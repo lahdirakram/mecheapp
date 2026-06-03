@@ -1,0 +1,28 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build / cache
+dist/
+.turbo/
+*.tsbuildinfo
+
+# expo
+.expo/
+.expo-shared/
+web-build/
+ios/
+android/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# supabase local
+supabase/.branches/
+supabase/.temp/
+
+# os / editor
+.DS_Store
+*.log
