@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Mèche",
+    "slug": "meche",
+    "scheme": "meche",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FCF8F4",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.meche.app"
+    },
+    "android": {
+      "package": "com.meche.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#15110E",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mèche utilise la caméra pour ton selfie d'essayage."
+        }
+      ]
+    ]
+  }
+}
