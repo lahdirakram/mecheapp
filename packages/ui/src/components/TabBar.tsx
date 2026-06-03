@@ -4,7 +4,7 @@ import { BlurView } from 'expo-blur';
 import { MPAL } from '@meche/core';
 import { MIcon, type MIconName } from './MIcon';
 import { MText } from './Type';
-import { useT } from '../i18n';
+import { useLang, useT } from '../i18n';
 
 export type B2CTab = 'explore' | 'wardrobe' | 'salons' | 'profile';
 
@@ -14,6 +14,8 @@ export interface TabBarProps {
   /** Central caramel button — launches the selfie → hub try-on flow. */
   onPressCenter: () => void;
   dark?: boolean;
+  /** A tab shown with a "bientôt/soon" badge and disabled (no navigation) until it ships. */
+  comingSoon?: B2CTab;
 }
 
 const LEFT: { id: B2CTab; icon: MIconName; key: 'explore' | 'wardrobe' }[] = [
@@ -26,21 +28,34 @@ const RIGHT: { id: B2CTab; icon: MIconName; key: 'salons' | 'profile' }[] = [
 ];
 
 /** Floating glass tab bar: 4 tabs + an elevated central caramel "Mèche" action button. */
-export function TabBar({ active, onChange, onPressCenter, dark = false }: TabBarProps) {
+export function TabBar({ active, onChange, onPressCenter, dark = false, comingSoon }: TabBarProps) {
   const t = useT();
+  const lang = useLang();
   const onColor = dark ? MPAL.inkInv : MPAL.ink;
   const offColor = dark ? 'rgba(255,255,255,0.55)' : MPAL.mute;
+  const soonText = lang === 'fr' ? 'Bientôt' : 'Soon';
 
   const renderTab = (it: { id: B2CTab; icon: MIconName; key: 'explore' | 'wardrobe' | 'salons' | 'profile' }) => {
     const on = active === it.id;
+    const soon = comingSoon === it.id;
+    const color = soon ? offColor : on ? onColor : offColor;
     return (
       <Pressable
         key={it.id}
-        onPress={() => onChange(it.id)}
-        style={{ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 6 }}
+        // Coming-soon tab is inert: no navigation until the feature ships.
+        onPress={soon ? undefined : () => onChange(it.id)}
+        disabled={soon}
+        style={{ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 6, opacity: soon ? 0.6 : 1 }}
       >
-        <MIcon name={it.icon} size={20} color={on ? onColor : offColor} fill={on ? onColor : 'none'} stroke={on ? 0 : 1.7} />
-        <MText variant="bodySemibold" size={10} color={on ? onColor : offColor}>
+        {soon ? (
+          <View style={{ position: 'absolute', top: -7, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: MPAL.sable, zIndex: 1 }}>
+            <MText variant="mono" size={7} color="#fff" style={{ letterSpacing: 0.4 }}>
+              {soonText.toUpperCase()}
+            </MText>
+          </View>
+        ) : null}
+        <MIcon name={it.icon} size={20} color={soon ? offColor : on ? onColor : offColor} fill={!soon && on ? onColor : 'none'} stroke={!soon && on ? 0 : 1.7} />
+        <MText variant="bodySemibold" size={10} color={color}>
           {t(it.key)}
         </MText>
       </Pressable>

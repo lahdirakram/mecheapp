@@ -26,6 +26,8 @@ function CustomTabBar({ state, navigation }: TabBarRenderProps) {
         router.push('/try');
       }}
       dark={active === 'explore'}
+      // Coiffeurs (the stylist marketplace) ships with Mèche Pro — disabled with a badge for now.
+      comingSoon="salons"
     />
   );
 }
