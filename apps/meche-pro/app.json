@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Mèche Pro",
+    "slug": "meche-pro",
+    "scheme": "mechepro",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FCF8F4",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.meche.pro"
+    },
+    "android": {
+      "package": "com.meche.pro",
+      "adaptiveIcon": {
+        "backgroundColor": "#FCF8F4",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image"
+    ]
+  }
+}
