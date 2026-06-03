@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mèche — Palettes féminin premium</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #15110F; color: #EDE7E0; font-family: 'Geist', system-ui, sans-serif; }
+  .serif { font-family: 'Fraunces', serif; }
+  .mono { font-family: 'Geist Mono', monospace; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 48px 40px 100px; }
+
+  header.intro { margin-bottom: 48px; max-width: 760px; }
+  header.intro .kick { font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:#9A8F86; }
+  header.intro h1 { font-family:'Fraunces',serif; font-weight:400; font-size:46px; line-height:1.04; letter-spacing:-0.03em; margin:14px 0 14px; }
+  header.intro p { font-size:15.5px; line-height:1.6; color:#B6ADA4; margin:0; }
+  header.intro p b { color:#EDE7E0; font-weight:600; }
+
+  .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 30px 26px; align-items:start; }
+  @media (max-width:1100px){ .grid { grid-template-columns: repeat(2,1fr); gap:36px 26px; } }
+  @media (max-width:640px){ .grid { grid-template-columns: 1fr; } }
+
+  .opt { display:flex; flex-direction:column; gap:18px; }
+  .opt .head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .opt .num { font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:.2em; color:#9A8F86; }
+  .opt .nm { font-family:'Fraunces',serif; font-size:26px; letter-spacing:-0.02em; }
+  .opt .mood { font-size:12.5px; color:#9A8F86; line-height:1.45; }
+
+  /* phone */
+  .phone { width:100%; aspect-ratio: 300/620; border-radius:38px; padding:8px;
+    background:#0c0a09; box-shadow: 0 30px 60px -28px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.05); }
+  .screen { width:100%; height:100%; border-radius:30px; overflow:hidden; position:relative; }
+
+  /* swatches */
+  .sw-row { display:flex; gap:7px; }
+  .sw { flex:1; border-radius:10px; padding:9px 8px; min-height:64px; display:flex; flex-direction:column; justify-content:space-between;
+        font-family:'Geist Mono',monospace; border:1px solid rgba(255,255,255,0.06); }
+  .sw .role { font-size:8px; letter-spacing:.12em; text-transform:uppercase; opacity:.7; }
+  .sw .hex { font-size:9.5px; letter-spacing:.02em; }
+  .sw.accent { flex:1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <div class="kick">Mèche · direction couleur · v2</div>
+    <h1>Famille <span style="font-style:italic;color:#C98AA8;">rose &amp; rouge</span>.</h1>
+    <p>Six pistes <b>féminin premium</b>, du plus profond et mature au plus vif — sans vert ni violet. On garde <b>Fraunces × Geist</b> et le concept « l'accent = le highlight ». Chaque écran est le <b>vrai écran d'accueil B2C</b>, rendu dans la palette. Dis-moi laquelle te parle (ou on en mixe une).</p>
+  </header>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="meche-shared.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+
+// ── 4 feminine-premium palettes (anti cream+orange) ───────────────────────
+const PALETTES = [
+  {
+    key:'bordeaux', num:'01', name:'Bordeaux',
+    mood:'Greige rosé · encre vin · bordeaux profond. Le plus mature et luxe.',
+    bg:'#EFE8E7', paper:'#F7F1F0', ink:'#201418', mute:'#897A7C', border:'#E0D4D3',
+    accent:'#7E2A41', inkInv:'#F7F1F0',
+  },
+  {
+    key:'rose', num:'02', name:'Rose Noir',
+    mood:'Ivoire rosé · encre prune · framboise. Intemporel, beauté éditoriale.',
+    bg:'#F4ECEC', paper:'#FBF5F5', ink:'#1E1418', mute:'#8C7C80', border:'#E4D6D8',
+    accent:'#B23A5B', inkInv:'#FBF5F5',
+  },
+  {
+    key:'poudre', num:'03', name:'Rose Poudré',
+    mood:'Greige chaud · encre cacao · rose poudré. Doux, désaturé, élégant.',
+    bg:'#F1EBE8', paper:'#F8F3F1', ink:'#211A1A', mute:'#8C7F7B', border:'#E2D8D3',
+    accent:'#C06A82', inkInv:'#F8F3F1',
+  },
+  {
+    key:'cerise', num:'04', name:'Cerise',
+    mood:'Blanc froid · encre noire · rouge cerise. Le rouge à lèvres, vif et net.',
+    bg:'#FBF6F5', paper:'#FFFFFF', ink:'#181314', mute:'#8B807E', border:'#ECE0DE',
+    accent:'#D6314A', inkInv:'#FFFFFF',
+  },
+  {
+    key:'grenadine', num:'05', name:'Grenadine',
+    mood:'Blanc chaud · charbon · rose-rouge éclatant. Énergique, gourmand.',
+    bg:'#FBF5F4', paper:'#FFFFFF', ink:'#1A1413', mute:'#8B807D', border:'#EDE0DD',
+    accent:'#E0445E', inkInv:'#FFFFFF',
+  },
+  {
+    key:'magenta', num:'06', name:'Magenta',
+    mood:'Blanc froid · charbon · fuchsia vif. Jeune, audacieux, grand public.',
+    bg:'#F8F4F6', paper:'#FFFFFF', ink:'#191418', mute:'#8A808A', border:'#ECE2E9',
+    accent:'#D6246E', inkInv:'#FFFFFF',
+  },
+];
+
+// ── representative B2C welcome screen, themed by palette ───────────────────
+function WelcomeScreen({ p }) {
+  return (
+    <div style={{height:'100%',display:'flex',flexDirection:'column',background:p.bg,color:p.ink,position:'relative'}}>
+      {/* portrait collage */}
+      <div style={{flex:1,position:'relative',overflow:'hidden',padding:'34px 12px 0'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'1.1fr 1.25fr',gap:7,height:'100%'}}>
+          <div style={{borderRadius:18,overflow:'hidden',transform:'translateY(14px)'}}><MPortrait hair="bob" mood="blush"/></div>
+          <div style={{borderRadius:18,overflow:'hidden'}}><MPortrait hair="pixie" mood="night" tint={p.accent}/></div>
+          <div style={{borderRadius:18,overflow:'hidden'}}><MPortrait hair="curly" mood="warm"/></div>
+          <div style={{borderRadius:18,overflow:'hidden',transform:'translateY(-8px)'}}><MPortrait hair="long" mood="cool" tint={p.accent}/></div>
+        </div>
+        <div style={{position:'absolute',left:0,right:0,bottom:0,height:120,
+          background:`linear-gradient(to bottom, ${p.bg}00, ${p.bg})`}}/>
+      </div>
+      {/* copy */}
+      <div style={{padding:'10px 20px 24px',display:'flex',flexDirection:'column',gap:11}}>
+        <div style={{display:'flex',alignItems:'center',gap:7}}>
+          <MWordmark size={17} color={p.ink} accent={p.accent}/>
+          <span className="mono" style={{fontSize:9,letterSpacing:'.18em',color:p.accent,fontWeight:600}}>· BÊTA</span>
+        </div>
+        <div className="serif" style={{fontSize:34,lineHeight:1.0,letterSpacing:'-0.035em'}}>
+          Sois de la <span style={{fontStyle:'italic',color:p.accent}}>mèche</span>.
+        </div>
+        <div style={{fontSize:13,color:p.mute,lineHeight:1.45,maxWidth:260}}>
+          Vois la coupe avant la coupe — et trouve qui te la fait.
+        </div>
+        <div style={{marginTop:8,display:'flex',flexDirection:'column',gap:8}}>
+          <button style={{width:'100%',padding:'13px 18px',borderRadius:999,background:p.accent,color:p.inkInv,
+            border:'none',fontSize:14.5,fontWeight:600,cursor:'pointer',fontFamily:"'Geist',sans-serif",
+            display:'flex',alignItems:'center',justifyContent:'center',gap:7}}>
+            Entrer <MIcon name="arrowRight" size={15} color={p.inkInv}/>
+          </button>
+          <button style={{background:'transparent',border:'none',cursor:'pointer',color:p.mute,
+            fontSize:12.5,padding:'2px',fontWeight:500,fontFamily:"'Geist',sans-serif"}}>J'ai déjà un compte</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Swatches({ p }) {
+  const chips = [
+    { c:p.bg,     role:'fond',   hex:p.bg,     dark:false },
+    { c:p.ink,    role:'encre',  hex:p.ink,    dark:true  },
+    { c:p.border, role:'ligne',  hex:p.border, dark:false },
+  ];
+  return (
+    <div className="sw-row">
+      {chips.map((s,i)=>(
+        <div key={i} className="sw" style={{background:s.c, color: s.dark ? p.inkInv : p.ink}}>
+          <span className="role">{s.role}</span>
+          <span className="hex">{s.hex}</span>
+        </div>
+      ))}
+      <div className="sw accent" style={{background:p.accent, color:p.inkInv}}>
+        <span className="role">accent · highlight</span>
+        <span className="hex">{p.accent}</span>
+      </div>
+    </div>
+  );
+}
+
+function Option({ p }) {
+  return (
+    <div className="opt">
+      <div className="head">
+        <span className="nm">{p.name}</span>
+        <span className="num">{p.num}</span>
+      </div>
+      <div className="phone"><div className="screen"><WelcomeScreen p={p}/></div></div>
+      <Swatches p={p}/>
+      <div className="mood">{p.mood}</div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div className="grid-inner" style={{display:'contents'}}>
+      {PALETTES.map(p => <Option key={p.key} p={p}/>)}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('grid')).render(<App/>);
+</script>
+</body>
+</html>

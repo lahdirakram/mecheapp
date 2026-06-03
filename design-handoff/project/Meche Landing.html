@@ -1,0 +1,1228 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mèche · Vois-toi avant.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1A1714;
+    --ink-2: #2A2520;
+    --paper: #F5F1EA;
+    --paper-2: #ECE6D9;
+    --line: #D9D2C5;
+    --muted: #8A8275;
+    --muted-2: #4A4339;
+    --coral: #C5654C;
+    --coral-soft: #F2D9CC;
+    --plum: #3D2A33;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--coral); color: var(--paper); }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+
+  .italic { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  .wm { font-family: 'Fraunces', serif; font-weight: 400; letter-spacing: -0.03em; line-height: 1; position: relative; display: inline-block; white-space: nowrap; }
+  .wm .gw { position: relative; display: inline-block; line-height: 1; }
+  .wm .gw::after {
+    content: ''; position: absolute;
+    top: 0.18em; left: 0.18em;
+    width: 0.5em; height: 0.07em;
+    background: var(--coral);
+    transform: rotate(22deg);
+    transform-origin: left center;
+    border-radius: 999px;
+  }
+
+  /* ---------------- NAV ---------------- */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 40px;
+    background: rgba(245, 241, 234, 0.85);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav .wm { font-size: 22px; }
+  .nav .links { display: flex; gap: 32px; }
+  .nav .links a { font-size: 14px; color: var(--muted-2); }
+  .nav .links a:hover { color: var(--ink); }
+  .nav-cta {
+    font-family: 'Geist', sans-serif; font-size: 13px; font-weight: 500;
+    padding: 10px 18px; border-radius: 999px;
+    background: var(--ink); color: var(--paper);
+    transition: transform .15s ease, background .15s ease;
+  }
+  .nav-cta:hover { transform: translateY(-1px); background: var(--coral); }
+  @media (max-width: 720px) {
+    .nav { padding: 14px 20px; }
+    .nav .links { display: none; }
+  }
+
+  /* ---------------- HERO ---------------- */
+  .hero {
+    padding: 64px 40px 88px;
+    max-width: 1320px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.1fr 1fr;
+    gap: 64px; align-items: center;
+  }
+  @media (max-width: 980px) {
+    .hero { grid-template-columns: 1fr; padding: 40px 20px 56px; gap: 48px; }
+  }
+  .hero .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2);
+    background: var(--coral-soft);
+    padding: 8px 14px; border-radius: 999px;
+    margin-bottom: 28px;
+  }
+  .hero .eyebrow .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--coral); }
+  .hero h1 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: clamp(52px, 7.4vw, 104px);
+    line-height: 0.96; letter-spacing: -0.038em;
+    margin: 0 0 28px;
+    text-wrap: balance;
+  }
+  .hero h1 em {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    color: var(--coral);
+  }
+  .hero .sub {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: clamp(20px, 2vw, 24px);
+    line-height: 1.4; color: var(--muted-2);
+    margin: 0 0 36px; max-width: 540px;
+  }
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'Geist', sans-serif; font-weight: 500; font-size: 16px;
+    padding: 16px 24px; border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer; transition: transform .15s ease, background .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: var(--coral); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { border-color: var(--ink); }
+  .btn .arrow { font-family: 'Fraunces', serif; font-style: italic; font-size: 18px; line-height: 1; }
+  .hero .micro {
+    display: flex; gap: 24px; align-items: center;
+    margin-top: 26px;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .hero .micro b { color: var(--ink); font-weight: 500; }
+
+  /* ------- HERO TRY-ON CARD ------- */
+  .tryon-stage {
+    position: relative;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .tryon-card {
+    width: 100%; max-width: 460px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 18px;
+    box-shadow: 0 40px 80px -50px rgba(60, 30, 20, 0.45);
+    position: relative;
+  }
+  .tryon-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 8px 14px;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  }
+  .tryon-head .live { color: var(--coral); display: inline-flex; align-items: center; gap: 6px; }
+  .tryon-head .live::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: var(--coral); animation: blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .portrait {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(160deg, #E8D5C0 0%, #C9A38A 55%, #6B4D3F 100%);
+  }
+  .portrait::before {
+    /* face placeholder — abstract oval to suggest a face without drawing one */
+    content: ''; position: absolute;
+    left: 50%; top: 56%;
+    transform: translate(-50%, -50%);
+    width: 58%; aspect-ratio: 3 / 4;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 38%, #E8C9B0 0%, #C09578 60%, #8A6450 100%);
+    box-shadow:
+      inset 0 -20px 40px rgba(60,30,20,0.25),
+      inset 0 14px 30px rgba(255,235,210,0.25);
+  }
+  .portrait .hair {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    transition: all .55s cubic-bezier(.65,.05,.25,1);
+    pointer-events: none;
+  }
+  /* default hair shape: a broad rounded form sitting on the head */
+  .portrait .hair {
+    top: 10%;
+    width: 76%;
+    height: 46%;
+    background: #2a1f18;
+    border-radius: 50% 50% 38% 38% / 70% 70% 30% 30%;
+  }
+  /* swap shapes via data-look */
+  .portrait[data-look="coupe"] .hair { top: 6%; width: 90%; height: 64%; background: #6b4a2e; border-radius: 50% 50% 30% 30% / 38% 38% 60% 60%; }
+  .portrait[data-look="couleur"] .hair { top: 10%; width: 76%; height: 46%; background: #E8DCC8; border-radius: 50% 50% 38% 38% / 70% 70% 30% 30%; }
+  .portrait[data-look="meches"] .hair { top: 10%; width: 76%; height: 46%; background: linear-gradient(180deg, #3a2818 0%, #6b4a2e 40%, #c5944a 100%); border-radius: 50% 50% 38% 38% / 70% 70% 30% 30%; }
+  .portrait[data-look="lissage"] .hair { top: 8%; width: 68%; height: 72%; background: #1a1714; border-radius: 50% 50% 22% 22% / 28% 28% 78% 78%; }
+  .portrait[data-look="wolf"] .hair { top: 6%; width: 90%; height: 64%; background: #6b4a2e; border-radius: 50% 50% 30% 30% / 38% 38% 60% 60%; }
+  .portrait[data-look="pixie"] .hair { top: 8%; width: 64%; height: 30%; background: #1a1714; border-radius: 60% 60% 30% 30% / 80% 80% 30% 30%; }
+  .portrait[data-look="bob"] .hair { top: 9%; width: 80%; height: 48%; background: #c5944a; border-radius: 50% 50% 14% 14% / 60% 60% 22% 22%; }
+  .portrait[data-look="curly"] .hair { top: 5%; width: 92%; height: 56%; background:
+      radial-gradient(circle at 25% 30%, #5a3a25 12px, transparent 13px),
+      radial-gradient(circle at 50% 18%, #5a3a25 14px, transparent 15px),
+      radial-gradient(circle at 75% 28%, #5a3a25 12px, transparent 13px),
+      radial-gradient(circle at 18% 55%, #5a3a25 12px, transparent 13px),
+      radial-gradient(circle at 82% 55%, #5a3a25 12px, transparent 13px),
+      radial-gradient(circle at 50% 50%, #5a3a25 14px, transparent 15px),
+      #4a2f1f;
+    border-radius: 55% 55% 38% 38% / 60% 60% 40% 40%; }
+
+  .portrait .tag {
+    position: absolute; top: 14px; left: 14px;
+    background: rgba(255,255,255,0.95);
+    color: var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 999px;
+  }
+  .portrait .tag.coral { background: var(--coral); color: var(--paper); }
+  .portrait .name {
+    position: absolute; left: 16px; bottom: 16px; right: 16px;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .portrait .name .lbl {
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.85; margin-bottom: 4px;
+  }
+  .portrait .name .which {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 26px; letter-spacing: -0.02em; line-height: 1;
+  }
+  .portrait .name .which em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral-soft); }
+
+  .tryon-actions {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 6px 4px;
+  }
+  .look-btn {
+    flex: 1; padding: 12px 10px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    cursor: pointer; text-align: center;
+    font-family: 'Fraunces', serif; font-size: 15px;
+    letter-spacing: -0.01em;
+    transition: all .15s ease;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .look-btn .mlbl {
+    font-family: 'Geist Mono', monospace; font-size: 9px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+  .look-btn:hover { border-color: var(--ink); }
+  .look-btn.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .look-btn.on .mlbl { color: var(--coral-soft); }
+
+  /* floating chips */
+  .float-chip {
+    position: absolute; z-index: 2;
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 16px 30px -16px rgba(0,0,0,0.18);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .float-chip.tl { top: -20px; left: -30px; }
+  .float-chip.br { bottom: 20px; right: -36px; background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .float-chip .num { font-family: 'Fraunces', serif; font-size: 24px; line-height: 1; letter-spacing: -0.02em; }
+  .float-chip .num em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral); }
+  .float-chip .lbl {
+    font-family: 'Geist Mono', monospace; font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); line-height: 1.4;
+  }
+  .float-chip.br .lbl { color: rgba(245,241,234,0.7); }
+  @media (max-width: 980px) {
+    .float-chip.tl { left: 8px; top: -16px; }
+    .float-chip.br { right: 8px; bottom: 8px; }
+  }
+
+  /* ---------------- PRESS BAR ---------------- */
+  .press-bar {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-2);
+    padding: 24px 40px;
+  }
+  .press-inner {
+    max-width: 1320px; margin: 0 auto;
+    display: flex; align-items: center; gap: 48px; flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .press-inner .lbl {
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  }
+  .press {
+    display: flex; gap: 40px; flex-wrap: wrap;
+    font-family: 'Fraunces', serif; font-size: 22px;
+    color: var(--ink-2); opacity: 0.7;
+  }
+  .press .vogue { font-style: italic; letter-spacing: 0.04em; }
+  .press .elle { letter-spacing: 0.3em; font-weight: 500; }
+  .press .konbini { font-family: 'Geist', sans-serif; font-weight: 600; letter-spacing: -0.03em; }
+  .press .nylon { font-weight: 500; letter-spacing: 0.18em; }
+  .press .biba { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .press .numero { letter-spacing: 0.12em; }
+
+  /* ---------------- SECTION SHELL ---------------- */
+  section.s { padding: 120px 40px; max-width: 1320px; margin: 0 auto; }
+  @media (max-width: 720px) { section.s { padding: 80px 20px; } }
+  .s-head { margin-bottom: 56px; max-width: 720px; }
+  .s-eyebrow {
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--coral);
+    display: block; margin-bottom: 16px;
+  }
+  .s-title {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 56px);
+    line-height: 1.05; letter-spacing: -0.025em;
+    margin: 0 0 18px; text-wrap: balance;
+  }
+  .s-title em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral); }
+  .s-desc {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 22px; line-height: 1.4; color: var(--muted-2);
+    margin: 0; max-width: 580px;
+  }
+
+  /* ---------------- BEFORE / AFTER STRIP ---------------- */
+  .ba-strip {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+    margin-top: 16px;
+  }
+  @media (max-width: 880px) { .ba-strip { grid-template-columns: repeat(2, 1fr); } }
+  .ba-strip .frame {
+    aspect-ratio: 3 / 4;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+  .ba-strip .frame .tag {
+    position: absolute; bottom: 10px; left: 10px;
+    background: rgba(255,255,255,0.92); color: var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 999px;
+  }
+  .ba-strip .frame .num {
+    position: absolute; top: 10px; right: 10px;
+    background: var(--ink); color: var(--paper);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 4px 8px; border-radius: 999px;
+  }
+  /* faux portraits — head silhouette + hair color */
+  .pframe { background: linear-gradient(160deg, #ECE6D9, #C9B9A0); }
+  .pframe::before {
+    content: ''; position: absolute;
+    left: 50%; top: 60%;
+    transform: translate(-50%, -50%);
+    width: 56%; aspect-ratio: 3 / 4; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 38%, #E8C9B0 0%, #B5896E 75%);
+    box-shadow: inset 0 -16px 30px rgba(60,30,20,0.2);
+  }
+  .pframe::after {
+    content: ''; position: absolute;
+    left: 50%; top: 22%;
+    transform: translateX(-50%);
+    width: 64%; height: 36%;
+    background: var(--hair, #2a1f18);
+    border-radius: var(--hair-r, 50% 50% 38% 38% / 70% 70% 30% 30%);
+  }
+  .p-toi { --hair: #4a3220; }
+  .p-wolf { --hair: #6b4a2e; --hair-r: 50% 50% 30% 30% / 38% 38% 60% 60%; }
+  .p-pixie { --hair: #1a1714; --hair-r: 60% 60% 30% 30% / 80% 80% 30% 30%; }
+  .p-bob { --hair: #c5944a; --hair-r: 50% 50% 14% 14% / 60% 60% 22% 22%; }
+  .p-platinum { --hair: #E8DCC8; --hair-r: 55% 55% 30% 30% / 60% 60% 35% 35%; }
+  .p-wolf::after, .p-pixie::after, .p-bob::after, .p-platinum::after, .p-toi::after {
+    width: 76%; height: 42%; top: 18%;
+  }
+
+  /* ---------------- 3 PATHS ---------------- */
+  .paths {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px;
+  }
+  @media (max-width: 980px) { .paths { grid-template-columns: 1fr; } }
+  .path {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 22px; padding: 32px;
+    display: flex; flex-direction: column;
+    min-height: 360px;
+  }
+  .path.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .path.coral { background: var(--coral); color: var(--paper); border-color: var(--coral); }
+  .path .n {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 14px; color: var(--coral); margin-bottom: 14px;
+  }
+  .path.dark .n, .path.coral .n { color: rgba(245,241,234,0.75); }
+  .path h3 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 30px; line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+  .path h3 em { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .path p {
+    margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--muted-2);
+  }
+  .path.dark p, .path.coral p { color: rgba(245,241,234,0.8); }
+  .path .demo {
+    margin-top: auto; padding-top: 28px;
+  }
+
+  /* path demos */
+  .demo-prompt {
+    padding: 16px;
+    background: var(--paper-2);
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 18px; color: var(--ink); line-height: 1.4;
+  }
+  .demo-prompt .opa { opacity: 0.5; }
+  .demo-prompt .cur {
+    display: inline-block; width: 2px; height: 18px;
+    background: var(--coral);
+    vertical-align: middle; margin-left: 2px;
+    animation: blink 1s steps(2) infinite;
+  }
+  .demo-prompt .examples {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px;
+  }
+  .demo-prompt .ex {
+    padding: 5px 10px; border-radius: 999px;
+    background: #fff; border: 1px solid var(--line);
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 13px;
+  }
+
+  .demo-ai {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .demo-ai .mini {
+    aspect-ratio: 3 / 4;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .demo-ai .mini.on {
+    outline: 2px solid var(--coral); outline-offset: -1px;
+  }
+  .demo-ai .mini .tag {
+    position: absolute; bottom: 8px; left: 8px;
+    background: rgba(255,255,255,0.95); color: var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 8px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 999px;
+  }
+  .demo-ai .label {
+    grid-column: span 2;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(245,241,234,0.7);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .demo-ai .label .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--coral); }
+
+  .demo-gallery {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  }
+  .demo-gallery .mini {
+    aspect-ratio: 3 / 4;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ---------------- HOW IT WORKS ---------------- */
+  .how {
+    background: var(--ink); color: var(--paper);
+    padding: 120px 40px;
+  }
+  .how-inner { max-width: 1320px; margin: 0 auto; }
+  .how .s-title { color: var(--paper); }
+  .how .s-desc { color: rgba(245, 241, 234, 0.7); }
+  .steps {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+    margin-top: 48px;
+  }
+  @media (max-width: 880px) { .steps { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 540px) { .steps { grid-template-columns: 1fr; } }
+  .step {
+    border-top: 1px solid rgba(245, 241, 234, 0.18);
+    padding-top: 24px;
+  }
+  .step .n {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 14px; color: var(--coral); margin-bottom: 14px;
+  }
+  .step h4 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 26px; line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0 0 12px;
+  }
+  .step h4 em { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .step p {
+    margin: 0; font-size: 14px; line-height: 1.55;
+    color: rgba(245, 241, 234, 0.7);
+  }
+  .step .opt {
+    margin-top: 16px;
+    display: inline-block;
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--coral);
+    padding: 4px 9px; border-radius: 999px;
+    border: 1px solid rgba(197, 101, 76, 0.4);
+  }
+
+  /* ---------------- 5 REASONS ---------------- */
+  .reasons {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 980px) { .reasons { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .reasons { grid-template-columns: 1fr; } }
+  .reason {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 20px; padding: 28px;
+    display: flex; flex-direction: column;
+    min-height: 260px;
+  }
+  .reason.span-2 { grid-column: span 2; }
+  .reason.span-3 { grid-column: span 3; }
+  .reason.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .reason.coral { background: var(--coral); color: var(--paper); border-color: var(--coral); }
+  .reason.cream { background: var(--paper-2); }
+  @media (max-width: 980px) {
+    .reason.span-3, .reason.span-2 { grid-column: span 2; }
+  }
+  @media (max-width: 540px) {
+    .reason.span-3, .reason.span-2 { grid-column: span 1; }
+  }
+  .reason .num {
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 14px;
+    color: var(--coral); margin-bottom: 16px;
+  }
+  .reason.dark .num, .reason.coral .num { color: inherit; opacity: 0.75; }
+  .reason h3 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 26px; line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+  .reason h3 em { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .reason.span-3 h3 { font-size: 36px; }
+  .reason p {
+    margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--muted-2);
+  }
+  .reason.dark p, .reason.coral p { color: rgba(245, 241, 234, 0.8); }
+  .reason .viz {
+    margin-top: auto; padding-top: 20px;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+  .reason.dark .viz, .reason.coral .viz { color: rgba(245,241,234,0.6); }
+
+  /* ---------------- TESTIMONIALS ---------------- */
+  .quotes {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  @media (max-width: 880px) { .quotes { grid-template-columns: 1fr; } }
+  .quote {
+    background: var(--paper-2); border: 1px solid var(--line);
+    border-radius: 20px; padding: 32px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 240px;
+  }
+  .quote q {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 22px; line-height: 1.35; color: var(--ink);
+    quotes: '“' '”';
+  }
+  .quote q em { color: var(--coral); }
+  .quote .who {
+    margin-top: 24px; display: flex; align-items: center; gap: 12px;
+  }
+  .quote .av {
+    width: 40px; height: 40px; border-radius: 999px;
+    background: linear-gradient(135deg, #E8B5A0, #C5654C);
+    flex-shrink: 0;
+  }
+  .quote .who-text { display: flex; flex-direction: column; }
+  .quote .who-text b { font-weight: 500; font-size: 14px; }
+  .quote .who-text span {
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------------- PRICING ---------------- */
+  .plans-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 32px; flex-wrap: wrap;
+    margin-bottom: 48px;
+  }
+  .plans-head .s-eyebrow { color: var(--coral); }
+  .plans {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    align-items: stretch;
+  }
+  @media (max-width: 980px) { .plans { grid-template-columns: 1fr; } }
+  .plan {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 20px; padding: 32px;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .plan.lite { background: var(--paper-2); }
+  .plan.pro {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
+    transform: translateY(-12px);
+    box-shadow: 0 30px 60px -40px rgba(60, 30, 20, 0.45);
+  }
+  @media (max-width: 980px) { .plan.pro { transform: none; } }
+  .plan-badge {
+    position: absolute; top: -12px; left: 24px;
+    background: var(--coral); color: var(--paper);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 999px;
+  }
+  .plan-head { padding-bottom: 24px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+  .plan.pro .plan-head { border-color: rgba(245,241,234,0.18); }
+  .plan-name {
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .plan.pro .plan-name { color: var(--coral); }
+  .plan-name em {
+    font-family: 'Fraunces', serif; font-style: normal; font-weight: 400;
+    text-transform: none; letter-spacing: -0.01em; color: var(--ink);
+    font-size: 24px; margin-left: 6px;
+  }
+  .plan.pro .plan-name em { color: var(--paper); }
+  .plan-price { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .plan-price .big {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 56px; letter-spacing: -0.03em; line-height: 1;
+  }
+  .plan-price .per {
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+  .plan.pro .plan-price .per { color: rgba(245,241,234,0.6); }
+  .plan-credits {
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--coral);
+    margin-top: 4px;
+  }
+  .plan-sub {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 16px; color: var(--muted-2);
+    margin-top: 6px;
+  }
+  .plan.pro .plan-sub { color: rgba(245,241,234,0.75); }
+  .plan-list {
+    list-style: none; padding: 0; margin: 0 0 28px;
+    display: flex; flex-direction: column; gap: 10px;
+    flex: 1;
+  }
+  .plan-list li {
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 14px; line-height: 1.45;
+  }
+  .plan-list li .c {
+    font-family: 'Fraunces', serif; font-size: 14px;
+    color: var(--coral); flex-shrink: 0;
+  }
+  .plan.pro .plan-list li .c { color: var(--coral); }
+  .plan-list li b { font-weight: 500; color: var(--ink); }
+  .plan.pro .plan-list li b { color: var(--paper); }
+  .plan-list li.out { opacity: 0.45; }
+  .plan-list li.out .c { color: var(--muted); }
+  .btn-full { width: 100%; justify-content: center; }
+  .plan.pro .btn-ghost { color: var(--paper); border-color: rgba(245,241,234,0.3); }
+  .plan.pro .btn-ghost:hover { border-color: var(--paper); background: rgba(245,241,234,0.06); }
+  .plan.pro .btn-primary { background: var(--coral); color: var(--paper); }
+  .plan.pro .btn-primary:hover { background: var(--paper); color: var(--ink); }
+  .plans-foot {
+    margin-top: 40px;
+    display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------------- FAQ ---------------- */
+  .faq { display: flex; flex-direction: column; }
+  .faq-item {
+    border-top: 1px solid var(--line);
+    padding: 28px 0;
+  }
+  .faq-item:last-child { border-bottom: 1px solid var(--line); }
+  .faq-item summary {
+    list-style: none; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; gap: 24px;
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 24px; letter-spacing: -0.01em; line-height: 1.2;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item .icon {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 28px; color: var(--coral); line-height: 1;
+    transition: transform .25s ease;
+    flex-shrink: 0;
+  }
+  .faq-item[open] .icon { transform: rotate(45deg); }
+  .faq-item p {
+    margin: 16px 0 0; font-size: 15px; line-height: 1.65; color: var(--muted-2);
+    max-width: 720px;
+  }
+
+  /* ---------------- FINAL CTA ---------------- */
+  .final {
+    text-align: center; padding: 160px 40px 120px;
+    max-width: 980px; margin: 0 auto;
+  }
+  .final h2 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: clamp(56px, 8.2vw, 132px);
+    line-height: 0.94; letter-spacing: -0.04em;
+    margin: 0 0 32px; text-wrap: balance;
+  }
+  .final h2 em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral); }
+  .final .sub {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 24px; color: var(--muted-2); margin: 0 0 40px;
+  }
+  .final .stores {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    margin-top: 24px;
+  }
+  .store {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 20px;
+    background: var(--ink); color: var(--paper);
+    border-radius: 14px;
+    font-family: 'Geist', sans-serif; font-size: 13px; font-weight: 500;
+    transition: transform .15s ease;
+  }
+  .store:hover { transform: translateY(-1px); }
+  .store .glyph { font-family: 'Fraunces', serif; font-size: 20px; line-height: 1; }
+  .store .small { font-size: 9px; opacity: 0.7; display: block; letter-spacing: 0.1em; text-transform: uppercase; }
+  .store .big { font-size: 14px; font-weight: 500; line-height: 1.1; }
+
+  /* ---------------- FOOTER ---------------- */
+  footer.site {
+    background: var(--ink); color: rgba(245,241,234,0.7);
+    padding: 80px 40px 32px;
+  }
+  .foot-inner { max-width: 1320px; margin: 0 auto; }
+  .foot-top {
+    display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 48px;
+    padding-bottom: 56px; border-bottom: 1px solid rgba(245,241,234,0.15);
+  }
+  @media (max-width: 880px) { .foot-top { grid-template-columns: 1fr 1fr; } }
+  .foot-top .wm { color: var(--paper); font-size: 56px; line-height: 0.9; margin-bottom: 16px; }
+  .foot-top .tag {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 18px; color: rgba(245,241,234,0.7); max-width: 280px;
+  }
+  .foot-col h5 {
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(245,241,234,0.5); margin: 0 0 18px;
+  }
+  .foot-col a {
+    display: block; font-size: 14px; padding: 6px 0;
+    color: rgba(245,241,234,0.8);
+  }
+  .foot-col a:hover { color: var(--coral); }
+  .foot-bot {
+    padding-top: 28px;
+    display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(245,241,234,0.4);
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <a href="#" class="wm" aria-label="Mèche home">m<span class="gw">e</span>che</a>
+  <a href="#get" class="nav-cta">Get the app</a>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div>
+    <span class="eyebrow"><span class="dot"></span>Try-on virtuel · coupe, couleur, mèches</span>
+    <h1>Vois-toi <em>avant.</em></h1>
+    <p class="sub">Mèche essaie la transformation à ta place. Coupe, couleur, mèches, lissage. Tu vois vraiment ce que ça donne avant qu'on touche un cheveu.</p>
+    <div class="cta-row">
+      <a href="#get" class="btn btn-primary">Essayer gratuitement <span class="arrow">↗</span></a>
+      <a href="#how" class="btn btn-ghost">Voir comment ça marche</a>
+    </div>
+  </div>
+
+  <div class="tryon-stage">
+    <div class="tryon-card">
+      <div class="tryon-head">
+        <span class="live">Try-on · live</span>
+        <span>essai #03</span>
+      </div>
+      <div class="portrait" id="hero-portrait" data-look="coupe">
+        <span class="tag coral">Try-on</span>
+        <span class="hair"></span>
+        <div class="name">
+          <div class="lbl">Toi avec…</div>
+          <div class="which" id="hero-which"><em>Wolf cut</em> caramel</div>
+        </div>
+      </div>
+      <div class="tryon-actions" id="tryon-actions">
+        <button class="look-btn on" data-look="coupe" data-name="<em>Wolf cut</em> caramel">
+          <span class="mlbl">01</span>
+          <span>Coupe</span>
+        </button>
+        <button class="look-btn" data-look="couleur" data-name="Couleur <em>platine</em>">
+          <span class="mlbl">02</span>
+          <span>Couleur</span>
+        </button>
+        <button class="look-btn" data-look="meches" data-name="<em>Mèches</em> caramel">
+          <span class="mlbl">03</span>
+          <span>Mèches</span>
+        </button>
+        <button class="look-btn" data-look="lissage" data-name="<em>Lissage</em> soie">
+          <span class="mlbl">04</span>
+          <span>Lissage</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="float-chip br">
+      <div>
+        <div class="num"><em>Avant</em></div>
+        <div class="lbl">qu'on touche<br/>un cheveu</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+
+<!-- ============ 3 PATHS ============ -->
+<section class="s" id="paths">
+  <div class="s-head">
+    <span class="s-eyebrow">Trois façons d'essayer</span>
+    <h2 class="s-title">Décris ton look, laisse-toi <em>guider,</em> ou pioche.</h2>
+    <p class="s-desc">On ne sait pas tous quoi demander chez le coiffeur. Mèche t'écoute, te propose, te montre. Coupe, couleur, mèches : tu choisis comment tu veux trouver.</p>
+  </div>
+
+  <div class="paths">
+    <div class="path dark">
+      <div class="n">Voie 01 ·</div>
+      <h3>Décris ton look.<br/>En français, en anglais, à <em>voix haute.</em></h3>
+      <p>« Un carré flou caramel avec des mèches miel, doux à l'épaule. » Mèche transcrit, comprend, et te montre. Tu n'as pas besoin du vocabulaire du salon.</p>
+      <div class="demo">
+        <div class="demo-prompt" style="background:var(--ink-2);border-color:rgba(245,241,234,0.1);color:var(--paper);">
+          <span class="opa">« Un carré flou caramel,</span><br/>
+          doux à l'épaule…»<span class="cur"></span>
+          <div class="examples">
+            <span class="ex" style="background:var(--ink);border-color:rgba(245,241,234,0.15);color:var(--paper);">Wolf cut châtain</span>
+            <span class="ex" style="background:var(--ink);border-color:rgba(245,241,234,0.15);color:var(--paper);">Reflets miel</span>
+            <span class="ex" style="background:var(--ink);border-color:rgba(245,241,234,0.15);color:var(--paper);">Balayage froid</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="path coral">
+      <div class="n">Voie 02 ·</div>
+      <h3>Mèche <em>te propose</em>.</h3>
+      <p>L'IA regarde ton visage, ton style, tes looks gardés, et te suggère une coupe, une couleur ou un balayage faits pour toi. Avec le pourquoi.</p>
+      <div class="demo">
+        <div class="demo-ai">
+          <div class="mini on">
+            <div class="pframe p-wolf"></div>
+            <span class="tag">94% match</span>
+          </div>
+          <div class="mini">
+            <div class="pframe p-bob"></div>
+            <span class="tag">82%</span>
+          </div>
+          <div class="label" style="color:rgba(245,241,234,0.8);">
+            <span class="dot" style="background:var(--paper);"></span>
+            visage ovale · streetwear · printemps
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="path">
+      <div class="n">Voie 03 ·</div>
+      <h3>Pioche dans la <em>galerie.</em></h3>
+      <p>Tendances, viraux, classiques. 1 200 coupes, couleurs et balayages à essayer en un tap. Filtrés par longueur, couleur, mood.</p>
+      <div class="demo">
+        <div class="demo-gallery">
+          <div class="mini pframe p-wolf"></div>
+          <div class="mini pframe p-bob"></div>
+          <div class="mini pframe p-pixie"></div>
+          <div class="mini pframe p-curly" style="--hair:#5a3a25;--hair-r:55% 55% 38% 38% / 60% 60% 40% 40%;"></div>
+          <div class="mini pframe p-platinum"></div>
+          <div class="mini pframe p-toi"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BEFORE / AFTER ============ -->
+<section class="s" style="padding-top: 32px;">
+  <div class="s-head">
+    <span class="s-eyebrow">Toi · Toi · Toi · Toi · Toi</span>
+    <h2 class="s-title">Cinq <em>toi.</em> Un seul à garder.</h2>
+    <p class="s-desc">Essaie autant que tu veux. Coupe ici, couleur là, balayage demain. Compare côte à côte. La décision attend.</p>
+  </div>
+  <div class="ba-strip">
+    <div class="frame pframe p-toi"><span class="tag">Toi · aujourd'hui</span><span class="num">·00</span></div>
+    <div class="frame pframe p-wolf"><span class="tag">Wolf cut</span><span class="num">·01</span></div>
+    <div class="frame pframe p-bob"><span class="tag">Balayage miel</span><span class="num">·02</span></div>
+    <div class="frame pframe p-pixie"><span class="tag">Pixie</span><span class="num">·03</span></div>
+    <div class="frame pframe p-platinum"><span class="tag">Couleur platine</span><span class="num">·04</span></div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="s-head">
+      <span class="s-eyebrow" style="color:var(--coral);">Comment ça marche</span>
+      <h2 class="s-title">Un selfie. Quatre <em>looks.</em> Trente secondes.</h2>
+      <p class="s-desc">Selfie, choix du chemin, essai, comparaison. Le premier rendu est offert pour goûter. Tu décides ensuite si tu continues.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="n">Étape 01 ·</div>
+        <h4>Un <em>selfie</em>, ovale dans le cadre.</h4>
+        <p>Bonne lumière, on te dit si c'est bon. Mèche détecte ton visage, ta peau, ta couleur et texture de cheveux.</p>
+      </div>
+      <div class="step">
+        <div class="n">Étape 02 ·</div>
+        <h4>Choisis ton <em>chemin.</em></h4>
+        <p>Décris, laisse l'IA proposer, ou pioche dans la galerie. Tu peux mixer les trois.</p>
+      </div>
+      <div class="step">
+        <div class="n">Étape 03 ·</div>
+        <h4>Essaie. Compare. <em>Garde.</em></h4>
+        <p>Side-by-side avec ta version actuelle. Sauvegarde tes préférées dans ton vestiaire. Reviens quand tu veux.</p>
+      </div>
+      <div class="step">
+        <div class="n">Étape 04 ·</div>
+        <h4>Réserve <em>si tu veux.</em></h4>
+        <p>Quand tu es sûr·e, montre la coupe au coiffeur. Ou réserve en deux taps via Mèche. Sans pression.</p>
+        <div class="opt">Optionnel</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 REASONS ============ -->
+<section class="s" id="why">
+  <div class="s-head">
+    <span class="s-eyebrow">Pourquoi Mèche · cinq raisons</span>
+    <h2 class="s-title">Cinq raisons de ne plus <em>regretter</em> ton look.</h2>
+    <p class="s-desc">Tout le monde a un fail capillaire. Une coupe ratée, une couleur trop chaude, un balayage qui vire. Mèche existe pour qu'on n'en parle qu'au passé.</p>
+  </div>
+
+
+  <div class="reasons">
+    <div class="reason span-3 coral">
+      <div class="num">01 ·</div>
+      <h3>Tu vois <em>vraiment</em> ton visage.<br/>Pas un mannequin.</h3>
+      <p>Le rendu Mèche, c'est ta tête, ta peau, ta lumière. Pas une photo de banque d'images avec une perruque dessus. Ce que tu vois, c'est ce que tu auras.</p>
+      <div class="viz">0 mannequin · 0 perruque · 0 cliché</div>
+    </div>
+    <div class="reason span-3 dark">
+      <div class="num">02 ·</div>
+      <h3>Tu n'as plus à <em>deviner</em> le vocabulaire.</h3>
+      <p>« Un truc mi-long, dégradé, mais pas un mulet. Avec des reflets, pas trop chauds. » Mèche traduit ce que tu dis en look que le coiffeur reconnaît. Tu arrives au salon avec l'image. Pas avec un Pinterest désordre.</p>
+      <div class="viz">tu décris · il reconnaît · même longueur d'onde</div>
+    </div>
+
+    <div class="reason span-2 cream">
+      <div class="num">03 ·</div>
+      <h3>Vestiaire <em>perso.</em></h3>
+      <p>Garde tes looks essayés, compare-les côte à côte, reviens demain. Ton vestiaire te suit d'un appareil à l'autre.</p>
+      <div class="viz">vestiaire · historique · favoris</div>
+    </div>
+    <div class="reason span-2">
+      <div class="num">04 ·</div>
+      <h3>Tes selfies <em>restent</em> chez toi.</h3>
+      <p>Tes selfies restent stockés sur ton téléphone. Aucune photo n'est partagée, vendue, ou utilisée pour entraîner quoi que ce soit. Promis, juré, coupé.</p>
+      <div class="viz">stockage local · zero data sold</div>
+    </div>
+    <div class="reason span-2">
+      <div class="num">05 ·</div>
+      <h3>Réserver, c'est <em>ensuite.</em></h3>
+      <p>D'abord tu vois. Ensuite, peut-être, tu réserves chez un coiffeur ou un coloriste près de toi qui sait faire ce que tu as choisi. Dans cet ordre.</p>
+      <div class="viz">try first · book second</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="s" style="padding-top: 0;">
+  <div class="quotes">
+    <div class="quote">
+      <q>J'ai essayé <em>quarante coupes</em> en une soirée. Le matin j'avais ma réponse. Le mardi, ma coiffeuse l'avait dans les mains.</q>
+      <div class="who">
+        <div class="av"></div>
+        <div class="who-text"><b>Camille, 26</b><span>Paris 11e · vestiaire 12 looks</span></div>
+      </div>
+    </div>
+    <div class="quote">
+      <q>Première fois que j'arrive au salon en <em>sachant</em> ce que je veux. Ça a changé ma vie capillaire, ouais.</q>
+      <div class="who">
+        <div class="av" style="background:linear-gradient(135deg,#C9B9A0,#3D2A33);"></div>
+        <div class="who-text"><b>Yanis, 31</b><span>Lyon · wolf cut depuis 6 mois</span></div>
+      </div>
+    </div>
+    <div class="quote">
+      <q>L'app la plus <em>honnête</em> que j'aie installée. Pas de pub, pas de freemium piégé, pas de fake DM de marque.</q>
+      <div class="who">
+        <div class="av" style="background:linear-gradient(135deg,#F2D9CC,#C5654C);"></div>
+        <div class="who-text"><b>Margaux, 24</b><span>Marseille · ambassadrice</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section class="s" id="get">
+  <div class="plans-head">
+    <div>
+      <span class="s-eyebrow">Crédits · sans abonnement</span>
+      <h2 class="s-title">Tu paies <em>les essais.</em><br/>Pas un abonnement.</h2>
+      <p class="s-desc">Le premier essai est offert. Ensuite, des crédits. 1 crédit = 1 coupe en HD, sans watermark. Les crédits n'expirent <em>jamais</em>.</p>
+    </div>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Essai</em></div>
+        <div class="plan-price"><span class="big">4,99€</span></div>
+        <div class="plan-credits">10 crédits · 0,50€ / coupe</div>
+        <div class="plan-sub">Pour quand tu hésites entre deux looks.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>10 essais</b> en HD</span></li>
+        <li><span class="c">↳</span><span>Vestiaire jusqu'à 20 looks</span></li>
+        <li><span class="c">↳</span><span>Comparaison côte à côte</span></li>
+        <li><span class="c">↳</span><span>Export sans watermark</span></li>
+      </ul>
+      <a href="#" class="btn btn-ghost btn-full">Acheter · 4,99€</a>
+    </div>
+
+    <div class="plan pro">
+      <div class="plan-badge">Le plus choisi</div>
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Pop</em></div>
+        <div class="plan-price"><span class="big">9,99€</span></div>
+        <div class="plan-credits">25 crédits · 0,40€ / coupe</div>
+        <div class="plan-sub">Pour vraiment se décider.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>25 essais</b> en HD</span></li>
+        <li><span class="c">↳</span><span>Vestiaire <b>illimité</b></span></li>
+        <li><span class="c">↳</span><span>Voie <em>voix</em> + IA Propose</span></li>
+        <li><span class="c">↳</span><span>Partage en un tap</span></li>
+        <li><span class="c">↳</span><span>Économise <b>20%</b> vs Pack Essai</span></li>
+      </ul>
+      <a href="#" class="btn btn-primary btn-full">Acheter · 9,99€</a>
+    </div>
+
+    <div class="plan lite">
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Studio</em></div>
+        <div class="plan-price"><span class="big">19,99€</span></div>
+        <div class="plan-credits">60 crédits · 0,33€ / coupe</div>
+        <div class="plan-sub">Pour les indécis·es chroniques.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>60 essais</b> en HD</span></li>
+        <li><span class="c">↳</span><span>Tout ce qu'il y a dans Pop</span></li>
+        <li><span class="c">↳</span><span>Accès anticipé nouvelles coupes</span></li>
+        <li><span class="c">↳</span><span>Résolution <b>4K</b> pour le book</span></li>
+        <li><span class="c">↳</span><span>Économise <b>35%</b> vs Pack Essai</span></li>
+      </ul>
+      <a href="#" class="btn btn-ghost btn-full">Acheter · 19,99€</a>
+    </div>
+  </div>
+
+  <div class="plans-foot">
+    <span>Crédits sans expiration.</span>
+    <span>Paiement unique · zero abonnement.</span>
+    <span>Tes selfies restent à toi.</span>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="s" id="faq" style="max-width: 920px;">
+  <div class="s-head">
+    <span class="s-eyebrow">FAQ</span>
+    <h2 class="s-title">Les questions qu'on <em>nous pose.</em></h2>
+  </div>
+
+  <div class="faq">
+    <details class="faq-item" open>
+      <summary>Le rendu est vraiment réaliste ?<span class="icon">+</span></summary>
+      <p>Oui. Mèche utilise un modèle entraîné sur des coupes réelles, pas sur des avatars. Il garde ta peau, ta lumière, tes traits, et ne change que les cheveux. Tu peux comparer avant/après dans l'app. Si un rendu te paraît bizarre, signale-le, on le corrige.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Mes selfies sont stockés où ?<span class="icon">+</span></summary>
+      <p>Tes selfies sont stockés <b>sur ton téléphone</b>, jamais sur nos serveurs. Au moment d'un essai, la photo est envoyée chiffrée à notre modèle pour générer le rendu, puis supprimée dans les minutes qui suivent. Aucune photo n'est utilisée pour entraîner un modèle, vendue, ou partagée. Tu peux tout effacer en un tap dans les réglages.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Le modèle économique, en clair ?<span class="icon">+</span></summary>
+      <p>Ton premier essai est offert. Ensuite, tu achètes des crédits : <b>1 crédit = 1 coupe essayée en HD, export sans watermark.</b> Trois packs (10, 25, 60 crédits) avec dégressivité de prix. <b>Pas d'abonnement, pas de prélèvement mensuel</b>, pas de carte demandée pour l'essai gratuit. Les crédits achetés n'expirent jamais. Tu reviens dans deux ans, ils sont toujours là.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Ça marche sur cheveux bouclés / crépus / texturés ?<span class="icon">+</span></summary>
+      <p>Oui. On a entraîné le modèle sur tous les types de cheveux (1A à 4C), toutes les carnations, tous les genres. Si une texture ou une couleur n'est pas bien rendue, écris-nous, on itère.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Et la partie « réserver un coiffeur » ?<span class="icon">+</span></summary>
+      <p>Optionnelle, en bas du parcours. Quand tu as choisi ta coupe, Mèche te montre les coiffeurs près de toi qui savent la faire, avec leur book et leurs créneaux. Tu peux aussi juste télécharger l'image et la montrer à ton coiffeur habituel. C'est ton choix.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Dans quels pays ?<span class="icon">+</span></summary>
+      <p>Le try-on marche partout dans le monde. La partie réservation est dispo en France (Paris, Lyon, Marseille, Bordeaux, Lille, Nantes) et arrive en Italie et Espagne courant 2026.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="final">
+  <h2>Vois-toi <em>avant.</em><br/>Change après.</h2>
+  <p class="sub">Téléchargement gratuit. Premier essai offert. Aucune carte demandée.</p>
+  <div class="stores">
+    <a href="#" class="store">
+      <span class="glyph">↧</span>
+      <span><span class="small">Télécharger sur</span><span class="big">App Store</span></span>
+    </a>
+    <a href="#" class="store">
+      <span class="glyph">↧</span>
+      <span><span class="small">Disponible sur</span><span class="big">Google Play</span></span>
+    </a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site">
+  <div class="foot-inner">
+    <div class="foot-top">
+      <div>
+        <div class="wm">m<span class="gw">e</span>che</div>
+        <p class="tag">Vois-toi avant. Change après. Paris vers partout.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Produit</h5>
+        <a href="#paths">Try-on</a>
+        <a href="#how">Comment ça marche</a>
+        <a href="#why">Pourquoi Mèche</a>
+        <a href="#get">Télécharger</a>
+      </div>
+      <div class="foot-col">
+        <h5>Coiffeurs</h5>
+        <a href="#">Mèche Pro</a>
+        <a href="#">Rejoindre</a>
+        <a href="#">Tarification</a>
+      </div>
+      <div class="foot-col">
+        <h5>Mèche</h5>
+        <a href="#">À propos</a>
+        <a href="#">Confidentialité</a>
+        <a href="#">Presse</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 Mèche · Paris</span>
+      <span>Mentions · CGU · Confidentialité · Cookies</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Hero try-on swap
+  (function(){
+    const portrait = document.getElementById('hero-portrait');
+    const which = document.getElementById('hero-which');
+    const actions = document.getElementById('tryon-actions');
+    if (!portrait || !actions) return;
+    actions.addEventListener('click', (e) => {
+      const btn = e.target.closest('.look-btn');
+      if (!btn) return;
+      const look = btn.getAttribute('data-look');
+      const name = btn.getAttribute('data-name');
+      portrait.setAttribute('data-look', look);
+      which.innerHTML = name;
+      actions.querySelectorAll('.look-btn').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+    });
+
+    // auto-rotate looks until user interacts
+    let i = 0;
+    let stopped = false;
+    actions.addEventListener('click', () => { stopped = true; }, { once: true });
+    const looks = ['coupe','couleur','meches','lissage'];
+    const names = ['<em>Wolf cut</em> caramel','Couleur <em>platine</em>','<em>Mèches</em> caramel','<em>Lissage</em> soie'];
+    setInterval(() => {
+      if (stopped) return;
+      i = (i + 1) % looks.length;
+      portrait.setAttribute('data-look', looks[i]);
+      which.innerHTML = names[i];
+      actions.querySelectorAll('.look-btn').forEach((b, idx) => {
+        b.classList.toggle('on', idx === i);
+      });
+    }, 2600);
+  })();
+</script>
+
+</body>
+</html>

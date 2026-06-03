@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mèche — Noir, blanc & sable</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #100D0A; color: #ECE6DC; font-family: 'Geist', system-ui, sans-serif; }
+  .serif { font-family: 'Fraunces', serif; }
+  .mono { font-family: 'Geist Mono', monospace; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 48px 40px 100px; }
+
+  header.intro { margin-bottom: 48px; max-width: 780px; }
+  header.intro .kick { font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:#9A9082; }
+  header.intro h1 { font-family:'Fraunces',serif; font-weight:400; font-size:46px; line-height:1.04; letter-spacing:-0.03em; margin:14px 0 14px; }
+  header.intro p { font-size:15.5px; line-height:1.6; color:#B4ABA0; margin:0; }
+  header.intro p b { color:#ECE6DC; font-weight:600; }
+
+  .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 28px; align-items:start; }
+  @media (max-width:1240px){ .grid { grid-template-columns: repeat(2,1fr); gap:36px 28px; } }
+  @media (max-width:640px){ .grid { grid-template-columns: 1fr; } }
+
+  .opt { display:flex; flex-direction:column; gap:18px; }
+  .opt .head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .opt .num { font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:.2em; color:#9A9082; }
+  .opt .nm { font-family:'Fraunces',serif; font-size:26px; letter-spacing:-0.02em; }
+  .opt .mood { font-size:12.5px; color:#9A9082; line-height:1.45; }
+
+  .phone { width:100%; aspect-ratio: 300/620; border-radius:38px; padding:8px;
+    background:#08060500; box-shadow: 0 30px 60px -28px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.08); }
+  .phone.lite { background:#070605; }
+  .screen { width:100%; height:100%; border-radius:30px; overflow:hidden; position:relative; }
+
+  .sw-row { display:flex; gap:7px; }
+  .sw { flex:1; border-radius:10px; padding:9px 8px; min-height:64px; display:flex; flex-direction:column; justify-content:space-between;
+        font-family:'Geist Mono',monospace; border:1px solid rgba(255,255,255,0.07); }
+  .sw .role { font-size:8px; letter-spacing:.12em; text-transform:uppercase; opacity:.72; }
+  .sw .hex { font-size:9.5px; letter-spacing:.02em; }
+  .sw.beige { flex:1.4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <div class="kick">Mèche · direction couleur · v3 — éditorial clair</div>
+    <h1>Noir, blanc &amp; <span style="font-style:italic;color:#B79B6E;">sable</span> — clair.</h1>
+    <p>Version <b>lumineuse et aérée</b> façon Planity / Vogue : blanc éclatant, noir net, boutons noirs. Le sable n'est qu'une <b>fine touche claire</b> — le trait du wordmark, les filets, un petit label. Les visages gardent leur couleur pour rester vivants. Quatre températures de blanc, du plus frais au plus chaud. Chaque écran est le <b>vrai écran d'accueil B2C</b>.</p>
+  </header>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="meche-shared.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+
+// onBeige = text color sitting on a beige surface (always dark). inkInv = light text on ink button.
+const PALETTES = [
+  {
+    key:'galerie', num:'01', name:'Galerie', dark:false, cta:'ink',
+    mood:'Blanc galerie · noir net · sable très clair en touche. Le plus frais, façon Vogue.',
+    bg:'#FFFFFF', paper:'#FFFFFF', ink:'#14110D', mute:'#8C877C', border:'#ECE7DD',
+    beige:'#D8C6A4', onBeige:'#1A150F', inkInv:'#FFFFFF',
+  },
+  {
+    key:'lin', num:'02', name:'Lin', dark:false, cta:'ink',
+    mood:'Blanc lin tiède · noir · sable léger. Doux mais lumineux.',
+    bg:'#FAF7F1', paper:'#FFFFFF', ink:'#16120C', mute:'#8C8678', border:'#EBE5D8',
+    beige:'#DAC8A6', onBeige:'#1A150F', inkInv:'#FAF7F1',
+  },
+  {
+    key:'champagne', num:'03', name:'Champagne', dark:false, cta:'ink',
+    mood:'Ivoire champagne · noir · sable doré clair. Chaud et solaire, jamais terne.',
+    bg:'#FBF7EE', paper:'#FFFFFF', ink:'#17120A', mute:'#8E8772', border:'#EDE5D3',
+    beige:'#E0CB9E', onBeige:'#1A150F', inkInv:'#FBF7EE',
+  },
+  {
+    key:'blush', num:'04', name:'Blush', dark:false, cta:'ink',
+    mood:'Blanc rosé · noir · sable blush. Une pointe de vie sans couleur franche.',
+    bg:'#FCF8F4', paper:'#FFFFFF', ink:'#15110E', mute:'#8E8580', border:'#EEE5DE',
+    beige:'#E6CCBC', onBeige:'#1A150F', inkInv:'#FCF8F4',
+  },
+];
+
+function WelcomeScreen({ p }) {
+  const btn = p.cta === 'beige'
+    ? { background:p.beige, color:p.onBeige }
+    : { background:p.ink, color:p.inkInv };
+  const arrowColor = p.cta === 'beige' ? p.onBeige : p.inkInv;
+  return (
+    <div style={{height:'100%',display:'flex',flexDirection:'column',background:p.bg,color:p.ink,position:'relative'}}>
+      {/* portrait collage — soft natural color, kept alive */}
+      <div style={{flex:1,position:'relative',overflow:'hidden',padding:'34px 12px 0'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'1.1fr 1.25fr',gap:7,height:'100%',
+          filter:'grayscale(0.16) contrast(1.01) saturate(1.04)'}}>
+          <div style={{borderRadius:16,overflow:'hidden',transform:'translateY(14px)'}}><MPortrait hair="bob" mood="blush"/></div>
+          <div style={{borderRadius:16,overflow:'hidden'}}><MPortrait hair="pixie" mood="sand"/></div>
+          <div style={{borderRadius:16,overflow:'hidden'}}><MPortrait hair="curly" mood="warm"/></div>
+          <div style={{borderRadius:16,overflow:'hidden',transform:'translateY(-8px)'}}><MPortrait hair="long" mood="cool"/></div>
+        </div>
+        <div style={{position:'absolute',left:0,right:0,bottom:0,height:120,
+          background:`linear-gradient(to bottom, ${p.bg}00, ${p.bg})`}}/>
+      </div>
+      {/* copy */}
+      <div style={{padding:'8px 20px 24px',display:'flex',flexDirection:'column',gap:11}}>
+        <div style={{height:1,background:p.border,marginBottom:2}}/>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <MWordmark size={17} color={p.ink} accent={p.beige}/>
+          <span className="mono" style={{fontSize:8.5,letterSpacing:'.16em',fontWeight:700,
+            background:p.beige,color:p.onBeige,padding:'2px 7px',borderRadius:999}}>BÊTA</span>
+        </div>
+        <div className="serif" style={{fontSize:34,lineHeight:1.0,letterSpacing:'-0.035em'}}>
+          Sois de la <span style={{fontStyle:'italic'}}>mèche</span>.
+        </div>
+        <div style={{fontSize:13,color:p.mute,lineHeight:1.45,maxWidth:260}}>
+          Vois la coupe avant la coupe — et trouve qui te la fait.
+        </div>
+        <div style={{marginTop:8,display:'flex',flexDirection:'column',gap:8}}>
+          <button style={{width:'100%',padding:'13px 18px',borderRadius:999,...btn,
+            border:'none',fontSize:14.5,fontWeight:600,cursor:'pointer',fontFamily:"'Geist',sans-serif",
+            display:'flex',alignItems:'center',justifyContent:'center',gap:7}}>
+            Entrer <MIcon name="arrowRight" size={15} color={arrowColor}/>
+          </button>
+          <button style={{background:'transparent',border:'none',cursor:'pointer',color:p.mute,
+            fontSize:12.5,padding:'2px',fontWeight:500,fontFamily:"'Geist',sans-serif"}}>J'ai déjà un compte</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Swatches({ p }) {
+  return (
+    <div className="sw-row">
+      <div className="sw" style={{background:p.bg, color:p.ink, borderColor:p.border}}>
+        <span className="role">fond</span><span className="hex">{p.bg}</span>
+      </div>
+      <div className="sw" style={{background:p.ink, color:p.inkInv}}>
+        <span className="role">encre</span><span className="hex">{p.ink}</span>
+      </div>
+      <div className="sw" style={{background:p.border, color:p.ink}}>
+        <span className="role">ligne</span><span className="hex">{p.border}</span>
+      </div>
+      <div className="sw beige" style={{background:p.beige, color:p.onBeige}}>
+        <span className="role">sable · touche</span><span className="hex">{p.beige}</span>
+      </div>
+    </div>
+  );
+}
+
+function Option({ p }) {
+  return (
+    <div className="opt">
+      <div className="head">
+        <span className="nm">{p.name}</span>
+        <span className="num">{p.num}</span>
+      </div>
+      <div className={"phone" + (p.dark ? "" : " lite")}><div className="screen"><WelcomeScreen p={p}/></div></div>
+      <Swatches p={p}/>
+      <div className="mood">{p.mood}</div>
+    </div>
+  );
+}
+
+function App() {
+  return <React.Fragment>{PALETTES.map(p => <Option key={p.key} p={p}/>)}</React.Fragment>;
+}
+
+ReactDOM.createRoot(document.getElementById('grid')).render(<App/>);
+</script>
+</body>
+</html>

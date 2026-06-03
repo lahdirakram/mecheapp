@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mèche — Couleur du trait</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:#15110E;color:#ECE6DC;font-family:'Geist',system-ui,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:46px 40px 90px;}
+  .kick{font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#9A9082;}
+  h1{font-family:'Fraunces',serif;font-weight:400;font-size:40px;letter-spacing:-0.03em;margin:14px 0 10px;}
+  .lede{font-size:15px;color:#B4ABA0;line-height:1.6;max-width:680px;margin:0 0 40px;}
+  .lede b{color:#ECE6DC;font-weight:600;}
+  .row{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;}
+  @media (max-width:780px){ .row{grid-template-columns:1fr;} }
+  .card{border:1px solid #2A2620;border-radius:18px;overflow:hidden;}
+  .card .top{display:flex;align-items:baseline;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #2A2620;}
+  .card .nm{font-family:'Fraunces',serif;font-size:20px;}
+  .card .hex{font-family:'Geist Mono',monospace;font-size:11px;color:#9A9082;letter-spacing:.04em;}
+  .stage{display:flex;}
+  .stage > div{flex:1;padding:34px 26px;display:flex;align-items:center;justify-content:center;min-height:130px;}
+  .on-light{background:#FCF8F4;}
+  .on-dark{background:#1B1714;border-left:1px solid #2A2620;}
+  .tag{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;}
+  .note{margin-top:34px;font-size:13.5px;color:#9A9082;line-height:1.6;}
+  .note b{color:#ECE6DC;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kick">Mèche · couleur du trait (le grave)</div>
+  <h1>Quel sable pour le <span style="font-style:italic;color:#C9A063;">highlight</span> ?</h1>
+  <p class="lede">Le trait doit se lire comme une <b>mèche de cheveux</b> — donc d'une couleur <b>différente</b> des lettres. Trop clair, il disparaît sur le blanc ; noir, il se fond dans les lettres. Voici quatre tons chauds, chacun montré sur <b>fond clair</b> et <b>fond sombre</b>.</p>
+  <div class="row" id="row"></div>
+  <p class="note"><b>Mon conseil :</b> « Sable profond » ou « Caramel » — assez foncés pour ressortir partout, encore clairement chauds. Le « Sable clair » actuel est le problème que tu as repéré.</p>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="meche-shared.jsx"></script>
+<script type="text/babel">
+const OPTS = [
+  { nm:'Sable clair (actuel)', hex:'#E6CCBC' },
+  { nm:'Sable profond',        hex:'#C9A063' },
+  { nm:'Caramel',              hex:'#B07F3C' },
+  { nm:'Bronze chaud',         hex:'#9A6E3A' },
+];
+
+function Card({ o }) {
+  return (
+    <div className="card">
+      <div className="top"><span className="nm">{o.nm}</span><span className="hex">{o.hex}</span></div>
+      <div className="stage">
+        <div className="on-light" style={{flexDirection:'column',gap:10}}>
+          <MWordmark size={52} color="#15110E" accent={o.hex}/>
+          <span className="tag" style={{color:'#A89E92'}}>sur blanc</span>
+        </div>
+        <div className="on-dark" style={{flexDirection:'column',gap:10}}>
+          <MWordmark size={52} color="#FCF8F4" accent={o.hex}/>
+          <span className="tag" style={{color:'#8A8176'}}>sur sombre</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App(){ return <React.Fragment>{OPTS.map(o=><Card key={o.hex} o={o}/>)}</React.Fragment>; }
+ReactDOM.createRoot(document.getElementById('row')).render(<App/>);
+</script>
+</body>
+</html>

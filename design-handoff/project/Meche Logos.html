@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mèche — Logo Exploration</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1714;
+    --paper: #f5f1ea;
+    --line: #d9d2c5;
+    --muted: #8a8275;
+    --accent: #c5654c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: 'Geist', sans-serif; }
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 64px 48px 96px;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 48px;
+  }
+  header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: 40px;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header .meta {
+    display: flex;
+    gap: 24px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'Geist Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .intro {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.45;
+    max-width: 720px;
+    color: #4a4339;
+    margin-bottom: 64px;
+  }
+  .intro span { color: var(--accent); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card.dark .stage { background: var(--ink); color: var(--paper); }
+  .card.accent .stage { background: var(--accent); color: #fff; }
+  .card.cream .stage { background: var(--paper); }
+
+  .stage {
+    aspect-ratio: 16 / 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    position: relative;
+  }
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 22px;
+    border-top: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .footer b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- Logos ---------- */
+
+  /* 01 — Editorial wordmark, hairline accent grave */
+  .l01 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 132px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    position: relative;
+  }
+  .l01 .grave {
+    display: inline-block;
+    position: relative;
+    line-height: 1;
+  }
+  .l01 .grave::before {
+    content: '';
+    position: absolute;
+    top: 0.18em;
+    left: 0.16em;
+    width: 0.52em;
+    height: 0.075em;
+    background: var(--accent);
+    transform: rotate(22deg);
+    transform-origin: left center;
+    border-radius: 999px;
+  }
+
+  /* 02 — Strand: the grave becomes a single hair strand swooping */
+  .l02-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .l02-mark { width: 180px; height: 84px; }
+  .l02-word {
+    font-family: 'Geist', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    font-size: 18px;
+    text-transform: uppercase;
+  }
+
+  /* 03 — Geometric monogram M */
+  .l03-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .l03-mono {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 100px;
+    line-height: 1;
+    padding-bottom: 8px;
+    position: relative;
+  }
+  .l03-mono::after {
+    content: '';
+    position: absolute;
+    top: 38px;
+    left: 42px;
+    width: 32px;
+    height: 5px;
+    background: var(--accent);
+    transform: rotate(22deg);
+    transform-origin: left center;
+    border-radius: 999px;
+  }
+  .l03-word {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* 04 — Lowercase friendly, Gen-Z app icon */
+  .l04 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 150px;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    font-variation-settings: "SOFT" 100, "WONK" 1;
+  }
+  .l04 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  /* 05 — Cut: m e c h e split by a scissor line */
+  .l05 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 108px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .l05 .cut {
+    width: 2px;
+    height: 1.1em;
+    background: currentColor;
+    transform: skewX(-15deg);
+    margin: 0 4px;
+    opacity: 0.7;
+  }
+
+  /* 06 — Stamp / circle badge */
+  .l06 {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .l06 svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    animation: spin 30s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 07 — App icon: solid tile with M + strand */
+  .l07-row { display: flex; gap: 22px; align-items: center; }
+  .l07-tile {
+    width: 140px; height: 140px;
+    border-radius: 32px;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 96px;
+    line-height: 1;
+    padding-bottom: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  .l07-tile::before {
+    content: '';
+    position: absolute;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-70%) rotate(22deg);
+    transform-origin: left center;
+    width: 42px;
+    height: 5px;
+    background: var(--accent);
+    border-radius: 999px;
+  }
+  .l07-tile.alt { background: var(--accent); color: var(--paper); }
+  .l07-tile.alt::before { background: var(--paper); }
+  .l07-tile.alt2 { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
+  .l07-tile.alt2::before { background: var(--ink); }
+
+  /* 08 — Tight wordmark, Geist, modern tech-y */
+  .l08 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500;
+    font-size: 128px;
+    letter-spacing: -0.06em;
+    line-height: 1;
+    position: relative;
+  }
+  .l08 .accent {
+    color: var(--accent);
+  }
+
+  /* Cover */
+  .cover {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 28px;
+    margin-bottom: 28px;
+  }
+  .cover .card .stage { aspect-ratio: 16 / 9; }
+  .cover .hero-word {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(120px, 18vw, 200px);
+    letter-spacing: -0.05em;
+    line-height: 0.9;
+    white-space: nowrap;
+  }
+  .cover .hero-word .grave-wrap {
+    position: relative;
+    display: inline-block;
+    line-height: 1;
+  }
+  .cover .hero-word .grave-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0.18em;
+    left: 0.18em;
+    width: 0.48em;
+    height: 0.065em;
+    background: var(--accent);
+    transform: rotate(24deg);
+    transform-origin: left center;
+    border-radius: 999px;
+  }
+  .cover .url {
+    align-self: end;
+    width: 100%;
+    text-align: center;
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    text-transform: lowercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-top: 22px;
+  }
+
+  .side-card .stage { aspect-ratio: auto; flex-direction: column; gap: 28px; padding: 56px 40px; }
+  .pitch {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 30px;
+    line-height: 1.3;
+    text-align: center;
+    color: var(--paper);
+    max-width: 320px;
+  }
+  .pitch .accent { color: var(--accent); }
+
+  .section-title {
+    font-family: 'Geist Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    color: var(--muted);
+    margin: 56px 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .note {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Mèche <span style="color:var(--muted); font-size:18px; font-family:'Geist Mono',monospace; letter-spacing:.1em;">— LOGO STUDY</span></h1>
+    <div class="meta">
+      <span>mecheapp.com</span>
+      <span>v1 · 8 directions</span>
+    </div>
+  </header>
+
+  <p class="intro">
+    A logo system for <span>Mèche</span> — a Gen-Z hair-booking app launching in France. The brand's quietest asset is the most distinctive one: <em>the grave accent</em>. Most directions below use it as a single strand, a highlight, or a wink.
+  </p>
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="card cream">
+      <div class="stage" style="flex-direction:column;">
+        <div class="hero-word">m<span class="grave-wrap">e</span>che</div>
+        <div class="url">mecheapp.com</div>
+      </div>
+      <div class="footer"><b>Hero wordmark</b><span>Fraunces · accent grave in coral</span></div>
+    </div>
+    <div class="card dark side-card">
+      <div class="stage">
+        <div class="pitch">
+          “Être de <span class="accent">mèche</span>” —<br/>
+          <em>to be in on the secret.</em>
+        </div>
+        <div style="font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:.18em; color:var(--muted); text-transform:uppercase;">brand thesis</div>
+      </div>
+      <div class="footer" style="border-color:#2a2520; color:#8a8275;"><b style="color:#f5f1ea;">Why the name</b><span>insider / salon-native</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">01 — Wordmarks</div>
+
+  <div class="grid">
+
+    <!-- 01 -->
+    <div class="card cream">
+      <div class="stage"><div class="l01">m<span class="grave">e</span>che</div></div>
+      <div class="footer"><b>Hairline accent</b><span>Fraunces · coral grave</span></div>
+    </div>
+
+    <!-- 04 -->
+    <div class="card cream">
+      <div class="stage"><div class="l04">m<em>è</em>che</div></div>
+      <div class="footer"><b>Italic è</b><span>Fraunces SOFT/WONK</span></div>
+    </div>
+
+    <!-- 08 -->
+    <div class="card dark">
+      <div class="stage"><div class="l08">mèche<span class="accent">.</span></div></div>
+      <div class="footer" style="border-color:#2a2520; color:#8a8275;"><b style="color:#f5f1ea;">Tech-forward</b><span>Geist · period accent</span></div>
+    </div>
+
+    <!-- 05 -->
+    <div class="card cream">
+      <div class="stage"><div class="l05">m<span class="cut"></span>è<span class="cut"></span>c<span class="cut"></span>h<span class="cut"></span>e</div></div>
+      <div class="footer"><b>Le coup de ciseaux</b><span>Inter · scissor splits</span></div>
+    </div>
+
+  </div>
+
+  <div class="section-title">02 — Marks &amp; monograms</div>
+
+  <div class="grid">
+
+    <!-- 02 strand -->
+    <div class="card cream">
+      <div class="stage">
+        <div class="l02-wrap">
+          <svg class="l02-mark" viewBox="0 0 200 90" fill="none">
+            <path d="M8 60 C 40 10, 80 10, 100 45 S 160 80, 192 30" stroke="#1a1714" stroke-width="3" stroke-linecap="round"/>
+            <path d="M70 22 L 102 8" stroke="#c5654c" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+          <div class="l02-word">mèche</div>
+        </div>
+      </div>
+      <div class="footer"><b>Le strand</b><span>single hair + highlight</span></div>
+    </div>
+
+    <!-- 03 monogram -->
+    <div class="card cream">
+      <div class="stage">
+        <div class="l03-wrap">
+          <div class="l03-mono">M</div>
+          <div class="l03-word">m è c h e</div>
+        </div>
+      </div>
+      <div class="footer"><b>Disque M</b><span>monogram · accent floating</span></div>
+    </div>
+
+    <!-- 06 stamp -->
+    <div class="card cream">
+      <div class="stage">
+        <div class="l06">
+          mèche
+          <svg viewBox="0 0 220 220">
+            <defs>
+              <path id="circ" d="M 110, 110 m -95, 0 a 95,95 0 1,1 190,0 a 95,95 0 1,1 -190,0" />
+            </defs>
+            <text font-family="Geist Mono, monospace" font-size="11" letter-spacing="6" fill="#8a8275">
+              <textPath href="#circ">★ COIFFEUR · PARIS · DEPUIS 2026 · COIFFEUR · PARIS · DEPUIS 2026 ·</textPath>
+            </text>
+          </svg>
+        </div>
+      </div>
+      <div class="footer"><b>Le tampon</b><span>circle stamp · editorial</span></div>
+    </div>
+
+    <!-- 07 tile -->
+    <div class="card cream">
+      <div class="stage">
+        <div class="l07-row">
+          <div class="l07-tile">M</div>
+          <div class="l07-tile alt">M</div>
+          <div class="l07-tile alt2">M</div>
+        </div>
+      </div>
+      <div class="footer"><b>App icons</b><span>three colorways</span></div>
+    </div>
+
+  </div>
+
+  <div class="section-title">03 — Notes</div>
+  <p class="note" style="max-width:780px; line-height:1.7;">
+    The accent grave is doing a lot of work here — it reads as a single highlight, a strand of hair, a wink. The coral accent (oklch ~0.66 0.13 38) is warm and salon-friendly without being girly; works against cream, ink, and on tile. Two systems to pick between: <b style="color:var(--ink);">editorial</b> (Fraunces + Instrument Serif) for a quiet-luxury beauty feel, or <b style="color:var(--ink);">tech-forward</b> (Geist + Geist Mono) for an Arc/Linear-tier modern app brand. Say which direction lands and I'll refine to a single mark + full system (icon, color, type, voice).
+  </p>
+</div>
+</body>
+</html>
