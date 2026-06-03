@@ -1,0 +1,26 @@
+{
+  "name": "meche-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.19.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "meche": "pnpm --filter @meche/app start",
+    "pro": "pnpm --filter @meche/pro start",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "functions": "supabase functions serve --env-file ./supabase/functions/.env"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.60.0",
+    "supabase": "^2.20.5",
+    "turbo": "^2.3.3",
+    "typescript": "~6.0.3"
+  }
+}

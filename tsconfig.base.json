@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "paths": {
+      "@meche/core": ["./packages/core/src"],
+      "@meche/core/*": ["./packages/core/src/*"],
+      "@meche/ui": ["./packages/ui/src"],
+      "@meche/ui/*": ["./packages/ui/src/*"],
+      "@meche/api-client": ["./packages/api-client/src"],
+      "@meche/api-client/*": ["./packages/api-client/src/*"]
+    }
+  }
+}
