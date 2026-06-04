@@ -18,7 +18,11 @@
         "backgroundColor": "#15110E",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -33,6 +37,19 @@
           "cameraPermission": "Mèche utilise la caméra pour ton selfie d'essayage."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "28ba31d7-4c3f-4f33-a83f-81a31f2db519"
+      }
+    },
+    "owner": "akram.lahdir",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/28ba31d7-4c3f-4f33-a83f-81a31f2db519"
+    }
   }
 }
