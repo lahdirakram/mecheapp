@@ -16,6 +16,9 @@ export function createSupabase(opts: {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      // PKCE: the email-confirmation link returns to the app with a ?code= that the deep-link
+      // handler exchanges for a session (auto-login). The code_verifier lives in `storage` here.
+      flowType: 'pkce',
       // No-op lock. supabase-js defaults to navigator.locks on web, which can deadlock
       // (token attach on a request never resolves); RN has no Web Locks API at all. A simple
       // pass-through is safe for a single-client mobile app and fixes both environments.

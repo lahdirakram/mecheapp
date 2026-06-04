@@ -90,19 +90,26 @@ export default function Result() {
   };
   const wRef = useRef(0);
   wRef.current = w;
+  const originX = useRef(0); // container's absolute left edge, captured on touch-down
 
   const responder = useMemo(
-    () =>
-      PanResponder.create({
+    () => {
+      // Use absolute screen X (pageX / gestureState.moveX) rather than locationX: locationX is
+      // relative to whichever sub-view is under the finger, which makes the handle jump as you
+      // drag across the image/divider. pageX is stable for the whole gesture.
+      const setFrom = (pageX: number) => {
+        if (wRef.current > 0) setPos(Math.max(0, Math.min(1, (pageX - originX.current) / wRef.current)));
+      };
+      return PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (e) => {
-          if (wRef.current > 0) setPos(Math.max(0, Math.min(1, e.nativeEvent.locationX / wRef.current)));
+          originX.current = e.nativeEvent.pageX - e.nativeEvent.locationX;
+          setFrom(e.nativeEvent.pageX);
         },
-        onPanResponderMove: (e) => {
-          if (wRef.current > 0) setPos(Math.max(0, Math.min(1, e.nativeEvent.locationX / wRef.current)));
-        },
-      }),
+        onPanResponderMove: (_e, g) => setFrom(g.moveX),
+      });
+    },
     [],
   );
 

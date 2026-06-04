@@ -8,12 +8,13 @@ export function useAuth() {
   const client = useSupabase();
 
   return {
-    /** Email + password sign-up. `role` decides B2C (gets 1 free credit) vs Pro (see trigger). */
-    async signUpEmail(email: string, password: string, role: Role = 'b2c', displayName = '') {
+    /** Email + password sign-up. `role` decides B2C (gets 1 free credit) vs Pro (see trigger).
+     *  `emailRedirectTo` is the app deep link the confirmation email returns to (auto-login). */
+    async signUpEmail(email: string, password: string, role: Role = 'b2c', displayName = '', emailRedirectTo?: string) {
       return client.auth.signUp({
         email,
         password,
-        options: { data: { role, display_name: displayName } },
+        options: { data: { role, display_name: displayName }, emailRedirectTo },
       });
     },
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@meche/api-client';
@@ -23,7 +24,9 @@ export default function SignupEmail() {
   const submit = async () => {
     if (!valid || busy) return;
     setBusy(true);
-    const { data, error } = await signUpEmail(email.trim(), pwd, 'b2c');
+    // Confirmation email returns to the app via this deep link → auto-login (see root _layout).
+    const redirectTo = Linking.createURL('auth-callback');
+    const { data, error } = await signUpEmail(email.trim(), pwd, 'b2c', '', redirectTo);
     setBusy(false);
     if (error) {
       Alert.alert('Oups', error.message);
