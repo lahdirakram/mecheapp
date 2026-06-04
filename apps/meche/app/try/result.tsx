@@ -90,23 +90,28 @@ export default function Result() {
   };
   const wRef = useRef(0);
   wRef.current = w;
-  const originX = useRef(0); // container's absolute left edge, captured on touch-down
+  const originX = useRef(0); // container's absolute window X (measured, not inferred from touch)
+  const containerRef = useRef<View>(null);
+  // Measure the comparison box's true position on screen. Inferring it from locationX was wrong
+  // (locationX is relative to the touched sub-view), which made the handle snap on first touch.
+  const measure = () => containerRef.current?.measureInWindow((x, _y, width) => {
+    originX.current = x;
+    if (width) {
+      wRef.current = width;
+      setW(width);
+    }
+  });
 
   const responder = useMemo(
     () => {
-      // Use absolute screen X (pageX / gestureState.moveX) rather than locationX: locationX is
-      // relative to whichever sub-view is under the finger, which makes the handle jump as you
-      // drag across the image/divider. pageX is stable for the whole gesture.
-      const setFrom = (pageX: number) => {
-        if (wRef.current > 0) setPos(Math.max(0, Math.min(1, (pageX - originX.current) / wRef.current)));
+      // Drive from absolute screen X (gestureState x0/moveX) minus the measured container origin.
+      const setFrom = (absX: number) => {
+        if (wRef.current > 0) setPos(Math.max(0, Math.min(1, (absX - originX.current) / wRef.current)));
       };
       return PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (e) => {
-          originX.current = e.nativeEvent.pageX - e.nativeEvent.locationX;
-          setFrom(e.nativeEvent.pageX);
-        },
+        onPanResponderGrant: (_e, g) => setFrom(g.x0),
         onPanResponderMove: (_e, g) => setFrom(g.moveX),
       });
     },
@@ -149,8 +154,9 @@ export default function Result() {
       {/* comparison */}
       <View style={{ flex: 1, paddingHorizontal: 18, paddingTop: 14 }}>
         <View
+          ref={containerRef}
           {...responder.panHandlers}
-          onLayout={(e) => setW(e.nativeEvent.layout.width)}
+          onLayout={measure}
           style={{ flex: 1, borderRadius: 24, overflow: 'hidden' }}
         >
           {/* before (full) — real selfie if available */}
