@@ -127,7 +127,10 @@ export default function Result() {
             <Pressable onPress={onSave} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: saved ? MPAL.ink : 'rgba(0,0,0,0.05)' }}>
               <MIcon name="heart" size={18} color={saved ? '#fff' : MPAL.ink} fill={saved ? '#fff' : 'none'} />
             </Pressable>
-            <Pressable onPress={() => router.push('/share')} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+            <Pressable
+              onPress={() => router.push({ pathname: '/share', params: { name: title, generationId: generationId ?? '', after: afterUri ?? '' } })}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}
+            >
               <MIcon name="share" size={18} color={MPAL.ink} />
             </Pressable>
             {savedLookId || generationId ? (

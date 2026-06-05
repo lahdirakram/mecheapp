@@ -36,6 +36,15 @@
         {
           "cameraPermission": "Mèche utilise la caméra pour ton selfie d'essayage."
         }
+      ],
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Mèche enregistre tes essais dans tes photos.",
+          "savePhotosPermission": "Mèche enregistre tes essais dans tes photos.",
+          "isAccessMediaLocationEnabled": false
+        }
       ]
     ],
     "extra": {

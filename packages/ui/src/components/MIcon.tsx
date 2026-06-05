@@ -9,7 +9,7 @@ export type MIconName =
   | 'heart' | 'bookmark' | 'share' | 'sparkle' | 'compass' | 'home' | 'pin' | 'user'
   | 'chevronLeft' | 'chevronRight' | 'plus' | 'check' | 'star' | 'flame' | 'grid' | 'mic'
   | 'cam' | 'flip' | 'settings' | 'crown' | 'x' | 'arrowUp' | 'arrowRight' | 'instagram'
-  | 'tiktok' | 'snap' | 'link' | 'calendar' | 'apple' | 'google' | 'mail' | 'lock' | 'zap' | 'coin' | 'trash';
+  | 'tiktok' | 'snap' | 'link' | 'calendar' | 'apple' | 'google' | 'mail' | 'lock' | 'zap' | 'coin' | 'trash' | 'copy' | 'download';
 
 export interface MIconProps {
   name: MIconName;
@@ -179,6 +179,21 @@ function paths(name: MIconName): React.ReactNode {
           <Path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
           <Path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
           <Path d="M10 11v6M14 11v6" />
+        </G>
+      );
+    case 'copy':
+      return (
+        <G>
+          <Rect x="9" y="9" width="11" height="11" rx="2" />
+          <Path d="M5 15V5a2 2 0 0 1 2-2h8" />
+        </G>
+      );
+    case 'download':
+      return (
+        <G>
+          <Path d="M12 3v12" />
+          <Path d="m7 11 5 5 5-5" />
+          <Path d="M5 21h14" />
         </G>
       );
     default:
