@@ -19,7 +19,6 @@ export default function Selfie() {
   const t = useT();
   const toast = useToast();
   const [flash, setFlash] = useState(false);
-  const [grid, setGrid] = useState(false);
   const [facing, setFacing] = useState<CameraType>('front');
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -124,16 +123,6 @@ export default function Selfie() {
         <Ellipse cx="201" cy="380" rx="155" ry="220" fill="none" stroke={ACCENT} strokeWidth={2} strokeDasharray="6 6" />
       </Svg>
 
-      {/* framing grid (rule of thirds) */}
-      {grid ? (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
-          <View style={{ position: 'absolute', left: '33.33%', top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
-          <View style={{ position: 'absolute', left: '66.66%', top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
-          <View style={{ position: 'absolute', top: '33.33%', left: 0, right: 0, height: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
-          <View style={{ position: 'absolute', top: '66.66%', left: 0, right: 0, height: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
-        </View>
-      ) : null}
-
       {/* top bar */}
       <View style={{ position: 'absolute', top: insets.top + 8, left: 0, right: 0, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Pressable onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
@@ -175,9 +164,7 @@ export default function Selfie() {
 
       {/* shutter row */}
       <View style={{ position: 'absolute', bottom: insets.bottom + 96, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 36 }}>
-        <Pressable onPress={() => setGrid((g) => !g)} style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: grid ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
-          <MIcon name="grid" size={18} color="#fff" />
-        </Pressable>
+        <View style={{ width: 54, height: 54 }} />{/* spacer keeps the shutter centered */}
         <Pressable onPress={capture} style={{ width: 82, height: 82, borderRadius: 41, borderWidth: 5, borderColor: '#fff', backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ width: '86%', height: '86%', borderRadius: 999, backgroundColor: ACCENT }} />
         </Pressable>

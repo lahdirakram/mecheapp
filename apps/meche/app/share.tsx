@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, Share as RNShare, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, Share as RNShare, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -139,8 +138,15 @@ export default function Share() {
 
   const onSave = async () => {
     if (!guard()) return;
+    if (Platform.OS === 'web') {
+      toast(lang === 'fr' ? 'Indisponible sur le web.' : 'Not available on web.');
+      return;
+    }
     setBusy('save');
     try {
+      // Lazy-loaded: expo-media-library's native module isn't available on web, and a top-level
+      // import would crash the whole web bundle.
+      const MediaLibrary = await import('expo-media-library');
       const perm = await MediaLibrary.requestPermissionsAsync(false, ['photo']); // photos only, no audio/video prompt
       if (!perm.granted) {
         toast(lang === 'fr' ? 'Autorise l’accès aux photos pour enregistrer.' : 'Allow photo access to save.');
