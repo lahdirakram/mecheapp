@@ -45,6 +45,12 @@
           "savePhotosPermission": "Mèche enregistre tes essais dans tes photos.",
           "isAccessMediaLocationEnabled": false
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mèche utilise une photo de ta galerie pour l'essayage."
+        }
       ]
     ],
     "extra": {

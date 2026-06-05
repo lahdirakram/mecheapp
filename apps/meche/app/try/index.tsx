@@ -3,6 +3,7 @@ import { Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import Svg, { Defs, Ellipse, Mask, Rect } from 'react-native-svg';
 import { MIcon, MPAL, MText, MPortrait, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
@@ -67,11 +68,36 @@ export default function Selfie() {
     } catch {
       // capture can fail without a real camera (web/headless) — still advance the flow
     }
+    advance();
+  };
+
+  const advance = () => {
     setFlash(true);
     setTimeout(() => {
       setFlash(false);
       router.push(next);
     }, 360);
+  };
+
+  // Import a photo from the gallery instead of taking a selfie. On Android 13+ this is the system
+  // photo picker (no permission prompt). Used as-is — the AI restyles the hair regardless of framing.
+  const pickFromGallery = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
+      if (res.canceled || !res.assets?.[0]?.base64) return;
+      const asset = res.assets[0];
+      let b64 = asset.base64 as string;
+      let mime = asset.mimeType ?? 'image/jpeg';
+      const m = b64.match(/^data:(.+?);base64,(.*)$/s);
+      if (m) {
+        mime = m[1];
+        b64 = m[2];
+      }
+      setSelfie(b64, mime);
+      advance();
+    } catch {
+      toast('Import impossible.');
+    }
   };
 
   return (
@@ -140,6 +166,13 @@ export default function Selfie() {
 
       {flash ? <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', opacity: 0.8 }} /> : null}
 
+      {/* hint: a photo is required (camera or gallery) — no skip */}
+      <View style={{ position: 'absolute', bottom: insets.bottom + 44, left: 0, right: 0, alignItems: 'center' }}>
+        <MText size={12} color="rgba(255,255,255,0.6)">
+          Prends un selfie ou importe une photo
+        </MText>
+      </View>
+
       {/* shutter row */}
       <View style={{ position: 'absolute', bottom: insets.bottom + 96, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 36 }}>
         <Pressable onPress={() => setGrid((g) => !g)} style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: grid ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
@@ -148,17 +181,11 @@ export default function Selfie() {
         <Pressable onPress={capture} style={{ width: 82, height: 82, borderRadius: 41, borderWidth: 5, borderColor: '#fff', backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ width: '86%', height: '86%', borderRadius: 999, backgroundColor: ACCENT }} />
         </Pressable>
-        <Pressable onPress={() => toast('L’import depuis la galerie arrive bientôt.', { icon: 'sparkle' })} style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
-          <MIcon name="cam" size={20} color="#fff" />
+        <Pressable onPress={pickFromGallery} style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+          <MIcon name="image" size={20} color="#fff" />
         </Pressable>
       </View>
 
-      {/* skip */}
-      <View style={{ position: 'absolute', bottom: insets.bottom + 44, left: 0, right: 0, alignItems: 'center' }}>
-        <MText size={13} color="rgba(255,255,255,0.72)" onPress={() => router.push(next)} style={{ textDecorationLine: 'underline', padding: 8 }}>
-          {t('selfie_skip')}
-        </MText>
-      </View>
     </View>
   );
 }
