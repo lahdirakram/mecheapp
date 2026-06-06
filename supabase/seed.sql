@@ -2,9 +2,9 @@
 
 -- Credit packs (B2C recharge) — no subscription.
 insert into credit_packs (id, credits, price, unit, badge) values
-  ('taste', 10, '4,99 €',  '0,50 €', null),
-  ('star',  25, '9,99 €',  '0,40 €', 'popular'),
-  ('pro',   60, '19,99 €', '0,33 €', 'best')
+  ('taste',  5, '0,99 €', '0,20 €', null),
+  ('star',  20, '2,99 €', '0,15 €', 'popular'),
+  ('pro',   50, '5,99 €', '0,12 €', 'best')
 on conflict (id) do nothing;
 
 -- Demo salons + stylists (B2C "Coiffeurs" finder targets the stylist, not the salon).

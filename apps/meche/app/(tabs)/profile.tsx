@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo } from 'react';
-import { useAuth, useBookings, useCredits, useProfile, useSession, useSignedUrls, useWardrobe } from '@meche/api-client';
+import { useAuth, useBookings, useCredits, useCreditPacks, useProfile, useSession, useSignedUrls, useWardrobe } from '@meche/api-client';
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, useT, useToast } from '@meche/ui';
 
@@ -24,6 +24,9 @@ export default function Profile() {
   const { data: credits } = useCredits(session?.user.id);
   const { data: looksData } = useWardrobe(session?.user.id);
   const { data: bookings } = useBookings();
+  // Cheapest pack drives the "from" price so it tracks the real ladder (packs come ordered by credits asc).
+  const { data: packs } = useCreditPacks();
+  const fromPrice = ((packs as { price: string }[] | undefined) ?? [])[0]?.price;
 
   const name = profile?.display_name || session?.user.email?.split('@')[0] || (lang === 'fr' ? 'Toi' : 'You');
   const handle = profile?.handle || session?.user.email || '';
@@ -112,7 +115,7 @@ export default function Profile() {
               </MText>
             </Pressable>
             <MText size={11} color="rgba(255,255,255,0.55)" style={{ flex: 1, lineHeight: 15 }}>
-              {lang === 'fr' ? 'À partir de 4,99 € · sans abonnement' : 'From €4.99 · no subscription'}
+              {fromPrice ? (lang === 'fr' ? `À partir de ${fromPrice} · sans abonnement` : `From ${fromPrice} · no subscription`) : lang === 'fr' ? 'Sans abonnement' : 'No subscription'}
             </MText>
           </View>
         </View>

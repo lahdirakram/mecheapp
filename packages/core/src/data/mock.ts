@@ -106,7 +106,7 @@ export const MUSER = {
 } as const;
 
 export const MPACKS: CreditPack[] = [
-  { id: 'taste', credits: 10, price: '4,99 €', unit: '0,50 €', badge: null },
-  { id: 'star', credits: 25, price: '9,99 €', unit: '0,40 €', badge: 'popular' },
-  { id: 'pro', credits: 60, price: '19,99 €', unit: '0,33 €', badge: 'best' },
+  { id: 'taste', credits: 5, price: '0,99 €', unit: '0,20 €', badge: null },
+  { id: 'star', credits: 20, price: '2,99 €', unit: '0,15 €', badge: 'popular' },
+  { id: 'pro', credits: 50, price: '5,99 €', unit: '0,12 €', badge: 'best' },
 ];
