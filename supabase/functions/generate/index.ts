@@ -44,10 +44,59 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE);
 
-    // credit gate
-    const { data: txs } = await admin.from('credit_transactions').select('delta').eq('user_id', user.id);
-    const balance = (txs ?? []).reduce((s, r) => s + (r.delta as number), 0);
+    // Credit ledger, oldest first — we replay it to split the balance into free vs purchased pools.
+    const { data: txs } = await admin
+      .from('credit_transactions')
+      .select('delta, reason, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
+    const txList = (txs ?? []) as { delta: number; reason: string }[];
+
+    // Walk the history keeping two running balances. Generations are charged to the FREE pool first
+    // so purchased credits stay in reserve as long as possible. Replaying in order (rather than
+    // summing) means a later ad-reward can't retroactively reclassify an older paid look.
+    let free = 0; // free_trial + ad rewards + promos
+    let paid = 0; // purchased packs
+    for (const tx of txList) {
+      if (tx.reason === 'purchase') paid += tx.delta;
+      else if (tx.reason === 'generation') {
+        if (free > 0) free -= 1;
+        else paid -= 1;
+      } else if (tx.delta > 0) free += tx.delta;
+    }
+    const balance = free + paid;
     if (balance <= 0) return json({ error: 'no_credits' }, 402);
+
+    // A user who still holds ANY purchased credit is exempt from the free-tier caps below — a
+    // paying customer is never blocked, even on their first look. The caps apply only once all
+    // purchased credits are spent and the look is drawn from a free/ad credit.
+    const isPaidLook = paid > 0;
+
+    // Cost safety guards — only for UNCOMPENSATED looks (free-trial + ad-reward credits), applied
+    // BEFORE the paid Gemini call so a blocked request costs nothing. Paid looks skip ALL of this:
+    // every call is covered by money the user spent and is bounded by what they bought.
+    if (!isPaidLook) {
+      // GEN_DAILY_CAP is the hard ceiling on uncompensated AI spend: ~€0.02/look, so 1000 looks ≈
+      // €20/day max. Tune live with `supabase secrets set GEN_DAILY_CAP=N` (picked up next call).
+      const DAILY_CAP = Number(Deno.env.get('GEN_DAILY_CAP') ?? '1000');
+      const startOfDay = new Date();
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const { count: todayCount } = await admin
+        .from('generations')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', startOfDay.toISOString());
+      if ((todayCount ?? 0) >= DAILY_CAP) return json({ error: 'daily_cap' }, 503);
+
+      // Per-user hourly rate limit — stops a single free/farmed account from draining the cap.
+      const USER_HOURLY_CAP = Number(Deno.env.get('GEN_USER_HOURLY_CAP') ?? '8');
+      const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+      const { count: userHour } = await admin
+        .from('generations')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', hourAgo);
+      if ((userHour ?? 0) >= USER_HOURLY_CAP) return json({ error: 'rate_limited' }, 429);
+    }
 
     // generate
     const prompt = buildPrompt(brief);

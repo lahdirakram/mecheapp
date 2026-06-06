@@ -71,6 +71,23 @@ export default function Generating() {
             router.push('/recharge?low=1');
             return;
           }
+          if (code === 'daily_cap') {
+            failedRef.current = true;
+            // Global free-look ceiling for the day is reached. Paid credits bypass it, so point the
+            // user to recharge (their purchased looks go through immediately).
+            toast(lang === 'fr' ? "Beaucoup de monde aujourd'hui, on a atteint la limite des essais gratuits. Prends des crédits pour continuer maintenant, ou reviens demain." : "Lots of people today, so we've reached the free-look limit. Grab credits to keep going now, or come back tomorrow.");
+            if (router.canGoBack()) router.back();
+            router.push('/recharge');
+            return;
+          }
+          if (status === 429 || code === 'rate_limited') {
+            failedRef.current = true;
+            // Hourly cap on FREE looks only — paid credits aren't rate-limited, so offer recharge.
+            toast(lang === 'fr' ? "Tu as enchaîné beaucoup d'essais gratuits. Prends des crédits pour continuer maintenant, ou réessaie dans quelques minutes." : "You've done a lot of free looks in a row. Grab credits to keep going now, or try again in a few minutes.");
+            if (router.canGoBack()) router.back();
+            router.push('/recharge');
+            return;
+          }
           if (status === 503 || code === 'ai_quota') {
             failedRef.current = true;
             toast(lang === 'fr' ? 'Service IA occupé, réessaie dans un instant.' : 'AI is busy, try again in a moment.');
