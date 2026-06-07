@@ -1,10 +1,10 @@
 -- Seed reference / demo data (mirrors @meche/core mock data). Runs on `supabase db reset`.
 
 -- Credit packs (B2C recharge) — no subscription.
-insert into credit_packs (id, credits, price, unit, badge) values
-  ('taste',  5, '0,99 €', '0,20 €', null),
-  ('star',  20, '2,99 €', '0,15 €', 'popular'),
-  ('pro',   50, '5,99 €', '0,12 €', 'best')
+insert into credit_packs (id, credits, price, unit, badge, product_id) values
+  ('taste',  5, '0,99 €', '0,20 €', null,      'meche_credits_taste'),
+  ('star',  20, '2,99 €', '0,15 €', 'popular', 'meche_credits_star'),
+  ('pro',   50, '5,99 €', '0,12 €', 'best',    'meche_credits_pro')
 on conflict (id) do nothing;
 
 -- Demo salons + stylists (B2C "Coiffeurs" finder targets the stylist, not the salon).
