@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCreditPacks } from '@meche/api-client';
-import { MIcon, MPAL, MText, useT, useToast } from '@meche/ui';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCreditPacks, useSession, useSupabase } from '@meche/api-client';
+import { MIcon, MPAL, MText, useLang, useT, useToast } from '@meche/ui';
+import { purchaseProduct, purchasesAvailable } from '../lib/purchases';
 
-type Pack = { id: string; credits: number; price: string; unit: string; badge: string | null };
+type Pack = { id: string; credits: number; price: string; unit: string; badge: string | null; product_id: string };
 
 // B2C · Recharge (15 / 10b). Credit packs, no subscription. `low=1` shows the out-of-credits
 // banner (the recharge gate after the free try). Payment goes through IAP in Phase 6.
@@ -13,8 +15,12 @@ export default function Recharge() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
+  const lang = useLang();
   const toast = useToast();
-  const pay = () => toast(t('recharge') === 'Top up' ? 'Payments are coming soon.' : 'Le paiement arrive bientôt.', { icon: 'sparkle' });
+  const session = useSession();
+  const sb = useSupabase();
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
   // May be reached via push (profile) OR via replace from the generating screen on a 402 — in the
   // latter case there's no history, so close to a safe screen instead of an unhandled GO_BACK.
   const close = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/explore'));
@@ -23,6 +29,52 @@ export default function Recharge() {
   const { data } = useCreditPacks();
   const packs = (data ?? []) as Pack[];
   const [sel, setSel] = useState('star');
+
+  // Open the store sheet for the selected pack. The store confirms payment, then RevenueCat's
+  // webhook grants the credits server-side — so we poll the balance until it lands.
+  const buy = async () => {
+    if (busy) return;
+    const pack = packs.find((p) => p.id === sel);
+    if (!pack) return;
+    if (!purchasesAvailable()) {
+      toast(lang === 'fr' ? 'Le paiement arrive bientôt.' : 'Payments are coming soon.', { icon: 'sparkle' });
+      return;
+    }
+    setBusy(true);
+    try {
+      const before = ((await sb.rpc('my_credit_balance')).data as number) ?? 0;
+      const r = await purchaseProduct(pack.product_id);
+      if ('cancelled' in r) return;
+      if ('error' in r) {
+        toast(lang === 'fr' ? 'Paiement impossible. Réessaie.' : 'Purchase failed. Try again.');
+        return;
+      }
+      // Wait for the webhook to credit the account (usually a couple of seconds).
+      let credited = false;
+      for (let i = 0; i < 12; i++) {
+        await new Promise((res) => setTimeout(res, 1200));
+        const now = ((await sb.rpc('my_credit_balance')).data as number) ?? before;
+        if (now > before) {
+          credited = true;
+          break;
+        }
+      }
+      qc.invalidateQueries({ queryKey: ['credits'] });
+      toast(
+        credited
+          ? lang === 'fr'
+            ? 'Crédits ajoutés. Bon essayage !'
+            : 'Credits added. Have fun!'
+          : lang === 'fr'
+            ? 'Paiement reçu, tes crédits arrivent.'
+            : 'Payment received, your credits are on the way.',
+        { icon: 'sparkle' },
+      );
+      close();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 6 }}>
@@ -119,17 +171,25 @@ export default function Recharge() {
 
       <View style={{ paddingHorizontal: 22, paddingBottom: insets.bottom + 16, gap: 10 }}>
         <Pressable
-          onPress={pay}
-          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 15, borderRadius: 999, backgroundColor: MPAL.ink, opacity: pressed ? 0.85 : 1 })}
+          onPress={buy}
+          disabled={busy}
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 15, borderRadius: 999, backgroundColor: MPAL.ink, opacity: pressed || busy ? 0.85 : 1 })}
         >
-          <MIcon name="apple" size={17} color="#fff" fill="#fff" stroke={0} />
-          <MText variant="bodySemibold" size={15} color="#fff">
-            {t('pay_apple')}
-          </MText>
+          {busy ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <MIcon name="apple" size={17} color="#fff" fill="#fff" stroke={0} />
+              <MText variant="bodySemibold" size={15} color="#fff">
+                {t('pay_apple')}
+              </MText>
+            </>
+          )}
         </Pressable>
         <Pressable
-          onPress={pay}
-          style={({ pressed }) => ({ alignItems: 'center', paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: MPAL.border, opacity: pressed ? 0.7 : 1 })}
+          onPress={buy}
+          disabled={busy}
+          style={({ pressed }) => ({ alignItems: 'center', paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: MPAL.border, opacity: pressed || busy ? 0.7 : 1 })}
         >
           <MText variant="bodySemibold" size={14} color={MPAL.ink}>
             {t('pay_card')}
