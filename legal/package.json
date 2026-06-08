@@ -1,0 +1,12 @@
+{
+  "name": "meche-legal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static server for Mèche legal documents (privacy policy, terms of service).",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
