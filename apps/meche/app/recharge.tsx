@@ -1,13 +1,24 @@
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreditPacks, useSession, useSupabase } from '@meche/api-client';
 import { MIcon, MPAL, MText, useLang, useT, useToast } from '@meche/ui';
-import { purchaseProduct, purchasesAvailable } from '../lib/purchases';
+import { getStorePrices, purchaseProduct, purchasesAvailable, type StorePrice } from '../lib/purchases';
 
 type Pack = { id: string; credits: number; price: string; unit: string; badge: string | null; product_id: string };
+
+// Localized per-credit label derived from the live store price (e.g. "0,18 €"). Falls back to a
+// plain "amount CUR" string on engines without Intl currency support.
+function perCreditLabel(live: StorePrice, credits: number): string {
+  const v = live.price / credits;
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: live.currencyCode }).format(v);
+  } catch {
+    return `${v.toFixed(2)} ${live.currencyCode}`;
+  }
+}
 
 // B2C · Recharge (15 / 10b). Credit packs, no subscription. `low=1` shows the out-of-credits
 // banner (the recharge gate after the free try). Payment goes through IAP in Phase 6.
@@ -29,6 +40,12 @@ export default function Recharge() {
   const { data } = useCreditPacks();
   const packs = (data ?? []) as Pack[];
   const [sel, setSel] = useState('star');
+  // Live store prices (tax-inclusive, localized) keyed by product id. Empty until loaded / when
+  // purchases are unavailable, in which case we fall back to the catalog's display price.
+  const [prices, setPrices] = useState<Record<string, StorePrice>>({});
+  useEffect(() => {
+    void getStorePrices().then(setPrices);
+  }, []);
 
   // Open the store sheet for the selected pack. The store confirms payment, then RevenueCat's
   // webhook grants the credits server-side — so we poll the balance until it lands.
@@ -114,6 +131,7 @@ export default function Recharge() {
             const on = sel === p.id;
             const popular = p.badge === 'popular';
             const best = p.badge === 'best';
+            const live = prices[p.product_id];
             return (
               <Pressable
                 key={p.id}
@@ -145,11 +163,11 @@ export default function Recharge() {
                       </MText>
                     </MText>
                     <MText size={11} color={on ? 'rgba(255,255,255,0.7)' : MPAL.mute} style={{ marginTop: 3 }}>
-                      {p.unit} {t('per_credit')}
+                      {live ? perCreditLabel(live, p.credits) : p.unit} {t('per_credit')}
                     </MText>
                   </View>
                   <MText variant="serif" size={22} color={on ? '#fff' : MPAL.ink}>
-                    {p.price}
+                    {live ? live.priceString : p.price}
                   </MText>
                 </View>
               </Pressable>
@@ -179,21 +197,16 @@ export default function Recharge() {
             <ActivityIndicator color="#fff" />
           ) : (
             <>
-              <MIcon name="apple" size={17} color="#fff" fill="#fff" stroke={0} />
+              {Platform.OS === 'ios' ? (
+                <MIcon name="apple" size={17} color="#fff" fill="#fff" stroke={0} />
+              ) : (
+                <MIcon name="google" size={17} />
+              )}
               <MText variant="bodySemibold" size={15} color="#fff">
-                {t('pay_apple')}
+                {t('pay_cta')}
               </MText>
             </>
           )}
-        </Pressable>
-        <Pressable
-          onPress={buy}
-          disabled={busy}
-          style={({ pressed }) => ({ alignItems: 'center', paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: MPAL.border, opacity: pressed || busy ? 0.7 : 1 })}
-        >
-          <MText variant="bodySemibold" size={14} color={MPAL.ink}>
-            {t('pay_card')}
-          </MText>
         </Pressable>
       </View>
     </View>
