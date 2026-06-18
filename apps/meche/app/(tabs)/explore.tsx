@@ -120,11 +120,9 @@ export default function Explore() {
   }, [focus, t, sb, fetchPage]);
 
   const rows = filter === 'all' ? items : items.filter((r) => r.kind === filter);
+  // Only "Pour toi" for now — the other source filters are hidden until they earn their place.
   const filters: { id: 'all' | FeedSource; l: string }[] = [
     { id: 'all', l: lang === 'fr' ? 'Pour toi' : 'For you' },
-    { id: 'studio', l: 'Studio' },
-    { id: 'salon', l: lang === 'fr' ? 'Salons' : 'Salons' },
-    { id: 'user', l: lang === 'fr' ? 'Commu' : 'Community' },
   ];
 
   return (
@@ -211,7 +209,6 @@ function Reel({ card, height, lang, insetsTop, savedImages }: { card: Row; heigh
   const rail = [
     { ic: 'heart' as const, label: card.loves ?? '', on: liked, onPress: () => setLiked((v) => !v) },
     { ic: 'bookmark' as const, label: isSaved ? (lang === 'fr' ? 'Gardé' : 'Saved') : lang === 'fr' ? 'Garder' : 'Keep', on: isSaved, onPress: onSave },
-    { ic: 'share' as const, label: lang === 'fr' ? 'Partager' : 'Share', on: false, onPress: () => router.push('/share') },
   ];
 
   return (

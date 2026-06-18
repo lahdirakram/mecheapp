@@ -109,6 +109,9 @@ export default function Result() {
         if (wRef.current > 0) setPos(Math.max(0, Math.min(1, (absX - originX.current) / wRef.current)));
       };
       return PanResponder.create({
+        // Greedy: claim every touch and follow it in any direction. The modal's swipe-to-dismiss
+        // is disabled (see _layout.tsx) so there's nothing to compete with — diagonal/hybrid drags
+        // keep driving the slider instead of stalling.
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (_e, g) => setFrom(g.x0),

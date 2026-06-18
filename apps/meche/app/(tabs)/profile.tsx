@@ -62,32 +62,28 @@ export default function Profile() {
 
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 6, paddingBottom: 4 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 4 }}>
         <MText variant="serif" size={30}>
           {t('profile')}
         </MText>
-        <Pressable hitSlop={8} onPress={openPrefs} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
-          <MIcon name="settings" size={18} color={MPAL.ink} />
-        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
         {/* identity */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8, marginBottom: 18 }}>
-          <View style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: MPAL.sable, padding: 3 }}>
-            <View style={{ flex: 1, borderRadius: 33, overflow: 'hidden' }}>
-              <MPortrait hair="medium" mood="warm" />
-            </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <MText variant="serif" size={24}>
-              {name}
-            </MText>
-            <MText size={12} color={MPAL.mute} style={{ marginTop: 2 }} numberOfLines={1}>
+        <View style={{ marginTop: 8, marginBottom: 18 }}>
+          <MText variant="serif" size={26}>
+            {name}
+          </MText>
+          {handle ? (
+            <MText size={13} color={MPAL.mute} style={{ marginTop: 4 }} numberOfLines={1} ellipsizeMode="tail">
               {handle}
-              {since ? ` · ${t('member_since')} ${since}` : ''}
             </MText>
-          </View>
+          ) : null}
+          {since ? (
+            <MText size={12} color={MPAL.mute} style={{ marginTop: 2 }}>
+              {t('member_since')} {since}
+            </MText>
+          ) : null}
         </View>
 
         {/* credits card */}
