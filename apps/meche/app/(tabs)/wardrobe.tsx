@@ -41,17 +41,17 @@ export default function Wardrobe() {
         }
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 18, gap: 8, paddingBottom: 12 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 18, gap: 8, paddingTop: 2, paddingBottom: 14 }}>
         {tabs.map((label, i) => (
-          <Pressable key={i} onPress={() => setTab(i)} style={{ alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: tab === i ? MPAL.ink : MPAL.paper, borderWidth: 1, borderColor: tab === i ? MPAL.ink : MPAL.border }}>
-            <MText variant="bodySemibold" size={13} color={tab === i ? MPAL.inkInv : MPAL.ink}>
+          <Pressable key={i} onPress={() => setTab(i)} style={{ alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: tab === i ? MPAL.ink : MPAL.paper, borderWidth: 1, borderColor: tab === i ? MPAL.ink : MPAL.border }}>
+            <MText variant="bodySemibold" size={13} color={tab === i ? MPAL.inkInv : MPAL.ink} style={{ lineHeight: 18 }}>
               {label}
             </MText>
           </Pressable>
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
           {looks.map((w, i) => (
             <Pressable

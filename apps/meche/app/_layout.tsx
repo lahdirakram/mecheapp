@@ -17,7 +17,9 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: MPAL.bg },
           }}
         >
-          <Stack.Screen name="try" options={{ presentation: 'modal' }} />
+          {/* gestureEnabled off: the result screen's before/after slider owns all drags, so the
+              modal's swipe-to-dismiss must not compete. Close via the back arrow instead. */}
+          <Stack.Screen name="try" options={{ presentation: 'modal', gestureEnabled: false }} />
           <Stack.Screen name="recharge" options={{ presentation: 'modal' }} />
           <Stack.Screen name="share" options={{ presentation: 'modal' }} />
           <Stack.Screen name="look" options={{ presentation: 'modal' }} />
