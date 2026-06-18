@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 import { useGoogleSignIn } from '../../lib/useGoogleSignIn';
+import { useAppleSignIn } from '../../lib/useAppleSignIn';
 
 // Onboarding · Sign-in — same options as signup (Apple/Google/email) for consistency. Social
 // providers create-or-sign-in via signInWithIdToken, so they work for returning users too.
@@ -15,12 +16,12 @@ export default function SignIn() {
   const lang = useLang();
   const { signInEmail } = useAuth();
   const { onGoogle, busy: googleBusy } = useGoogleSignIn();
+  const { onApple, busy: appleBusy } = useAppleSignIn();
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const valid = /\S+@\S+\.\S+/.test(email) && pwd.length >= 1;
-  const soon = () => Alert.alert('Bientôt', 'La connexion Apple arrive bientôt.');
 
   const submit = async () => {
     if (!valid || busy) return;
@@ -34,12 +35,18 @@ export default function SignIn() {
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 8 }}>
       <View style={{ paddingHorizontal: 26 }}>
-        <Pressable onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
           <MIcon name="chevronLeft" size={18} />
         </Pressable>
       </View>
 
-      <View style={{ flex: 1, paddingHorizontal: 26, paddingTop: 16 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 26, paddingTop: 16 }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        showsVerticalScrollIndicator={false}
+      >
         <MText variant="mono" size={10} color={MPAL.ink} style={{ letterSpacing: 1.4 }}>
           {lang === 'fr' ? 'CONNEXION' : 'SIGN IN'}
         </MText>
@@ -49,8 +56,8 @@ export default function SignIn() {
 
         {/* social — same set as signup */}
         <View style={{ marginTop: 20, gap: 10 }}>
-          <SocialButton label={t('auth_apple')} icon="apple" filled onPress={soon} />
-          <SocialButton label={t('auth_google')} icon="google" onPress={onGoogle} />
+          {Platform.OS === 'ios' ? <SocialButton label={t('auth_apple')} icon="apple" filled onPress={onApple} /> : null}
+          {Platform.OS !== 'ios' ? <SocialButton label={t('auth_google')} icon="google" onPress={onGoogle} /> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 }}>
             <View style={{ flex: 1, height: 1, backgroundColor: MPAL.border }} />
             <MText variant="mono" size={10} color={MPAL.mute}>
@@ -71,10 +78,14 @@ export default function SignIn() {
             placeholder="••••••••"
             secureTextEntry={!show}
             autoCapitalize="none"
+            returnKeyType="go"
+            onSubmitEditing={submit}
             trailing={
-              <MText variant="bodySemibold" size={11} color={MPAL.mute} onPress={() => setShow((s) => !s)}>
-                {show ? 'CACHER' : 'VOIR'}
-              </MText>
+              <Pressable hitSlop={12} onPress={() => setShow((s) => !s)}>
+                <MText variant="bodySemibold" size={11} color={MPAL.mute}>
+                  {show ? 'CACHER' : 'VOIR'}
+                </MText>
+              </Pressable>
             }
           />
         </View>
@@ -91,9 +102,9 @@ export default function SignIn() {
             </MText>
           </MText>
         </View>
-      </View>
+      </ScrollView>
 
-      {googleBusy ? (
+      {googleBusy || appleBusy ? (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(252,248,244,0.86)', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
           <ActivityIndicator color={MPAL.ink} size="large" />
           <MText size={14} color={MPAL.mute}>

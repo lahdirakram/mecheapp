@@ -9,17 +9,32 @@ export function useAuth() {
 
   return {
     /** Email + password sign-up. `role` decides B2C (gets 1 free credit) vs Pro (see trigger).
-     *  `emailRedirectTo` is the app deep link the confirmation email returns to (auto-login). */
-    async signUpEmail(email: string, password: string, role: Role = 'b2c', displayName = '', emailRedirectTo?: string) {
+     *  `emailRedirectTo` is the app deep link the confirmation email returns to (auto-login).
+     *  `lang` is stored in user metadata so the confirmation email template can localise via
+     *  `{{ .Data.lang }}` ("fr" | "en"). */
+    async signUpEmail(
+      email: string,
+      password: string,
+      role: Role = 'b2c',
+      displayName = '',
+      emailRedirectTo?: string,
+      lang: 'fr' | 'en' = 'fr',
+    ) {
       return client.auth.signUp({
         email,
         password,
-        options: { data: { role, display_name: displayName }, emailRedirectTo },
+        options: { data: { role, display_name: displayName, lang }, emailRedirectTo },
       });
     },
 
     signInEmail(email: string, password: string) {
       return client.auth.signInWithPassword({ email, password });
+    },
+
+    /** Confirm a sign-up with the 6-digit code from the email (OTP, not the magic link).
+     *  On success the client stores the session, so the screen can just route on. */
+    verifyEmailOtp(email: string, token: string) {
+      return client.auth.verifyOtp({ email, token, type: 'signup' });
     },
 
     /**

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,7 +26,7 @@ export default function SignupEmail() {
     setBusy(true);
     // Confirmation email returns to the app via this deep link → auto-login (see root _layout).
     const redirectTo = Linking.createURL('auth-callback');
-    const { data, error } = await signUpEmail(email.trim(), pwd, 'b2c', '', redirectTo);
+    const { data, error } = await signUpEmail(email.trim(), pwd, 'b2c', '', redirectTo, lang);
     setBusy(false);
     if (error) {
       Alert.alert('Oups', error.message);
@@ -40,12 +40,18 @@ export default function SignupEmail() {
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 8 }}>
       <View style={{ paddingHorizontal: 26 }}>
-        <Pressable onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
           <MIcon name="chevronLeft" size={18} />
         </Pressable>
       </View>
 
-      <View style={{ flex: 1, paddingHorizontal: 26, paddingTop: 18 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 26, paddingTop: 18 }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        showsVerticalScrollIndicator={false}
+      >
         <MText variant="mono" size={10} color={MPAL.ink} style={{ letterSpacing: 1.4 }}>
           ÉTAPE 1 · COMPTE
         </MText>
@@ -76,10 +82,14 @@ export default function SignupEmail() {
             placeholder={t('pwd_ph')}
             secureTextEntry={!show}
             autoCapitalize="none"
+            returnKeyType="go"
+            onSubmitEditing={submit}
             trailing={
-              <MText variant="bodySemibold" size={11} color={MPAL.mute} onPress={() => setShow((s) => !s)}>
-                {show ? 'CACHER' : 'VOIR'}
-              </MText>
+              <Pressable hitSlop={12} onPress={() => setShow((s) => !s)}>
+                <MText variant="bodySemibold" size={11} color={MPAL.mute}>
+                  {show ? 'CACHER' : 'VOIR'}
+                </MText>
+              </Pressable>
             }
           />
           <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -98,7 +108,7 @@ export default function SignupEmail() {
             {t('auth_terms')}
           </MText>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
