@@ -38,13 +38,13 @@ export default function Idea() {
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 6 }}>
       {/* chrome */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 }}>
-        <Pressable onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
           <MIcon name="chevronLeft" size={18} />
         </Pressable>
         <MText variant="mono" size={10} color={MPAL.mute} style={{ letterSpacing: 1.6 }}>
           {lang === 'fr' ? 'ÉTAPE 2 · TON IDÉE' : 'STEP 2 · YOUR IDEA'}
         </MText>
-        <Pressable onPress={() => router.dismissAll()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+        <Pressable hitSlop={8} onPress={() => router.dismissAll()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
           <MIcon name="x" size={18} />
         </Pressable>
       </View>
@@ -168,9 +168,11 @@ export default function Idea() {
           <MIcon name="arrowRight" size={18} color={ON_DARK} />
         </Pressable>
 
-        <MText variant="bodyMedium" size={13} color={MPAL.mute} onPress={() => router.push('/try/gallery')} style={{ textAlign: 'center', paddingVertical: 2 }}>
-          {lang === 'fr' ? 'Parcourir la galerie' : 'Browse the gallery'} →
-        </MText>
+        <Pressable hitSlop={12} onPress={() => router.push('/try/gallery')}>
+          <MText variant="bodyMedium" size={13} color={MPAL.mute} style={{ textAlign: 'center', paddingVertical: 2 }}>
+            {lang === 'fr' ? 'Parcourir la galerie' : 'Browse the gallery'} →
+          </MText>
+        </Pressable>
       </LinearGradient>
     </View>
   );

@@ -37,7 +37,7 @@ export default function LookDetail() {
 
       {/* close */}
       <View style={{ position: 'absolute', top: insets.top + 8, right: 16 }}>
-        <Pressable onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
           <MIcon name="x" size={18} color="#fff" />
         </Pressable>
       </View>

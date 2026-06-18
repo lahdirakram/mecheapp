@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Redirect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -81,9 +81,11 @@ export default function Welcome() {
 
         <View style={{ marginTop: 14, gap: 10 }}>
           <PrimaryButton label={t('cta_start')} tone="ink" icon="arrowRight" onPress={go} />
-          <MText variant="bodyMedium" size={14} color={MPAL.mute} onPress={login} style={{ textAlign: 'center', paddingVertical: 4 }}>
-            {t('cta_login')}
-          </MText>
+          <Pressable hitSlop={12} onPress={login}>
+            <MText variant="bodyMedium" size={14} color={MPAL.mute} style={{ textAlign: 'center', paddingVertical: 4 }}>
+              {t('cta_login')}
+            </MText>
+          </Pressable>
         </View>
       </View>
     </View>

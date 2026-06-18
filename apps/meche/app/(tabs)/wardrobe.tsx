@@ -35,7 +35,7 @@ export default function Wardrobe() {
         title={t('your_looks')}
         big
         right={
-          <Pressable onPress={() => router.push('/try')} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+          <Pressable hitSlop={8} onPress={() => router.push('/try')} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
             <MIcon name="plus" size={18} color={MPAL.ink} />
           </Pressable>
         }

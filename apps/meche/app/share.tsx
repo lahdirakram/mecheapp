@@ -167,7 +167,7 @@ export default function Share() {
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }}>
-        <Pressable onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
           <MIcon name="chevronLeft" size={18} color={MPAL.ink} />
         </Pressable>
         <MText variant="serif" size={30} style={{ marginLeft: 8 }}>
