@@ -51,6 +51,33 @@ export async function clearPurchaseUser(): Promise<void> {
   }
 }
 
+export type StorePrice = { priceString: string; price: number; currencyCode: string };
+
+/**
+ * Live prices from the current offering, keyed by store product id. The store is the source of
+ * truth for what the user actually pays (tax-inclusive, localized per country), so the UI should
+ * prefer these over any hard-coded value. Returns {} when purchases aren't available.
+ */
+export async function getStorePrices(): Promise<Record<string, StorePrice>> {
+  if (!purchasesAvailable()) return {};
+  try {
+    const Purchases = await rc();
+    const offerings = await Purchases.getOfferings();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const packages: any[] = offerings.current?.availablePackages ?? [];
+    const out: Record<string, StorePrice> = {};
+    for (const pkg of packages) {
+      const prod = pkg.product;
+      if (prod?.identifier) {
+        out[prod.identifier] = { priceString: prod.priceString, price: prod.price, currencyCode: prod.currencyCode };
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 export type PurchaseResult = { ok: true } | { cancelled: true } | { error: string };
 
 /** Open the store sheet for the package whose store product id matches `productId`. */
