@@ -68,7 +68,7 @@ export default function Gallery() {
         big
         onBack={() => router.back()}
         right={
-          <Pressable onPress={openSort} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+          <Pressable hitSlop={8} onPress={openSort} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
             <MIcon name="settings" size={16} color={MPAL.ink} />
           </Pressable>
         }
@@ -113,7 +113,7 @@ export default function Gallery() {
                   </MText>
                 </View>
               ) : null}
-              <Pressable onPress={() => onSave(it.n[lang], it.hair, it.mood)} style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
+              <Pressable hitSlop={10} onPress={() => onSave(it.n[lang], it.hair, it.mood)} style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
                 <MIcon name="plus" size={14} color={MPAL.ink} />
               </Pressable>
               <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 24, paddingHorizontal: 10, paddingBottom: 10 }}>

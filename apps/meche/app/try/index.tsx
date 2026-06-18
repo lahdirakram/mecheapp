@@ -125,7 +125,7 @@ export default function Selfie() {
 
       {/* top bar */}
       <View style={{ position: 'absolute', top: insets.top + 8, left: 0, right: 0, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Pressable onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
           <MIcon name="x" size={18} color="#fff" />
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.92)' }}>
@@ -134,7 +134,7 @@ export default function Selfie() {
             {t('selfie_hint')}
           </MText>
         </View>
-        <Pressable onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable hitSlop={8} onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
           <MIcon name="flip" size={18} color="#fff" />
         </Pressable>
       </View>

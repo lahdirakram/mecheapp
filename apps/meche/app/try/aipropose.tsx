@@ -80,7 +80,7 @@ export default function AIPropose() {
       <TopBar
         onBack={() => router.back()}
         right={
-          <Pressable onPress={() => router.push('/try/idea')} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+          <Pressable hitSlop={8} onPress={() => router.push('/try/idea')} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
             <MIcon name="settings" size={16} color={MPAL.ink} />
           </Pressable>
         }

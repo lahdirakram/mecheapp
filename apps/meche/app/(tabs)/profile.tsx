@@ -66,7 +66,7 @@ export default function Profile() {
         <MText variant="serif" size={30}>
           {t('profile')}
         </MText>
-        <Pressable onPress={openPrefs} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+        <Pressable hitSlop={8} onPress={openPrefs} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
           <MIcon name="settings" size={18} color={MPAL.ink} />
         </Pressable>
       </View>
@@ -127,9 +127,11 @@ export default function Profile() {
               <MText variant="mono" size={10} color={MPAL.mute} style={{ letterSpacing: 1.4 }}>
                 {lang === 'fr' ? 'TES DERNIERS ESSAIS' : 'YOUR RECENT TRIES'}
               </MText>
-              <MText size={12} color={MPAL.mute} onPress={() => router.push('/(tabs)/wardrobe')}>
-                {lang === 'fr' ? 'Tout voir' : 'See all'}
-              </MText>
+              <Pressable hitSlop={12} onPress={() => router.push('/(tabs)/wardrobe')}>
+                <MText size={12} color={MPAL.mute}>
+                  {lang === 'fr' ? 'Tout voir' : 'See all'}
+                </MText>
+              </Pressable>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
               {recent.map((w, i) => (
@@ -180,9 +182,11 @@ export default function Profile() {
           ))}
         </View>
 
-        <MText size={13} color={MPAL.mute} onPress={signOut} style={{ textAlign: 'center', marginTop: 18, textDecorationLine: 'underline' }}>
-          {lang === 'fr' ? 'Se déconnecter' : 'Sign out'}
-        </MText>
+        <Pressable hitSlop={12} onPress={signOut}>
+          <MText size={13} color={MPAL.mute} style={{ textAlign: 'center', marginTop: 18, textDecorationLine: 'underline' }}>
+            {lang === 'fr' ? 'Se déconnecter' : 'Sign out'}
+          </MText>
+        </Pressable>
       </ScrollView>
     </View>
   );
