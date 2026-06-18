@@ -62,7 +62,13 @@
         }
       ],
       "./plugins/withImagesOnlyMediaPermissions",
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.909044731824-p3682dg7av55v93s20lo0vt88u6blhnc"
+        }
+      ],
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {
