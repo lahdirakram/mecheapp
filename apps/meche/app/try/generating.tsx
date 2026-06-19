@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Animated, Dimensions, Easing, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,8 +11,11 @@ import { supabase } from '../../lib/supabase';
 import { useTryStore } from '../../lib/tryStore';
 
 // B2C · Génération (09) — dark loader while the real AI runs (/generate Edge Function → Gemini).
-// Progress holds at ~92% until the result returns, then completes and reveals the before/after.
+// Gemini latency is unknown (~15-20s), so progress never hard-freezes: it trickles toward ~95% and
+// the scan line sweeps on its own loop, so the screen stays alive however long the call takes. On
+// completion it races to 100% and reveals the before/after.
 const ACCENT = MPAL.sable;
+const SCREEN_H = Dimensions.get('window').height;
 const STEPS_FR = ['ANALYSE DU VISAGE', 'LECTURE DE L’IDÉE', 'COMPOSITION', 'FINALISATION'];
 const STEPS_EN = ['FACE ANALYSIS', 'READING THE IDEA', 'COMPOSITION', 'FINALISING'];
 
@@ -28,16 +31,32 @@ export default function Generating() {
   const [pct, setPct] = useState(0);
   const doneRef = useRef(false);
   const failedRef = useRef(false);
+  const scanY = useRef(new Animated.Value(0)).current;
+
+  // Continuous scan-line sweep — runs regardless of progress so the loader never looks frozen,
+  // even while Gemini takes its time.
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanY, { toValue: 1, duration: 1700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(scanY, { toValue: 0, duration: 1700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scanY]);
 
   useEffect(() => {
     let cancelled = false;
     const iv = setInterval(() => {
       setPct((p) => {
-        const cap = doneRef.current ? 100 : 92; // hold until the result returns
-        if (p >= cap) return cap;
-        return Math.min(cap, p + (p > 80 ? 2 : 6));
+        if (doneRef.current) return Math.min(100, p + 7); // result is in → race to 100
+        // Ease-out trickle toward a soft 95% ceiling: fast at first, ever-slower near the top, with
+        // a small floor so it always keeps moving. The sweeping scan line carries the "alive" feel.
+        if (p >= 95) return 95;
+        return Math.min(95, p + Math.max(0.4, (95 - p) * 0.02));
       });
-    }, 110);
+    }, 130);
 
     (async () => {
       if (!selfieBase64) {
@@ -151,8 +170,22 @@ export default function Generating() {
       </View>
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
 
-      {/* scan line */}
-      <View style={{ position: 'absolute', left: 0, right: 0, top: `${pct * 0.85}%`, height: 2, backgroundColor: ACCENT, shadowColor: ACCENT, shadowOpacity: 0.9, shadowRadius: 16, shadowOffset: { width: 0, height: 0 } }} />
+      {/* scan line — sweeps continuously on its own loop (decoupled from progress %) */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          height: 2,
+          backgroundColor: ACCENT,
+          shadowColor: ACCENT,
+          shadowOpacity: 0.9,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 0 },
+          transform: [{ translateY: scanY.interpolate({ inputRange: [0, 1], outputRange: [SCREEN_H * 0.14, SCREEN_H * 0.82] }) }],
+        }}
+      />
 
       {/* corner brackets */}
       <Svg width="100%" height="100%" viewBox="0 0 402 874" preserveAspectRatio="none" style={{ position: 'absolute' }} pointerEvents="none">
@@ -177,7 +210,7 @@ export default function Generating() {
             {step}
           </MText>
           <MText variant="mono" size={11} color="rgba(255,255,255,0.7)" style={{ letterSpacing: 1.2 }}>
-            {pct}%
+            {Math.round(pct)}%
           </MText>
         </View>
         <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 4, overflow: 'hidden' }}>
