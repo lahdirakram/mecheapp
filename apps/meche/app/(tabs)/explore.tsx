@@ -303,11 +303,7 @@ function Reel({ card, height, lang, insetsTop, savedImages }: { card: Row; heigh
                 {lang === 'fr' ? 'Voir profil' : 'See profile'}
               </MText>
             </Pressable>
-          ) : (
-            <Pressable onPress={onSave} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
-              <MIcon name="bookmark" size={18} color="#fff" fill={isSaved ? '#fff' : 'none'} />
-            </Pressable>
-          )}
+          ) : null /* studio: save lives in the right rail under the like — no duplicate here */}
         </View>
       </View>
     </View>
