@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MIcon, MPAL, MText, MPortrait, useLang } from '@meche/ui';
 import { useTryStore } from '../lib/tryStore';
+import { cacheKeyFor } from '../lib/img';
 
 // Look detail (from "Mes mèches"). A feed-saved look is an inspiration photo → "Essayer ce look".
 // A generated essai shows the produced image → book / share. (No before/after here — the
@@ -31,7 +32,7 @@ export default function LookDetail() {
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-        {image ? <Image source={{ uri: image }} style={{ flex: 1 }} contentFit="cover" /> : <MPortrait hair="bob" mood="warm" tint={MPAL.ink} />}
+        {image ? <Image source={{ uri: image, cacheKey: cacheKeyFor(image) }} style={{ flex: 1 }} contentFit="cover" cachePolicy="memory-disk" /> : <MPortrait hair="bob" mood="warm" tint={MPAL.ink} />}
       </View>
       <LinearGradient colors={['rgba(0,0,0,0.45)', 'transparent', 'transparent', 'rgba(0,0,0,0.9)']} locations={[0, 0.2, 0.5, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none" />
 

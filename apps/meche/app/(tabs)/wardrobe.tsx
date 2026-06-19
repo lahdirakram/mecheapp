@@ -64,7 +64,7 @@ export default function Wardrobe() {
               style={{ width: '48%', aspectRatio: 3 / 4, borderRadius: 18, overflow: 'hidden', backgroundColor: MPAL.paper, borderWidth: 1, borderColor: MPAL.border, marginBottom: 12 }}
             >
               {srcOf(w.image_url) ? (
-                <Image source={{ uri: srcOf(w.image_url) }} style={{ flex: 1 }} contentFit="cover" transition={150} />
+                <Image source={{ uri: srcOf(w.image_url), cacheKey: w.image_url ?? undefined }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" recyclingKey={w.image_url ?? undefined} />
               ) : (
                 <MPortrait hair={w.hair} mood={w.mood} tint={i % 3 === 0 ? MPAL.ink : undefined} />
               )}

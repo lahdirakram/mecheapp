@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGeneration } from '@meche/api-client';
 import { MIcon, MPAL, MText, MWordmark, MPortrait, useLang, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../lib/tryStore';
+import { cacheKeyFor } from '../lib/img';
 
 // The watermarked share card (after-only, or before/after top-bottom split). `s` scales the chrome.
 // This same on-screen node is captured to a PNG, so what you preview is exactly what you share.
@@ -16,8 +17,8 @@ const Card = React.forwardRef<View, { w: number; withBefore: boolean; beforeUri:
   ({ w, withBefore, beforeUri, afterUri, name }, ref) => {
     const h = (w * 16) / 9;
     const s = w / 360;
-    const After = afterUri ? <Image source={{ uri: afterUri }} style={{ flex: 1 }} contentFit="cover" contentPosition="center" /> : <MPortrait hair="bob" mood="warm" tint={MPAL.ink} />;
-    const Before = beforeUri ? <Image source={{ uri: beforeUri }} style={{ flex: 1 }} contentFit="cover" contentPosition="center" /> : <MPortrait hair="medium" mood="warm" />;
+    const After = afterUri ? <Image source={{ uri: afterUri, cacheKey: cacheKeyFor(afterUri) }} style={{ flex: 1 }} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" /> : <MPortrait hair="bob" mood="warm" tint={MPAL.ink} />;
+    const Before = beforeUri ? <Image source={{ uri: beforeUri, cacheKey: cacheKeyFor(beforeUri) }} style={{ flex: 1 }} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" /> : <MPortrait hair="medium" mood="warm" />;
     const Tag = ({ text, side }: { text: string; side: 'l' | 'r' }) => (
       <View style={{ position: 'absolute', top: 12 * s, left: side === 'l' ? 12 * s : undefined, right: side === 'r' ? 12 * s : undefined, paddingHorizontal: 9 * s, paddingVertical: 4 * s, borderRadius: 6 * s, backgroundColor: side === 'l' ? 'rgba(255,255,255,0.92)' : MPAL.sable }}>
         <MText variant="bodyBold" size={11 * s} color={side === 'l' ? MPAL.ink : '#fff'} style={{ letterSpacing: 1 * s }}>
