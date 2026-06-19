@@ -24,6 +24,7 @@ export default function Selfie() {
   const cameraRef = useRef<CameraView>(null);
   const setSelfie = useTryStore((s) => s.setSelfie);
   const directMode = useTryStore((s) => s.directMode);
+  const surprise = useTryStore((s) => s.surprise);
 
   const granted = permission?.granted ?? false;
 
@@ -44,9 +45,9 @@ export default function Selfie() {
     }
   };
 
-  // directMode → a specific look was chosen ("Essayer ce look"): after the selfie, generate it
-  // straight away instead of showing "Ton idée".
-  const next = directMode ? '/try/generating' : '/try/idea';
+  // After the selfie: a specific look ("Essayer ce look") generates straight away; "coupe surprise"
+  // hands off to "L'IA te propose" so Mèche picks; otherwise the "Ton idée" hub.
+  const next = directMode ? '/try/generating' : surprise ? '/try/aipropose' : '/try/idea';
 
   const capture = async () => {
     try {
