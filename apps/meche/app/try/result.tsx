@@ -215,12 +215,23 @@ export default function Result() {
             {t('see_more')}
           </MText>
         </Pressable>
-        <Pressable onPress={() => { router.dismissAll(); router.navigate('/(tabs)/salons'); }} style={{ flex: 1.4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 999, backgroundColor: MPAL.ink }}>
-          <MIcon name="pin" size={15} color="#fff" />
-          <MText variant="bodySemibold" size={14} color="#fff">
-            {t('book')}
-          </MText>
-        </Pressable>
+        {/* Réserver — inert + greyed with a "Bientôt" badge until booking ships, matching the
+            coming-soon salons tab in the main menu. */}
+        <View style={{ flex: 1.4 }}>
+          <View style={{ position: 'absolute', top: -8, left: 0, right: 0, alignItems: 'center', zIndex: 1 }}>
+            <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: MPAL.sable }}>
+              <MText variant="mono" size={7} color="#fff" style={{ letterSpacing: 0.4 }}>
+                {(lang === 'fr' ? 'Bientôt' : 'Soon').toUpperCase()}
+              </MText>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 999, backgroundColor: MPAL.subtle, opacity: 0.7 }}>
+            <MIcon name="pin" size={15} color={MPAL.mute} />
+            <MText variant="bodySemibold" size={14} color={MPAL.mute}>
+              {t('book')}
+            </MText>
+          </View>
+        </View>
       </View>
     </View>
   );
