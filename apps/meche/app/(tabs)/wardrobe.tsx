@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession, useSignedUrls, useWardrobe } from '@meche/api-client';
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useT } from '@meche/ui';
+import { useTryStore } from '../../lib/tryStore';
 
 // B2C · Mes mèches (17) — kept looks, sort tabs (Récents/Préférés/Pour cet été), staggered
 // grid + a "surprise cut" prompt. Ported from MScreenWardrobe. Falls back to demo looks until
@@ -20,6 +21,11 @@ export default function Wardrobe() {
   const session = useSession();
   const { data } = useWardrobe(session?.user.id);
   const [tab, setTab] = useState(0);
+  const resetTry = useTryStore((s) => s.reset);
+  const setSurprise = useTryStore((s) => s.setSurprise);
+  // Fresh generic try (reset wipes any stale brief/directMode); "surprise" then routes to Mèche's pick.
+  const startTry = () => { resetTry(); router.push('/try'); };
+  const startSurprise = () => { resetTry(); setSurprise(true); router.push('/try'); };
 
   const base = (data ?? []) as Look[]; // real saved looks only — no demo fallback
   // Generated images are private storage paths → sign for display; feed photos are external URLs.
@@ -35,7 +41,7 @@ export default function Wardrobe() {
         title={t('your_looks')}
         big
         right={
-          <Pressable hitSlop={8} onPress={() => router.push('/try')} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+          <Pressable hitSlop={8} onPress={startTry} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
             <MIcon name="plus" size={18} color={MPAL.ink} />
           </Pressable>
         }
@@ -109,8 +115,8 @@ export default function Wardrobe() {
           </View>
         ) : null}
 
-        {/* surprise cut */}
-        <Pressable onPress={() => router.push('/try')} style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 18, backgroundColor: MPAL.paper, borderWidth: 1, borderStyle: 'dashed', borderColor: MPAL.border }}>
+        {/* surprise cut → Mèche picks for you (AI propose) */}
+        <Pressable onPress={startSurprise} style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 18, backgroundColor: MPAL.paper, borderWidth: 1, borderStyle: 'dashed', borderColor: MPAL.border }}>
           <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: MPAL.subtle, alignItems: 'center', justifyContent: 'center' }}>
             <MIcon name="sparkle" size={22} color={MPAL.sable} fill={MPAL.sable} stroke={0} />
           </View>

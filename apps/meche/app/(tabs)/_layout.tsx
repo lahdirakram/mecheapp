@@ -21,8 +21,9 @@ function CustomTabBar({ state, navigation }: TabBarRenderProps) {
       active={active}
       onChange={(tab) => navigation.navigate(tab)}
       onPressCenter={() => {
-        // Central button = no specific look chosen → go through "Ton idée".
-        useTryStore.getState().setDirect(false);
+        // Central button = no specific look, no surprise → go through "Ton idée". Reset clears any
+        // stale brief/directMode/surprise from a previous flow.
+        useTryStore.getState().reset();
         router.push('/try');
       }}
       dark={active === 'explore'}
