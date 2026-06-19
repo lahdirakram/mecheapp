@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDeleteLook, useGeneration, useSaveLook, useSession, useToggleLove } from '@meche/api-client';
 import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useT, useToast, useSheet } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
+import { cacheKeyFor } from '../../lib/img';
 
 // B2C · Avant / après (10) — draggable comparison. Left reveals the generated "after", right
 // shows the "before"; white divider + round handle. Ported from MScreenResult.
@@ -169,7 +170,7 @@ export default function Result() {
           {/* before (full) — real selfie if available */}
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {beforeUri ? (
-              <Image source={{ uri: beforeUri }} style={{ flex: 1 }} contentFit="cover" />
+              <Image source={{ uri: beforeUri, cacheKey: cacheKeyFor(beforeUri) }} style={{ flex: 1 }} contentFit="cover" cachePolicy="memory-disk" />
             ) : (
               <MPortrait hair="medium" mood="warm" label="AVANT" />
             )}
@@ -178,7 +179,7 @@ export default function Result() {
           <View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: w * pos, overflow: 'hidden' }}>
             <View style={{ width: w, height: '100%' }}>
               {afterUri ? (
-                <Image source={{ uri: afterUri }} style={{ width: w, height: '100%' }} contentFit="cover" />
+                <Image source={{ uri: afterUri, cacheKey: cacheKeyFor(afterUri) }} style={{ width: w, height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
               ) : (
                 <MPortrait hair="bob" mood="warm" tint={MPAL.ink} label="APRÈS" />
               )}
