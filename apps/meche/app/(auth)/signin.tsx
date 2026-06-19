@@ -88,6 +88,15 @@ export default function SignIn() {
               </Pressable>
             }
           />
+          <MText
+            size={13}
+            color={MPAL.ink}
+            variant="bodySemibold"
+            onPress={() => router.push('/(auth)/forgot')}
+            style={{ alignSelf: 'flex-end', paddingVertical: 4, textDecorationLine: 'underline' }}
+          >
+            {t('forgot_link')}
+          </MText>
         </View>
 
         <View style={{ marginTop: 'auto', paddingBottom: insets.bottom + 20, gap: 10 }}>

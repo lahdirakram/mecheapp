@@ -57,6 +57,24 @@ export function useAuth() {
     resendConfirmation(email: string) {
       return client.auth.resend({ type: 'signup', email });
     },
+
+    /** Start a password reset: emails a 6-digit recovery code (the "Reset Password" template must
+     *  expose `{{ .Token }}`, like the signup one). Supabase returns success even for unknown
+     *  emails, so the screen can't leak whether an account exists. */
+    resetPassword(email: string) {
+      return client.auth.resetPasswordForEmail(email);
+    },
+
+    /** Verify the 6-digit recovery code. On success the client stores a (temporary) session, which
+     *  is what authorises the follow-up `updatePassword` call. */
+    verifyRecoveryOtp(email: string, token: string) {
+      return client.auth.verifyOtp({ email, token, type: 'recovery' });
+    },
+
+    /** Set a new password for the signed-in (recovery) session. */
+    updatePassword(password: string) {
+      return client.auth.updateUser({ password });
+    },
   };
 }
 
