@@ -41,6 +41,12 @@
       "expo-font",
       "expo-image",
       [
+        "expo-notifications",
+        {
+          "color": "#15110E"
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Mèche utilise la caméra pour ton selfie d'essayage."

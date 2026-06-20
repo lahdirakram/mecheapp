@@ -13,6 +13,40 @@ import { buildPrompt, generateWithGemini, mockResult, type Brief } from '../_sha
 // Supabase Edge Runtime: keeps the worker alive to finish `promise` after the response is sent.
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
 
+// deno-lint-ignore no-explicit-any
+type Admin = any;
+
+// Fire an Expo push to all of the user's registered devices. Best-effort and never throws — a push
+// failure must not affect the generation outcome. Copy follows the user's profile language.
+async function notifyUser(admin: Admin, userId: string, kind: 'done' | 'failed', lookName: string, genId: string, lookId: string) {
+  try {
+    const { data: devices } = await admin.from('devices').select('expo_push_token').eq('user_id', userId);
+    const tokens = (devices ?? []).map((d: { expo_push_token: string }) => d.expo_push_token).filter(Boolean);
+    if (!tokens.length) return;
+
+    const { data: prof } = await admin.from('profiles').select('lang').eq('id', userId).maybeSingle();
+    const fr = (prof?.lang ?? 'fr') !== 'en';
+    const title = kind === 'done' ? (fr ? 'Ta mèche est prête ✨' : 'Your look is ready ✨') : fr ? 'Génération impossible' : 'Generation failed';
+    const body =
+      kind === 'done'
+        ? fr
+          ? `${lookName} t'attend dans Mes mèches.`
+          : `${lookName} is waiting in My looks.`
+        : fr
+          ? 'Ton crédit a été conservé. Réessaie quand tu veux.'
+          : 'Your credit was kept. Try again anytime.';
+
+    const messages = tokens.map((to: string) => ({ to, title, body, sound: 'default', priority: 'high', data: { type: 'generation', status: kind, generationId: genId, lookId } }));
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(messages),
+    });
+  } catch {
+    /* push is best-effort */
+  }
+}
+
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, 'content-type': 'application/json' } });
 
 Deno.serve(async (req) => {
@@ -160,7 +194,7 @@ Deno.serve(async (req) => {
           const match = Math.round(88 + Math.random() * 9);
           await admin.from('generations').update({ status: 'done', result_path: resultPath, match }).eq('id', genId);
           await admin.from('looks').update({ image_url: resultPath }).eq('id', look.id);
-          // Stage 2: push-notify the user's devices here once expo-notifications ships.
+          await notifyUser(admin, user.id, 'done', lookName, genId, look.id);
         } catch (e) {
           const msg = String(e instanceof Error ? e.message : e);
           // Mark failed and refund the reserved credit. KEEP the look (status drives a "failed" card
@@ -168,6 +202,7 @@ Deno.serve(async (req) => {
           // vanishing on them.
           await admin.from('generations').update({ status: 'failed', error: msg }).eq('id', genId);
           await admin.from('credit_transactions').delete().eq('id', resv.id);
+          await notifyUser(admin, user.id, 'failed', lookName, genId, look.id);
         }
       })(),
     );
