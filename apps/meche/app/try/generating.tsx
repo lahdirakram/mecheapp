@@ -5,15 +5,15 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSaveLook, useSession } from '@meche/api-client';
 import { MPAL, MText, MPortrait, useLang, useT, useToast } from '@meche/ui';
 import { supabase } from '../../lib/supabase';
 import { useTryStore } from '../../lib/tryStore';
 
-// B2C · Génération (09) — dark loader while the real AI runs (/generate Edge Function → Gemini).
-// Gemini latency is unknown (~15-20s), so progress never hard-freezes: it trickles toward ~95% and
-// the scan line sweeps on its own loop, so the screen stays alive however long the call takes. On
-// completion it races to 100% and reveals the before/after.
+// B2C · Génération (09) — dark loader that WATCHES a background generation. /generate enqueues the
+// try-on server-side and returns immediately; this screen polls the generation row until it's done.
+// Leaving is safe: the work keeps running and the look appears in "Mes mèches" on its own. Gemini
+// latency is unknown (~15-20s), so progress never hard-freezes: it trickles toward ~95% and the
+// scan line sweeps on its own loop. On completion it races to 100% and reveals the before/after.
 const ACCENT = MPAL.sable;
 const SCREEN_H = Dimensions.get('window').height;
 const STEPS_FR = ['ANALYSE DU VISAGE', 'LECTURE DE L’IDÉE', 'COMPOSITION', 'FINALISATION'];
@@ -25,8 +25,6 @@ export default function Generating() {
   const lang = useLang();
   const toast = useToast();
   const qc = useQueryClient();
-  const session = useSession();
-  const { mutateAsync: saveLook } = useSaveLook();
   const { selfieBase64, mimeType, brief, setResult } = useTryStore();
   const [pct, setPct] = useState(0);
   const doneRef = useRef(false);
@@ -69,8 +67,12 @@ export default function Generating() {
         }, 2400);
         return;
       }
+      const name = brief.lookName || (brief.prompt ? brief.prompt.slice(0, 40) : lang === 'fr' ? 'Ma mèche' : 'My look');
       try {
-        const { data, error } = await supabase.functions.invoke('generate', { body: { selfieBase64, mimeType, brief } });
+        // The generation now runs server-side, decoupled from this screen: /generate reserves the
+        // credit, records a PENDING look, and returns immediately. The pre-flight errors below are
+        // the only synchronous ones; the AI itself finishes in the background.
+        const { data, error } = await supabase.functions.invoke('generate', { body: { selfieBase64, mimeType, brief, name } });
         if (cancelled) return;
         if (error) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,33 +109,45 @@ export default function Generating() {
             router.push('/recharge');
             return;
           }
-          if (status === 503 || code === 'ai_quota') {
+          throw error;
+        }
+        // Enqueued (status: 'pending'). The credit is reserved and a placeholder look now exists, so
+        // refresh both — if the user leaves, the look shows up in "Mes mèches" on its own.
+        qc.invalidateQueries({ queryKey: ['credits'] });
+        qc.invalidateQueries({ queryKey: ['looks'] });
+        const genId = data.id as string;
+        const lookId = data.lookId as string | undefined;
+
+        // Watch the generation row while we stay on the loader. Leaving just stops the poll — the
+        // background task keeps running and the look lands in the wardrobe regardless.
+        const startedAt = Date.now();
+        while (!cancelled) {
+          await new Promise((r) => setTimeout(r, 1500));
+          if (cancelled) return;
+          const { data: g } = await supabase.from('generations').select('status, result_path, match').eq('id', genId).single();
+          if (cancelled) return;
+          if (g?.status === 'done') {
+            // The result is PRIVATE (the user's face) → mint a short-lived signed URL for display.
+            const { data: signed } = await supabase.storage.from('generated').createSignedUrl(g.result_path as string, 3600);
+            setResult({ uri: signed?.signedUrl ?? '', match: (g.match as number) ?? 0, generationId: genId, name, savedLookId: lookId });
+            doneRef.current = true;
+            return;
+          }
+          if (g?.status === 'failed') {
             failedRef.current = true;
-            toast(lang === 'fr' ? 'Service IA occupé, réessaie dans un instant.' : 'AI is busy, try again in a moment.');
+            toast(lang === 'fr' ? 'Génération impossible, ton crédit est conservé.' : "Generation failed, your credit was kept.");
             router.back();
             return;
           }
-          throw error;
-        }
-        // The generated image is PRIVATE (it's the user's face). Store only the Storage path and
-        // mint a short-lived signed URL for immediate display — never a public URL.
-        const resultPath = data.resultPath as string;
-        const { data: signed } = await supabase.storage.from('generated').createSignedUrl(resultPath, 3600);
-        const displayUri = signed?.signedUrl ?? '';
-        const name = brief.lookName || (brief.prompt ? brief.prompt.slice(0, 40) : lang === 'fr' ? 'Ma mèche' : 'My look');
-        // Auto-save every generation into "Mes essais" (generation_id set). image_url holds the
-        // private path; the wardrobe signs it on read.
-        let savedLookId: string | undefined;
-        if (session) {
-          try {
-            savedLookId = await saveLook({ userId: session.user.id, name, imageUrl: resultPath, generationId: data.id, loved: false });
-          } catch {
-            /* non-blocking */
+          // Taking longer than expected → stop waiting on-screen and let it finish in the
+          // background; it'll appear in "Mes mèches" as soon as it's ready.
+          if (Date.now() - startedAt > 60000) {
+            failedRef.current = true; // suppress the auto-navigation to /result
+            toast(lang === 'fr' ? 'Ça prend un peu plus de temps. On le dépose dans Mes mèches dès que c’est prêt.' : "This is taking longer than usual. It'll land in My looks as soon as it's ready.");
+            router.back();
+            return;
           }
         }
-        setResult({ uri: displayUri, match: data.match, generationId: data.id, name, savedLookId });
-        qc.invalidateQueries({ queryKey: ['credits'] });
-        doneRef.current = true;
       } catch {
         if (cancelled) return;
         failedRef.current = true;

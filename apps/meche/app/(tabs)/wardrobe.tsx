@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import { useTryStore } from '../../lib/tryStore';
 // B2C · Mes mèches (17) — kept looks, sort tabs (Récents/Préférés/Pour cet été), staggered
 // grid + a "surprise cut" prompt. Ported from MScreenWardrobe. Falls back to demo looks until
 // the user has saved their own.
-type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; loved: boolean; tag: string | null; image_url?: string | null; generation_id?: string | null };
+type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; loved: boolean; tag: string | null; image_url?: string | null; generation_id?: string | null; generation?: { status?: string } | null };
 
 export default function Wardrobe() {
   const insets = useSafeAreaInsets();
@@ -59,9 +59,14 @@ export default function Wardrobe() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-          {looks.map((w, i) => (
+          {looks.map((w, i) => {
+            // A background try-on still cooking: show a "generating" placeholder and disable the tap
+            // (there's no before/after to open yet). It flips to the image once the poll sees 'done'.
+            const pending = w.generation?.status === 'pending';
+            return (
             <Pressable
               key={w.id}
+              disabled={pending}
               onPress={() =>
                 w.generation_id
                   ? router.push({ pathname: '/try/result', params: { generationId: w.generation_id, lookId: w.id, name: w.name, after: w.image_url ?? '', loved: w.loved ? '1' : '0' } })
@@ -69,12 +74,19 @@ export default function Wardrobe() {
               }
               style={{ width: '48%', aspectRatio: 3 / 4, borderRadius: 18, overflow: 'hidden', backgroundColor: MPAL.paper, borderWidth: 1, borderColor: MPAL.border, marginBottom: 12 }}
             >
-              {srcOf(w.image_url) ? (
+              {pending ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                  <ActivityIndicator color={MPAL.sable} />
+                  <MText variant="mono" size={9} color={MPAL.mute} style={{ letterSpacing: 1.4 }}>
+                    {lang === 'fr' ? 'CRÉATION…' : 'CREATING…'}
+                  </MText>
+                </View>
+              ) : srcOf(w.image_url) ? (
                 <Image source={{ uri: srcOf(w.image_url), cacheKey: w.image_url ?? undefined }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" recyclingKey={w.image_url ?? undefined} />
               ) : (
                 <MPortrait hair={w.hair} mood={w.mood} tint={i % 3 === 0 ? MPAL.ink : undefined} />
               )}
-              {w.loved ? (
+              {w.loved && !pending ? (
                 <View style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
                   <MIcon name="heart" size={14} color={MPAL.sable} fill={MPAL.sable} stroke={0} />
                 </View>
@@ -90,7 +102,8 @@ export default function Wardrobe() {
                 ) : null}
               </View>
             </Pressable>
-          ))}
+          );
+          })}
         </View>
 
         {looks.length === 0 ? (
