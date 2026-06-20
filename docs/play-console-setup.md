@@ -113,8 +113,10 @@ RevenueCat) existent déjà.
    - Google : **`goog_…`**
    → **à me transmettre.**
 7. **Integrations → Webhooks → + New** :
-   - **URL** : `https://vefxfjcdvstjwieasrbq.supabase.co/functions/v1/iap-webhook`
-   - **En-tête Authorization** : `a24fac561bc54522a7d9e80f3cf15773a4a0b064c0f34fa2`
+   - **URL** : `https://hqhnvjjbohzktoapsytj.supabase.co/functions/v1/iap-webhook` (backend PROD)
+   - **En-tête Authorization** : la valeur de `RC_WEBHOOK_SECRET` (jamais commitée — voir le
+     gestionnaire de mots de passe). Définie côté serveur via
+     `supabase secrets set RC_WEBHOOK_SECRET=… --project-ref hqhnvjjbohzktoapsytj`.
    - (Bouton « Send test event » → le webhook répond 200, c'est normal.)
 
 ---

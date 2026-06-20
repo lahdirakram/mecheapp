@@ -33,7 +33,7 @@ IAP is the one exception to the lanes above. A store app is a single identity ti
 | Env | Project ref | Notes |
 |-----|-------------|-------|
 | STAGING | `vefxfjcdvstjwieasrbq` | the original project; keep on the Free tier |
-| PROD | `REPLACE_ME_PROD_REF` | the new clean project |
+| PROD | `hqhnvjjbohzktoapsytj` | the new clean project |
 
 ## Where every variable lives (one home each)
 
@@ -89,7 +89,7 @@ the linked project.
 ### Set a server secret (do it on BOTH projects, with each env's value)
 ```bash
 supabase secrets set GEMINI_API_KEY=... --project-ref vefxfjcdvstjwieasrbq   # staging value
-supabase secrets set GEMINI_API_KEY=... --project-ref REPLACE_ME_PROD_REF    # prod value
+supabase secrets set GEMINI_API_KEY=... --project-ref hqhnvjjbohzktoapsytj    # prod value
 ```
 
 ## Setup status
