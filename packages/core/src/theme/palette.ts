@@ -22,6 +22,7 @@ export const MPAL = {
   // Semantic source colors — meaning, not decoration.
   salon: '#1F8A5B', // green = real / trusted salon result
   community: '#4A88E0', // blue = community / user-generated
+  warn: '#C8412B', // warm red = destructive (delete) — the only red in the B2C palette
 } as const;
 
 // Pro palette extends MPAL: Pro signature = ink (unified system), plus status colors.

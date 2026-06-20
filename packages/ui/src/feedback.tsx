@@ -128,7 +128,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
                 }}
                 style={{ paddingVertical: 15, borderRadius: RADIUS.card, alignItems: 'center', marginTop: i ? 6 : 0, backgroundColor: o.cancel ? 'transparent' : MPAL.paper, borderWidth: o.cancel ? 0 : 1, borderColor: MPAL.border }}
               >
-                <MText style={{ fontFamily: o.cancel ? FONTS.bodyMedium : FONTS.bodySemibold, fontSize: 16, color: o.destructive ? MPAL.community : o.cancel ? MPAL.mute : MPAL.ink }}>
+                <MText style={{ fontFamily: o.cancel ? FONTS.bodyMedium : FONTS.bodySemibold, fontSize: 16, color: o.destructive ? MPAL.warn : o.cancel ? MPAL.mute : MPAL.ink }}>
                   {o.label}
                 </MText>
               </Pressable>
