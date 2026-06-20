@@ -4,16 +4,14 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCredits, useSession } from '@meche/api-client';
-import { FONTS, MIcon, MPAL, MText, PrimaryButton, Slider, pOnDark, useLang, useT } from '@meche/ui';
+import { FONTS, MIcon, MPAL, MText, PrimaryButton, pOnDark, useLang, useT } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 
-// B2C · Ton idée (refactored hub) — prompt-first intent screen after the selfie. The prompt
-// (text + voice) is the hero; "L'IA te propose" is the highlighted zero-effort path; the gallery
-// is a quiet secondary; manual sliders live behind a collapsible "Réglages avancés".
+// B2C · Ton idée — prompt-first intent screen after the selfie. The prompt is the hero (with
+// example chips), and "L'IA te propose" is the highlighted zero-effort path. No manual sliders:
+// the free-text prompt covers length/colour/fringe far better.
 const ACCENT = MPAL.ink;
 const ON_DARK = pOnDark(ACCENT); // caramel on the dark AI card
-const COLORS = ['#1A1612', '#5A3A20', '#A07242', '#D9B987', '#E8C9A0'];
-const COLOR_NAMES = ['Noir', 'Châtain', 'Caramel', 'Miel', 'Blond'];
 
 export default function Idea() {
   const insets = useSafeAreaInsets();
@@ -25,14 +23,9 @@ export default function Idea() {
   const setBrief = useTryStore((s) => s.setBrief);
 
   const [prompt, setPrompt] = useState('');
-  const [listening, setListening] = useState(false);
-  const [advanced, setAdvanced] = useState(false);
-  const [len, setLen] = useState(0.4);
-  const [fringe, setFringe] = useState(0.3);
-  const [col, setCol] = useState(2);
 
   const examples = lang === 'fr' ? ['Wolf cut châtain', 'Carré flou caramel', 'Pixie audacieux', 'Boucles définies', 'Reflets miel doux'] : ['Ash-brown wolf cut', 'Caramel soft bob', 'Bold pixie', 'Defined curls', 'Soft honey highlights'];
-  const canGenerate = prompt.trim().length > 0 || advanced;
+  const canGenerate = prompt.trim().length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 6 }}>
@@ -65,17 +58,14 @@ export default function Idea() {
             maxLength={240}
             style={{ minHeight: 84, fontFamily: prompt ? FONTS.serif : FONTS.serifItalic, fontSize: 18, color: MPAL.ink, lineHeight: 25 }}
           />
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-            <Pressable onPress={() => setListening((l) => !l)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: listening ? MPAL.ink : 'transparent', borderWidth: listening ? 0 : 1, borderColor: MPAL.border }}>
-              <MIcon name="mic" size={14} color={listening ? '#fff' : MPAL.ink} />
-              <MText variant="bodySemibold" size={12} color={listening ? '#fff' : MPAL.ink}>
-                {listening ? t('listening') : lang === 'fr' ? 'Dicter' : 'Dictate'}
+          {/* Counter stays hidden until 70% to avoid stressing the user, then warns near the cap. */}
+          {prompt.length >= 168 ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
+              <MText variant="mono" size={10} color={prompt.length >= 216 ? MPAL.sable : MPAL.mute}>
+                {prompt.length}/240
               </MText>
-            </Pressable>
-            <MText variant="mono" size={10} color={MPAL.mute}>
-              {prompt.length}/240
-            </MText>
-          </View>
+            </View>
+          ) : null}
         </View>
 
         {/* example chips */}
@@ -88,35 +78,6 @@ export default function Idea() {
             </Pressable>
           ))}
         </ScrollView>
-
-        {/* collapsible advanced settings */}
-        <Pressable onPress={() => setAdvanced((a) => !a)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 18 }}>
-          <MIcon name={advanced ? 'chevronLeft' : 'chevronRight'} size={14} color={MPAL.mute} />
-          <MText variant="bodySemibold" size={12} color={MPAL.mute} style={{ letterSpacing: 0.4 }}>
-            {lang === 'fr' ? 'Réglages avancés' : 'Advanced settings'}
-          </MText>
-        </Pressable>
-        {advanced ? (
-          <View style={{ marginTop: 12, gap: 16, padding: 18, borderRadius: 14, backgroundColor: MPAL.paper, borderWidth: 1, borderColor: MPAL.border }}>
-            <Slider label={t('length')} value={len} onChange={setLen} accent={MPAL.ink} notches={[lang === 'fr' ? 'Court' : 'Short', lang === 'fr' ? 'Mi-long' : 'Medium', lang === 'fr' ? 'Long' : 'Long']} />
-            <Slider label={t('fringe')} value={fringe} onChange={setFringe} accent={MPAL.ink} notches={[lang === 'fr' ? 'Sans' : 'None', lang === 'fr' ? 'Légère' : 'Light', lang === 'fr' ? 'Rideau' : 'Curtain']} />
-            <View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                <MText variant="bodyMedium" size={14}>
-                  {t('color')}
-                </MText>
-                <MText size={12} color={MPAL.mute}>
-                  {COLOR_NAMES[col]}
-                </MText>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {COLORS.map((c, i) => (
-                  <Pressable key={i} onPress={() => setCol(i)} style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: c, borderWidth: col === i ? 3 : 1, borderColor: col === i ? MPAL.ink : MPAL.border }} />
-                ))}
-              </View>
-            </View>
-          </View>
-        ) : null}
       </ScrollView>
 
       {/* generate + alternatives */}
@@ -127,12 +88,7 @@ export default function Idea() {
           icon="sparkle"
           disabled={!canGenerate}
           onPress={() => {
-            setBrief({
-              prompt: prompt.trim() || undefined,
-              length: advanced ? len : undefined,
-              fringe: advanced ? fringe : undefined,
-              color: advanced ? COLOR_NAMES[col] : undefined,
-            });
+            setBrief({ prompt: prompt.trim() });
             router.push('/try/generating');
           }}
         />
@@ -168,11 +124,6 @@ export default function Idea() {
           <MIcon name="arrowRight" size={18} color={ON_DARK} />
         </Pressable>
 
-        <Pressable hitSlop={12} onPress={() => router.push('/try/gallery')}>
-          <MText variant="bodyMedium" size={13} color={MPAL.mute} style={{ textAlign: 'center', paddingVertical: 2 }}>
-            {lang === 'fr' ? 'Parcourir la galerie' : 'Browse the gallery'} →
-          </MText>
-        </Pressable>
       </LinearGradient>
     </View>
   );
