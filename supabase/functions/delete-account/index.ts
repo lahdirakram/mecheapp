@@ -30,8 +30,11 @@ Deno.serve(async (req) => {
     // doesn't leave files behind past the first page.
     for (const bucket of ['selfies', 'generated']) {
       const PAGE = 100;
-      for (let offset = 0; ; offset += PAGE) {
-        const { data: files } = await admin.storage.from(bucket).list(user.id, { limit: PAGE, offset });
+      // Always list from offset 0: each page is deleted before the next list, so the just-deleted
+      // files are gone and offset 0 returns the remaining ones. (Incrementing offset would skip a
+      // page each round.) Safety cap to avoid an infinite loop if a delete silently fails.
+      for (let guard = 0; guard < 10000; guard++) {
+        const { data: files } = await admin.storage.from(bucket).list(user.id, { limit: PAGE });
         if (!files || files.length === 0) break;
         await admin.storage.from(bucket).remove(files.map((f) => `${user.id}/${f.name}`));
         if (files.length < PAGE) break;

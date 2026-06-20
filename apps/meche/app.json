@@ -67,6 +67,7 @@
         }
       ],
       "./plugins/withImagesOnlyMediaPermissions",
+      "./plugins/withNoMicrophone",
       [
         "@react-native-google-signin/google-signin",
         {

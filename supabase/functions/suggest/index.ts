@@ -50,13 +50,13 @@ Deno.serve(async (req) => {
       return json({ error: 'invalid_image', detail: String(e instanceof Error ? e.message : e) }, 400);
     }
 
-    // Rate-limit this free, paid-model-backed endpoint per user. Logged server-side in suggest_calls.
+    // Rate-limit this free, paid-model-backed endpoint per user — concurrency-safe (advisory-locked
+    // count+insert in a single RPC, so parallel requests can't bypass the cap).
     const admin = createClient(SUPABASE_URL, SERVICE);
     const SUGGEST_HOURLY_CAP = Number(Deno.env.get('SUGGEST_HOURLY_CAP') ?? '20');
-    const hourAgo = new Date(Date.now() - 3600_000).toISOString();
-    const { count } = await admin.from('suggest_calls').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', hourAgo);
-    if ((count ?? 0) >= SUGGEST_HOURLY_CAP) return json({ error: 'rate_limited' }, 429);
-    await admin.from('suggest_calls').insert({ user_id: user.id });
+    const { data: allowed, error: rlErr } = await admin.rpc('reserve_suggest_call', { p_user: user.id, p_max: SUGGEST_HOURLY_CAP });
+    if (rlErr) throw rlErr;
+    if (!allowed) return json({ error: 'rate_limited' }, 429);
 
     const suggestion = await suggestWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, selfieB64: selfie, mimeType: mt, lang, exclude });
     return json({ ...suggestion, provider: 'gemini' });

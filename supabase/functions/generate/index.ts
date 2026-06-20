@@ -60,6 +60,10 @@ Deno.serve(async (req) => {
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
   const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash-image';
 
+  // Hoisted so the outer catch can refund the reservation if a synchronous setup step fails.
+  let admin: Admin | null = null;
+  let resvId: string | null = null;
+
   try {
     const authHeader = req.headers.get('Authorization') ?? '';
     const userClient = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: authHeader } } });
@@ -84,7 +88,7 @@ Deno.serve(async (req) => {
       return json({ error: 'invalid_image', detail: String(e instanceof Error ? e.message : e) }, 400);
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE);
+    admin = createClient(SUPABASE_URL, SERVICE);
 
     // Credit ledger, oldest first — we replay it to split the balance into free vs purchased pools.
     const { data: txs } = await admin
@@ -146,17 +150,20 @@ Deno.serve(async (req) => {
     // Reserve 1 credit ATOMICALLY before any paid work: an advisory-locked check+decrement inside
     // the DB so concurrent /generate calls can't over-spend or fire multiple paid AI calls on the
     // same credit. Returns the reservation id, or null when no credit is left. Refunded on failure.
-    const { data: resvId, error: resvErr } = await admin.rpc('reserve_generation_credit', { p_user: user.id });
+    const { data: rid, error: resvErr } = await admin.rpc('reserve_generation_credit', { p_user: user.id });
     if (resvErr) throw resvErr;
-    if (!resvId) return json({ error: 'no_credits' }, 402);
+    if (!rid) return json({ error: 'no_credits' }, 402);
+    resvId = rid as string;
 
     const selfiePath = `${user.id}/${genId}-in.jpg`;
     // Store the selfie now so the before/after is available even while the result is still pending.
-    await admin.storage.from('selfies').upload(selfiePath, decodeBase64(selfie), { contentType: mt, upsert: true });
+    const { error: upErr } = await admin.storage.from('selfies').upload(selfiePath, decodeBase64(selfie), { contentType: mt, upsert: true });
+    if (upErr) throw upErr;
 
     // Pending generation + its wardrobe look. image_url / result_path stay null until the AI
     // finishes; the wardrobe shows a "generating" placeholder meanwhile (driven by status).
-    await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief, status: 'pending' });
+    const { error: genErr } = await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief, status: 'pending' });
+    if (genErr) throw genErr;
     const lookName = (name && name.trim()) || (brief.lookName || brief.prompt || '').slice(0, 40) || 'Ma mèche';
     const { data: look, error: lookErr } = await admin
       .from('looks')
@@ -190,7 +197,8 @@ Deno.serve(async (req) => {
           }
           const outExt = result.mimeType.includes('png') ? 'png' : 'jpg';
           const resultPath = `${user.id}/${genId}-out.${outExt}`;
-          await admin.storage.from('generated').upload(resultPath, decodeBase64(result.base64), { contentType: result.mimeType, upsert: true });
+          const { error: outErr } = await admin.storage.from('generated').upload(resultPath, decodeBase64(result.base64), { contentType: result.mimeType, upsert: true });
+          if (outErr) throw outErr; // failed upload → fall to catch (mark failed + refund), no orphan "done"
           const match = Math.round(88 + Math.random() * 9);
           await admin.from('generations').update({ status: 'done', result_path: resultPath, match }).eq('id', genId);
           await admin.from('looks').update({ image_url: resultPath }).eq('id', look.id);
@@ -211,6 +219,15 @@ Deno.serve(async (req) => {
     // work is now decoupled from this request.
     return json({ id: genId, lookId: look.id, status: 'pending', creditsLeft: balance - 1, provider: GEMINI_API_KEY ? 'gemini' : 'mock' });
   } catch (e) {
+    // A synchronous step failed after the credit was reserved → refund it. The background path has
+    // its own refund and is only scheduled once setup fully succeeds, so there's no double refund.
+    if (resvId && admin) {
+      try {
+        await admin.from('credit_transactions').delete().eq('id', resvId);
+      } catch {
+        /* best-effort refund */
+      }
+    }
     const msg = String(e instanceof Error ? e.message : e);
     return json({ error: 'generation_failed', detail: msg }, 500);
   }
