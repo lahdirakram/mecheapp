@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Switch, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,16 +49,8 @@ export default function Profile() {
   const srcOf = (u?: string | null) => (!u ? undefined : /^https?:\/\//.test(u) ? u : signed[u]);
 
   const soon = (title: string) => toast(lang === 'fr' ? `${title} arrive bientôt.` : `${title} is coming soon.`, { icon: 'sparkle' });
-  const openPrefs = () =>
-    sheet({
-      title: lang === 'fr' ? 'Préférences' : 'Preferences',
-      options: [
-        { label: lang === 'fr' ? `Langue : ${lang.toUpperCase()} · changer` : `Language: ${lang.toUpperCase()} · switch`, onPress: toggle },
-        { label: lang === 'fr' ? 'Se déconnecter' : 'Sign out', destructive: true, onPress: () => void signOut() },
-        { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
-      ],
-    });
-
+  // Two-step + visually distinct: only "delete" is destructive (red) and it opens its own confirm,
+  // so it can't be mistaken for the harmless "sign out".
   const onDeleteAccount = () =>
     sheet({
       title: lang === 'fr' ? 'Supprimer ton compte ?' : 'Delete your account?',
@@ -82,6 +74,32 @@ export default function Profile() {
       ],
     });
 
+  // Preferences = language + notifications only (no account actions here).
+  const openPrefs = () =>
+    sheet({
+      title: lang === 'fr' ? 'Préférences' : 'Preferences',
+      options: [
+        { label: lang === 'fr' ? `Langue : ${lang.toUpperCase()} · changer` : `Language: ${lang.toUpperCase()} · switch`, onPress: toggle },
+        {
+          label: lang === 'fr' ? `Notifications : ${pushOn ? 'activées' : 'désactivées'} · changer` : `Notifications: ${pushOn ? 'on' : 'off'} · switch`,
+          onPress: () => togglePush(!pushOn),
+        },
+        { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
+      ],
+    });
+
+  // Account = sign out (normal) + delete (red, with its own confirm). Separate menu so a destructive
+  // tap is never adjacent to a preference.
+  const openAccount = () =>
+    sheet({
+      title: lang === 'fr' ? 'Compte' : 'Account',
+      options: [
+        { label: lang === 'fr' ? 'Se déconnecter' : 'Sign out', onPress: () => void signOut() },
+        { label: lang === 'fr' ? 'Supprimer mon compte' : 'Delete my account', destructive: true, onPress: onDeleteAccount },
+        { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
+      ],
+    });
+
   const rows: { ic: MIconName; l: string; sub: string; onPress?: () => void }[] = [
     {
       ic: 'calendar',
@@ -91,6 +109,7 @@ export default function Profile() {
     },
     { ic: 'heart', l: lang === 'fr' ? 'Salons favoris' : 'Favorite salons', sub: '', onPress: () => soon(lang === 'fr' ? 'Salons favoris' : 'Favorite salons') },
     { ic: 'settings', l: lang === 'fr' ? 'Préférences' : 'Preferences', sub: lang === 'fr' ? 'Langue, notifications' : 'Language, notifications', onPress: openPrefs },
+    { ic: 'user', l: lang === 'fr' ? 'Compte' : 'Account', sub: lang === 'fr' ? 'Déconnexion, suppression' : 'Sign out, delete', onPress: openAccount },
   ];
 
   return (
@@ -209,33 +228,7 @@ export default function Profile() {
               <MIcon name="chevronRight" size={16} color={MPAL.mute} />
             </Pressable>
           ))}
-          {/* push toggle — stored per device (notifPref); turning off drops this device's token */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderTopWidth: 1, borderTopColor: MPAL.border }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: MPAL.subtle, alignItems: 'center', justifyContent: 'center' }}>
-              <MIcon name="sparkle" size={16} color={MPAL.ink} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <MText variant="bodySemibold" size={13}>
-                {lang === 'fr' ? 'Notifications' : 'Notifications'}
-              </MText>
-              <MText size={11} color={MPAL.mute} style={{ marginTop: 1 }}>
-                {lang === 'fr' ? 'Quand ton essai est prêt' : 'When your try-on is ready'}
-              </MText>
-            </View>
-            <Switch value={pushOn} onValueChange={togglePush} trackColor={{ true: MPAL.ink, false: MPAL.border }} thumbColor="#fff" ios_backgroundColor={MPAL.border} />
-          </View>
         </View>
-
-        <Pressable hitSlop={12} onPress={signOut}>
-          <MText size={13} color={MPAL.mute} style={{ textAlign: 'center', marginTop: 18, textDecorationLine: 'underline' }}>
-            {lang === 'fr' ? 'Se déconnecter' : 'Sign out'}
-          </MText>
-        </Pressable>
-        <Pressable hitSlop={12} onPress={onDeleteAccount}>
-          <MText size={12} color={MPAL.mute} style={{ textAlign: 'center', marginTop: 12 }}>
-            {lang === 'fr' ? 'Supprimer mon compte' : 'Delete my account'}
-          </MText>
-        </Pressable>
       </ScrollView>
     </View>
   );
