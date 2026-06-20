@@ -66,15 +66,23 @@ export function useStylists() {
   });
 }
 
+// Saved looks for "Mes mèches". Each generated look embeds its generation's status so the grid can
+// show a "generating" placeholder for background try-ons; while any look is still pending we poll so
+// it flips to the finished image on its own (the generation runs server-side, decoupled from the
+// loader screen).
 export function useWardrobe(userId: string | undefined) {
   const sb = useSupabase();
   return useQuery({
     queryKey: ['looks', userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await sb.from('looks').select('*').eq('user_id', userId!).order('created_at', { ascending: false });
+      const { data, error } = await sb.from('looks').select('*, generation:generations(status)').eq('user_id', userId!).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
+    },
+    refetchInterval: (query) => {
+      const rows = query.state.data as { generation?: { status?: string } | null }[] | undefined;
+      return rows?.some((l) => l.generation?.status === 'pending') ? 4000 : false;
     },
   });
 }

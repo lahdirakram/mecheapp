@@ -1,11 +1,17 @@
 // POST /functions/v1/generate
-// Body: { selfieBase64, mimeType, brief }
-// Auth: user JWT. Checks the credit balance, runs the AI try-on (Gemini, or mock fallback),
-// stores selfie + result in Storage, records the generation, decrements 1 credit.
+// Body: { selfieBase64, mimeType, brief, name }
+// Auth: user JWT. Checks the credit balance + free-tier caps, reserves 1 credit, then records a
+// PENDING generation and its wardrobe look and RETURNS IMMEDIATELY. The AI try-on (Gemini, or mock
+// fallback) runs in the background (EdgeRuntime.waitUntil): on success it stores the result and
+// flips the rows to 'done'; on failure it refunds the credit and removes the empty look. So a
+// try-on survives the user leaving the loader — it appears in "Mes mèches" when ready.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { decodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import { cors } from '../_shared/cors.ts';
 import { buildPrompt, generateWithGemini, mockResult, type Brief } from '../_shared/tryon.ts';
+
+// Supabase Edge Runtime: keeps the worker alive to finish `promise` after the response is sent.
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, 'content-type': 'application/json' } });
 
@@ -26,10 +32,11 @@ Deno.serve(async (req) => {
     const user = userData.user;
     if (!user) return json({ error: 'unauthorized' }, 401);
 
-    const { selfieBase64, mimeType = 'image/jpeg', brief = {} } = (await req.json()) as {
+    const { selfieBase64, mimeType = 'image/jpeg', brief = {}, name } = (await req.json()) as {
       selfieBase64?: string;
       mimeType?: string;
       brief?: Brief;
+      name?: string;
     };
     if (!selfieBase64) return json({ error: 'missing_selfie' }, 400);
 
@@ -73,8 +80,8 @@ Deno.serve(async (req) => {
     const isPaidLook = paid > 0;
 
     // Cost safety guards — only for UNCOMPENSATED looks (free-trial + ad-reward credits), applied
-    // BEFORE the paid Gemini call so a blocked request costs nothing. Paid looks skip ALL of this:
-    // every call is covered by money the user spent and is bounded by what they bought.
+    // BEFORE we reserve the credit / kick off the paid Gemini call so a blocked request costs
+    // nothing. Paid looks skip ALL of this: every call is covered by money the user spent.
     if (!isPaidLook) {
       // GEN_DAILY_CAP is the hard ceiling on uncompensated AI spend: ~€0.02/look, so 1000 looks ≈
       // €20/day max. Tune live with `supabase secrets set GEN_DAILY_CAP=N` (picked up next call).
@@ -98,40 +105,64 @@ Deno.serve(async (req) => {
       if ((userHour ?? 0) >= USER_HOURLY_CAP) return json({ error: 'rate_limited' }, 429);
     }
 
-    // generate
-    const prompt = buildPrompt(brief);
-    const result = GEMINI_API_KEY
-      ? await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: selfie, mimeType: mt, prompt })
-      : mockResult(selfie, mt);
-
-    // store
+    // ── Reserve + enqueue (all synchronous, so the client gets a definitive answer fast) ──────
     const genId = crypto.randomUUID();
     const selfiePath = `${user.id}/${genId}-in.jpg`;
-    const outExt = result.mimeType.includes('png') ? 'png' : 'jpg';
-    const resultPath = `${user.id}/${genId}-out.${outExt}`;
+    // Store the selfie now so the before/after is available even while the result is still pending.
     await admin.storage.from('selfies').upload(selfiePath, decodeBase64(selfie), { contentType: mt, upsert: true });
-    await admin.storage.from('generated').upload(resultPath, decodeBase64(result.base64), { contentType: result.mimeType, upsert: true });
 
-    // record + decrement
-    const match = Math.round(88 + Math.random() * 9);
-    await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief, result_path: resultPath, match });
-    await admin.from('credit_transactions').insert({ user_id: user.id, delta: -1, reason: 'generation' });
+    // Reserve 1 credit up-front (refunded if the generation fails). Charging on enqueue — not on
+    // success — keeps a user from firing many looks while the balance still reads full.
+    const { data: resv, error: resvErr } = await admin
+      .from('credit_transactions')
+      .insert({ user_id: user.id, delta: -1, reason: 'generation' })
+      .select('id')
+      .single();
+    if (resvErr) throw resvErr;
 
-    // Return only the Storage path (not the multi-MB base64) — the client builds a public URL
-    // and loads the image directly. Keeps the function's CPU/response small (avoids the local
-    // edge runtime's early-termination on big payloads).
-    return json({
-      id: genId,
-      resultPath,
-      mimeType: result.mimeType,
-      match,
-      creditsLeft: balance - 1,
-      provider: GEMINI_API_KEY ? 'gemini' : 'mock',
-    });
+    // Pending generation + its wardrobe look. image_url / result_path stay null until the AI
+    // finishes; the wardrobe shows a "generating" placeholder meanwhile (driven by status).
+    await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief, status: 'pending' });
+    const lookName = (name && name.trim()) || (brief.lookName || brief.prompt || '').slice(0, 40) || 'Ma mèche';
+    const { data: look, error: lookErr } = await admin
+      .from('looks')
+      .insert({ user_id: user.id, name: lookName, generation_id: genId, loved: false })
+      .select('id')
+      .single();
+    if (lookErr) throw lookErr;
+
+    // ── Background work: the actual AI call. Runs after the response is sent; the runtime keeps
+    // the worker alive until it settles, so it completes even if the client disconnects. ────────
+    EdgeRuntime.waitUntil(
+      (async () => {
+        try {
+          const prompt = buildPrompt(brief);
+          const result = GEMINI_API_KEY
+            ? await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: selfie, mimeType: mt, prompt })
+            : mockResult(selfie, mt);
+          const outExt = result.mimeType.includes('png') ? 'png' : 'jpg';
+          const resultPath = `${user.id}/${genId}-out.${outExt}`;
+          await admin.storage.from('generated').upload(resultPath, decodeBase64(result.base64), { contentType: result.mimeType, upsert: true });
+          const match = Math.round(88 + Math.random() * 9);
+          await admin.from('generations').update({ status: 'done', result_path: resultPath, match }).eq('id', genId);
+          await admin.from('looks').update({ image_url: resultPath }).eq('id', look.id);
+          // Stage 2: push-notify the user's devices here once expo-notifications ships.
+        } catch (e) {
+          const msg = String(e instanceof Error ? e.message : e);
+          // Mark failed (kept for audit), refund the reserved credit, and drop the empty look so no
+          // broken card lingers in "Mes mèches". A watching client sees 'failed' via polling.
+          await admin.from('generations').update({ status: 'failed', error: msg }).eq('id', genId);
+          await admin.from('credit_transactions').delete().eq('id', resv.id);
+          await admin.from('looks').delete().eq('id', look.id);
+        }
+      })(),
+    );
+
+    // The client navigates away or watches the loader (polling the generation row) — either way the
+    // work is now decoupled from this request.
+    return json({ id: genId, lookId: look.id, status: 'pending', creditsLeft: balance - 1, provider: GEMINI_API_KEY ? 'gemini' : 'mock' });
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e);
-    // Provider quota / rate limit (e.g. Gemini image gen on a non-billed project) → 503, not 500.
-    const quota = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
-    return json({ error: quota ? 'ai_quota' : 'generation_failed', detail: msg }, quota ? 503 : 500);
+    return json({ error: 'generation_failed', detail: msg }, 500);
   }
 });
