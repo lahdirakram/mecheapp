@@ -58,7 +58,10 @@ export default function Profile() {
         lang === 'fr'
           ? 'Tes essais, photos et crédits seront définitivement supprimés. Action irréversible.'
           : 'Your tries, photos and credits will be permanently deleted. This cannot be undone.',
+      // Placement inverted vs the Account menu: the safe "Cancel" is on top, the destructive button
+      // is moved to the bottom so a reflex double-tap can't confirm deletion.
       options: [
+        { label: lang === 'fr' ? 'Annuler' : 'Cancel', cancel: true },
         {
           label: lang === 'fr' ? 'Supprimer définitivement' : 'Delete permanently',
           destructive: true,
@@ -70,7 +73,6 @@ export default function Profile() {
             }
           },
         },
-        { label: lang === 'fr' ? 'Annuler' : 'Cancel', cancel: true },
       ],
     });
 
