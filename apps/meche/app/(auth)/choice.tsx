@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MIcon, MPAL, MText, MWordmark, useT } from '@meche/ui';
 import { useGoogleSignIn } from '../../lib/useGoogleSignIn';
 import { useAppleSignIn } from '../../lib/useAppleSignIn';
+import { LegalConsent } from '../../components/LegalConsent';
 
 // Onboarding 01b · Compte (choix) — Apple / Google / email. Both social providers use native
 // sign-in → Supabase signInWithIdToken. Apple is iOS-only (hidden on Android, and required by App
@@ -77,9 +78,7 @@ export default function AuthChoice() {
         </View>
 
         <View style={{ marginTop: 'auto', paddingVertical: 28, alignItems: 'center' }}>
-          <MText size={11} color={MPAL.mute} style={{ textAlign: 'center', lineHeight: 16, maxWidth: 300 }}>
-            {t('auth_terms')}
-          </MText>
+          <LegalConsent />
           <MText size={13} color={MPAL.mute} style={{ marginTop: 14 }}>
             {t('auth_have_account')}{' '}
             <MText size={13} color={MPAL.ink} variant="bodySemibold" onPress={() => router.push('/(auth)/signin')} style={{ textDecorationLine: 'underline' }}>

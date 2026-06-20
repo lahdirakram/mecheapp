@@ -8,6 +8,7 @@ import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, useT, useToast } from '@meche/ui';
 import { getPushEnabled } from '../../lib/notifPref';
 import { setPushPreference } from '../../lib/push';
+import { openLegal } from '../../lib/legal';
 
 type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; image_url?: string | null; generation_id?: string | null };
 
@@ -90,6 +91,17 @@ export default function Profile() {
       ],
     });
 
+  const openLegalSheet = () =>
+    sheet({
+      title: lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms',
+      options: [
+        { label: lang === 'fr' ? 'Politique de confidentialité' : 'Privacy Policy', onPress: () => openLegal('privacy', lang) },
+        { label: lang === 'fr' ? "Conditions d'utilisation" : 'Terms of Service', onPress: () => openLegal('terms', lang) },
+        { label: lang === 'fr' ? 'Mentions légales' : 'Legal Notice', onPress: () => openLegal('mentions-legales', lang) },
+        { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
+      ],
+    });
+
   // Account = sign out (normal) + delete (red, with its own confirm). Separate menu so a destructive
   // tap is never adjacent to a preference.
   const openAccount = () =>
@@ -111,6 +123,7 @@ export default function Profile() {
     },
     { ic: 'heart', l: lang === 'fr' ? 'Salons favoris' : 'Favorite salons', sub: '', onPress: () => soon(lang === 'fr' ? 'Salons favoris' : 'Favorite salons') },
     { ic: 'settings', l: lang === 'fr' ? 'Préférences' : 'Preferences', sub: lang === 'fr' ? 'Langue, notifications' : 'Language, notifications', onPress: openPrefs },
+    { ic: 'lock', l: lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms', sub: lang === 'fr' ? 'Politique, CGU, mentions légales' : 'Policy, Terms, Legal notice', onPress: openLegalSheet },
     { ic: 'user', l: lang === 'fr' ? 'Compte' : 'Account', sub: lang === 'fr' ? 'Déconnexion, suppression' : 'Sign out, delete', onPress: openAccount },
   ];
 
