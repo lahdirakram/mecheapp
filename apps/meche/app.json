@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.meche.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#15110E",
         "foregroundImage": "./assets/android-icon-foreground.png"
