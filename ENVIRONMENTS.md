@@ -7,11 +7,26 @@ built.
 | Lane | How you reach it | Backend (Supabase) | Money | Build profile / channel |
 |------|------------------|--------------------|-------|-------------------------|
 | **Dev** | `expo start` on your device | local (`supabase start`) or staging | none | `development` |
-| **Test** | TestFlight + Play internal | **STAGING** | sandbox | `preview` / channel `preview` |
+| **Test** | on-device internal build | **STAGING** | no IAP (see below) | `preview` / channel `preview` |
 | **Prod** | App Store + Play public | **PROD** | real | `production` / channel `production` |
 
 Rule: **never submit a `preview` build to the public**. TestFlight holds `preview` (staging) builds
 for you; the App Store gets the `production` (prod) build.
+
+## In-app purchases (IAP) — PROD only
+
+IAP is the one exception to the lanes above. A store app is a single identity tied to one backend, so
+**all purchases — sandbox/license-tester AND real — credit the PROD backend.** There is no staging IAP.
+
+- **One** RevenueCat project → **one** webhook → the **prod** `iap-webhook` (no environment filter; it
+  grants for sandbox and production alike — a normal store user can't make sandbox purchases).
+- Test the webhook **logic** on staging via RevenueCat "send test event" / a crafted POST with a
+  staging user id. The **real purchase flow** is only verifiable on the store track (sandbox = no
+  charge), against prod.
+- **Android**: Play Billing needs a **Play-distributed build** (internal track), never a sideloaded
+  `preview` APK (else "produit introuvable"). Build `production` → `eas submit` to Internal testing →
+  add your Google account as a License tester + opt in → install from the Play link. Products
+  `meche_credits_taste/star/pro` must be Active. iOS: same idea via TestFlight sandbox.
 
 ## Supabase projects
 
