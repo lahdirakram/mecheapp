@@ -11,6 +11,7 @@
       "ios": { "simulator": true },
       "android": { "buildType": "apk" },
       "env": {
+        "APP_ENV": "staging",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vefxfjcdvstjwieasrbq.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9v1ycTlTbN7GGlgyKqOA9A_FvVFKmWS",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "909044731824-hm8v0cs8rlq1nasu4hog32cfo0kid32j.apps.googleusercontent.com",
@@ -25,6 +26,7 @@
       "ios": {},
       "android": { "buildType": "apk" },
       "env": {
+        "APP_ENV": "staging",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vefxfjcdvstjwieasrbq.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9v1ycTlTbN7GGlgyKqOA9A_FvVFKmWS",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "909044731824-hm8v0cs8rlq1nasu4hog32cfo0kid32j.apps.googleusercontent.com",
@@ -37,6 +39,7 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
+        "APP_ENV": "production",
         "EXPO_PUBLIC_SUPABASE_URL": "https://hqhnvjjbohzktoapsytj.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable__j-O5UlodqNWnkyCPt5Mmw_NturInne",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "909044731824-hm8v0cs8rlq1nasu4hog32cfo0kid32j.apps.googleusercontent.com",

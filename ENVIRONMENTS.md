@@ -13,6 +13,11 @@ built.
 Rule: **never submit a `preview` build to the public**. TestFlight holds `preview` (staging) builds
 for you; the App Store gets the `production` (prod) build.
 
+**App identities** (separate bundles so staging installs alongside prod, via `app.config.js` +
+`APP_ENV`): prod = `com.meche.app` ("Mèche"), staging = `com.meche.app.staging` ("Mèche (staging)").
+Staging needs its own Apple App ID / Google OAuth clients / Firebase app for Apple/Google sign-in +
+push; email auth + generation work without that. IAP stays prod-only.
+
 ## In-app purchases (IAP) — PROD only
 
 IAP is the one exception to the lanes above. A store app is a single identity tied to one backend, so
