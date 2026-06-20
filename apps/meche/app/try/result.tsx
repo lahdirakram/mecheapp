@@ -41,7 +41,6 @@ export default function Result() {
   // back to the param if it's already a full URL.
   const afterUri = result?.uri ?? gen?.resultUrl ?? (params.after && /^https?:\/\//.test(params.after) ? params.after : null);
   const title = result?.name ?? params.name ?? (lang === 'fr' ? 'Ma mèche' : 'My look');
-  const matchPct = result?.match ?? gen?.match ?? null;
   const savedLookId = result?.savedLookId ?? params.lookId;
 
   // The generation is already auto-saved to "Mes essais"; the heart toggles "préféré" on it.
@@ -190,7 +189,6 @@ export default function Result() {
           <View style={{ position: 'absolute', top: 14, left: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.95)' }}>
             <MText variant="bodyBold" size={10} color={MPAL.ink} style={{ letterSpacing: 1 }}>
               {t('after').toUpperCase()}
-              {matchPct != null ? ` · ${matchPct}%` : ''}
             </MText>
           </View>
           <View style={{ position: 'absolute', top: 14, right: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.6)' }}>

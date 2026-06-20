@@ -261,13 +261,6 @@ function Reel({ card, height, lang, insetsTop, savedImages }: { card: Row; heigh
               {card.by?.[lang] ?? ''}
             </MText>
           </View>
-          {typeof card.match === 'number' ? (
-            <View style={{ marginLeft: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: MPAL.ink }}>
-              <MText variant="bodyBold" size={10} color="#fff">
-                {card.match}% {lang === 'fr' ? 'pour toi' : 'for you'}
-              </MText>
-            </View>
-          ) : null}
         </View>
 
         <MText variant="serif" size={32} color="#fff" style={{ lineHeight: 34 }}>
