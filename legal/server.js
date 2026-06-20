@@ -9,7 +9,7 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, 'public');
-const PAGES = new Set(['index', 'privacy', 'terms']);
+const PAGES = new Set(['index', 'privacy', 'terms', 'mentions-legales']);
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
