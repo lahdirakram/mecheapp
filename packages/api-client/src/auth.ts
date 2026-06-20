@@ -75,6 +75,14 @@ export function useAuth() {
     updatePassword(password: string) {
       return client.auth.updateUser({ password });
     },
+
+    /** Permanently delete the signed-in user's account (storage + all data, via the delete-account
+     *  Edge Function), then sign out locally so the auth guard routes back to Welcome. */
+    async deleteAccount() {
+      const { error } = await client.functions.invoke('delete-account');
+      if (error) throw error;
+      await client.auth.signOut();
+    },
   };
 }
 

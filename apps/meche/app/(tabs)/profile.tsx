@@ -1,11 +1,13 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth, useBookings, useCredits, useCreditPacks, useProfile, useSession, useSignedUrls, useWardrobe } from '@meche/api-client';
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, useT, useToast } from '@meche/ui';
+import { getPushEnabled } from '../../lib/notifPref';
+import { setPushPreference } from '../../lib/push';
 
 type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; image_url?: string | null; generation_id?: string | null };
 
@@ -19,7 +21,15 @@ export default function Profile() {
   const toast = useToast();
   const sheet = useSheet();
   const session = useSession();
-  const { signOut } = useAuth();
+  const { signOut, deleteAccount } = useAuth();
+  const [pushOn, setPushOn] = useState(true);
+  useEffect(() => {
+    void getPushEnabled().then(setPushOn);
+  }, []);
+  const togglePush = (v: boolean) => {
+    setPushOn(v); // optimistic
+    if (session) void setPushPreference(session.user.id, v);
+  };
   const { data: profile } = useProfile(session?.user.id);
   const { data: credits } = useCredits(session?.user.id);
   const { data: looksData } = useWardrobe(session?.user.id);
@@ -46,6 +56,29 @@ export default function Profile() {
         { label: lang === 'fr' ? `Langue : ${lang.toUpperCase()} · changer` : `Language: ${lang.toUpperCase()} · switch`, onPress: toggle },
         { label: lang === 'fr' ? 'Se déconnecter' : 'Sign out', destructive: true, onPress: () => void signOut() },
         { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
+      ],
+    });
+
+  const onDeleteAccount = () =>
+    sheet({
+      title: lang === 'fr' ? 'Supprimer ton compte ?' : 'Delete your account?',
+      message:
+        lang === 'fr'
+          ? 'Tes essais, photos et crédits seront définitivement supprimés. Action irréversible.'
+          : 'Your tries, photos and credits will be permanently deleted. This cannot be undone.',
+      options: [
+        {
+          label: lang === 'fr' ? 'Supprimer définitivement' : 'Delete permanently',
+          destructive: true,
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch {
+              toast(lang === 'fr' ? 'Suppression impossible, réessaie.' : 'Could not delete, try again.');
+            }
+          },
+        },
+        { label: lang === 'fr' ? 'Annuler' : 'Cancel', cancel: true },
       ],
     });
 
@@ -176,11 +209,31 @@ export default function Profile() {
               <MIcon name="chevronRight" size={16} color={MPAL.mute} />
             </Pressable>
           ))}
+          {/* push toggle — stored per device (notifPref); turning off drops this device's token */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderTopWidth: 1, borderTopColor: MPAL.border }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: MPAL.subtle, alignItems: 'center', justifyContent: 'center' }}>
+              <MIcon name="sparkle" size={16} color={MPAL.ink} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <MText variant="bodySemibold" size={13}>
+                {lang === 'fr' ? 'Notifications' : 'Notifications'}
+              </MText>
+              <MText size={11} color={MPAL.mute} style={{ marginTop: 1 }}>
+                {lang === 'fr' ? 'Quand ton essai est prêt' : 'When your try-on is ready'}
+              </MText>
+            </View>
+            <Switch value={pushOn} onValueChange={togglePush} trackColor={{ true: MPAL.ink, false: MPAL.border }} thumbColor="#fff" ios_backgroundColor={MPAL.border} />
+          </View>
         </View>
 
         <Pressable hitSlop={12} onPress={signOut}>
           <MText size={13} color={MPAL.mute} style={{ textAlign: 'center', marginTop: 18, textDecorationLine: 'underline' }}>
             {lang === 'fr' ? 'Se déconnecter' : 'Sign out'}
+          </MText>
+        </Pressable>
+        <Pressable hitSlop={12} onPress={onDeleteAccount}>
+          <MText size={12} color={MPAL.mute} style={{ textAlign: 'center', marginTop: 12 }}>
+            {lang === 'fr' ? 'Supprimer mon compte' : 'Delete my account'}
           </MText>
         </Pressable>
       </ScrollView>

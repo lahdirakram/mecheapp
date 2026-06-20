@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { supabase } from './supabase';
+import { getPushEnabled, setPushEnabledPref } from './notifPref';
 
 // Push notifications. The /generate Edge Function fires an Expo push when a background try-on lands
 // in "Mes mèches" (or fails), so the user finds out even after leaving the loader / closing the app.
@@ -25,6 +26,7 @@ const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string }
 export async function registerPushToken(userId: string): Promise<void> {
   try {
     if (!Device.isDevice || !projectId) return; // simulators can't mint a token
+    if (!(await getPushEnabled())) return; // user turned notifications off
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -47,5 +49,22 @@ export async function registerPushToken(userId: string): Promise<void> {
       .upsert({ user_id: userId, expo_push_token: token.data, platform: Platform.OS }, { onConflict: 'user_id,expo_push_token' });
   } catch {
     /* non-blocking */
+  }
+}
+
+// Profile toggle: persist the choice, then register (on) or drop THIS device's token (off) so the
+// backend stops pushing to it.
+export async function setPushPreference(userId: string, enabled: boolean): Promise<void> {
+  await setPushEnabledPref(enabled);
+  if (enabled) {
+    await registerPushToken(userId);
+    return;
+  }
+  try {
+    if (!Device.isDevice || !projectId) return;
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
+    await supabase.from('devices').delete().eq('user_id', userId).eq('expo_push_token', token.data);
+  } catch {
+    /* best-effort */
   }
 }
