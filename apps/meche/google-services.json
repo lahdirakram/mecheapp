@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281414668072",
+    "project_id": "mecheapp-staging",
+    "storage_bucket": "mecheapp-staging.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281414668072:android:86e1c93f7dd947c52d0a1d",
+        "android_client_info": {
+          "package_name": "com.meche.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjydotJIVkMCqrgpIiYsIg6SiGMxN0QIA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
