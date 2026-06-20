@@ -9,6 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { decodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import { cors } from '../_shared/cors.ts';
 import { buildPrompt, generateWithGemini, mockResult, type Brief } from '../_shared/tryon.ts';
+import { parseImageInput } from '../_shared/validate.ts';
 
 // Supabase Edge Runtime: keeps the worker alive to finish `promise` after the response is sent.
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
@@ -72,15 +73,15 @@ Deno.serve(async (req) => {
       brief?: Brief;
       name?: string;
     };
-    if (!selfieBase64) return json({ error: 'missing_selfie' }, 400);
-
-    // Strip a `data:<mime>;base64,` prefix if present (expo-camera returns it on web).
-    let selfie = selfieBase64;
-    let mt = mimeType;
-    const pfx = selfie.match(/^data:(.+?);base64,/);
-    if (pfx) {
-      mt = pfx[1];
-      selfie = selfie.slice(pfx[0].length);
+    // Validate + normalize the image (size cap, MIME allowlist, valid base64) before any decode/upload.
+    let selfie: string;
+    let mt: string;
+    try {
+      const img = parseImageInput(selfieBase64, mimeType);
+      selfie = img.base64;
+      mt = img.mimeType;
+    } catch (e) {
+      return json({ error: 'invalid_image', detail: String(e instanceof Error ? e.message : e) }, 400);
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE);
@@ -141,18 +142,17 @@ Deno.serve(async (req) => {
 
     // ── Reserve + enqueue (all synchronous, so the client gets a definitive answer fast) ──────
     const genId = crypto.randomUUID();
+
+    // Reserve 1 credit ATOMICALLY before any paid work: an advisory-locked check+decrement inside
+    // the DB so concurrent /generate calls can't over-spend or fire multiple paid AI calls on the
+    // same credit. Returns the reservation id, or null when no credit is left. Refunded on failure.
+    const { data: resvId, error: resvErr } = await admin.rpc('reserve_generation_credit', { p_user: user.id });
+    if (resvErr) throw resvErr;
+    if (!resvId) return json({ error: 'no_credits' }, 402);
+
     const selfiePath = `${user.id}/${genId}-in.jpg`;
     // Store the selfie now so the before/after is available even while the result is still pending.
     await admin.storage.from('selfies').upload(selfiePath, decodeBase64(selfie), { contentType: mt, upsert: true });
-
-    // Reserve 1 credit up-front (refunded if the generation fails). Charging on enqueue — not on
-    // success — keeps a user from firing many looks while the balance still reads full.
-    const { data: resv, error: resvErr } = await admin
-      .from('credit_transactions')
-      .insert({ user_id: user.id, delta: -1, reason: 'generation' })
-      .select('id')
-      .single();
-    if (resvErr) throw resvErr;
 
     // Pending generation + its wardrobe look. image_url / result_path stay null until the AI
     // finishes; the wardrobe shows a "generating" placeholder meanwhile (driven by status).
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
           // in "Mes mèches") so the user gets clear feedback + a retry, instead of it silently
           // vanishing on them.
           await admin.from('generations').update({ status: 'failed', error: msg }).eq('id', genId);
-          await admin.from('credit_transactions').delete().eq('id', resv.id);
+          await admin.from('credit_transactions').delete().eq('id', resvId);
           await notifyUser(admin, user.id, 'failed', lookName, genId, look.id);
         }
       })(),

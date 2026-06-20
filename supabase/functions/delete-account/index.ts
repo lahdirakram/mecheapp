@@ -26,11 +26,16 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE);
 
     // Storage first — deleting the auth user does NOT remove their files. Both buckets store objects
-    // under a folder named after the uid (e.g. `<uid>/<genId>-out.png`).
+    // under a folder named after the uid (e.g. `<uid>/<genId>-out.png`). Paginate so a heavy user
+    // doesn't leave files behind past the first page.
     for (const bucket of ['selfies', 'generated']) {
-      const { data: files } = await admin.storage.from(bucket).list(user.id, { limit: 1000 });
-      const paths = (files ?? []).map((f) => `${user.id}/${f.name}`);
-      if (paths.length) await admin.storage.from(bucket).remove(paths);
+      const PAGE = 100;
+      for (let offset = 0; ; offset += PAGE) {
+        const { data: files } = await admin.storage.from(bucket).list(user.id, { limit: PAGE, offset });
+        if (!files || files.length === 0) break;
+        await admin.storage.from(bucket).remove(files.map((f) => `${user.id}/${f.name}`));
+        if (files.length < PAGE) break;
+      }
     }
 
     // Then the auth user → cascades all DB rows referencing it.

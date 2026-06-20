@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { cors } from '../_shared/cors.ts';
 import { mockSuggestion, suggestWithGemini } from '../_shared/tryon.ts';
+import { parseImageInput } from '../_shared/validate.ts';
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, 'content-type': 'application/json' } });
 
@@ -15,6 +16,7 @@ Deno.serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
   const GEMINI_TEXT_MODEL = Deno.env.get('GEMINI_TEXT_MODEL') ?? 'gemini-2.5-flash';
 
@@ -22,7 +24,8 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization') ?? '';
     const userClient = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: authHeader } } });
     const { data: userData } = await userClient.auth.getUser();
-    if (!userData.user) return json({ error: 'unauthorized' }, 401);
+    const user = userData.user;
+    if (!user) return json({ error: 'unauthorized' }, 401);
 
     const { selfieBase64, mimeType = 'image/jpeg', lang = 'fr', exclude = [] } = (await req.json()) as {
       selfieBase64?: string;
@@ -36,14 +39,24 @@ Deno.serve(async (req) => {
       return json({ ...mockSuggestion(lang, exclude), provider: 'mock' });
     }
 
-    // Strip a `data:<mime>;base64,` prefix (expo-camera returns it on web).
-    let selfie = selfieBase64;
-    let mt = mimeType;
-    const pfx = selfie.match(/^data:(.+?);base64,/);
-    if (pfx) {
-      mt = pfx[1];
-      selfie = selfie.slice(pfx[0].length);
+    // Validate the image (size cap, MIME allowlist, valid base64) before sending it to the model.
+    let selfie: string;
+    let mt: string;
+    try {
+      const img = parseImageInput(selfieBase64, mimeType);
+      selfie = img.base64;
+      mt = img.mimeType;
+    } catch (e) {
+      return json({ error: 'invalid_image', detail: String(e instanceof Error ? e.message : e) }, 400);
     }
+
+    // Rate-limit this free, paid-model-backed endpoint per user. Logged server-side in suggest_calls.
+    const admin = createClient(SUPABASE_URL, SERVICE);
+    const SUGGEST_HOURLY_CAP = Number(Deno.env.get('SUGGEST_HOURLY_CAP') ?? '20');
+    const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+    const { count } = await admin.from('suggest_calls').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', hourAgo);
+    if ((count ?? 0) >= SUGGEST_HOURLY_CAP) return json({ error: 'rate_limited' }, 429);
+    await admin.from('suggest_calls').insert({ user_id: user.id });
 
     const suggestion = await suggestWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, selfieB64: selfie, mimeType: mt, lang, exclude });
     return json({ ...suggestion, provider: 'gemini' });
