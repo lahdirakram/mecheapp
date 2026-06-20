@@ -6,6 +6,7 @@ import { useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 import { useGoogleSignIn } from '../../lib/useGoogleSignIn';
 import { useAppleSignIn } from '../../lib/useAppleSignIn';
+import { LegalConsent } from '../../components/LegalConsent';
 
 // Onboarding · Sign-in — same options as signup (Apple/Google/email) for consistency. Social
 // providers create-or-sign-in via signInWithIdToken, so they work for returning users too.
@@ -101,9 +102,7 @@ export default function SignIn() {
 
         <View style={{ marginTop: 'auto', paddingBottom: insets.bottom + 20, gap: 10 }}>
           <PrimaryButton label={busy ? '…' : t('auth_signin')} tone="ink" icon="arrowRight" disabled={!valid || busy} onPress={submit} />
-          <MText size={11} color={MPAL.mute} style={{ textAlign: 'center', lineHeight: 16, maxWidth: 320, alignSelf: 'center' }}>
-            {t('auth_terms')}
-          </MText>
+          <LegalConsent />
           <MText size={13} color={MPAL.mute} style={{ textAlign: 'center' }}>
             {lang === 'fr' ? 'Pas encore de compte ? ' : 'No account yet? '}
             <MText size={13} color={MPAL.ink} variant="bodySemibold" onPress={() => router.replace('/(auth)/signup')} style={{ textDecorationLine: 'underline' }}>
