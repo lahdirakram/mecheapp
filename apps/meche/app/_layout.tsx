@@ -4,12 +4,14 @@ import { AppProviders, MPAL } from '@meche/ui';
 import { SupabaseProvider } from '@meche/api-client';
 import { supabase } from '../lib/supabase';
 import { PurchasesSync } from '../lib/PurchasesSync';
+import { PushSync } from '../lib/PushSync';
 
 export default function RootLayout() {
   return (
     <AppProviders>
       <SupabaseProvider client={supabase}>
         <PurchasesSync />
+        <PushSync />
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
