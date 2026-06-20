@@ -38,6 +38,16 @@ Deno.serve(async (req) => {
     return json({ error: 'bad_request' }, 400);
   }
 
+  // One RevenueCat project feeds BOTH backends (a single store app can only have one RC project).
+  // Each deployment acts ONLY on its own environment — set IAP_ENV=SANDBOX on staging,
+  // IAP_ENV=PRODUCTION (or leave unset) on prod. Add both Supabase webhook URLs in RevenueCat; the
+  // one that doesn't match acks and ignores. So TestFlight/sandbox purchases grant on staging and
+  // App Store purchases grant on prod, with no cross-contamination.
+  const IAP_ENV = (Deno.env.get('IAP_ENV') ?? 'PRODUCTION').toUpperCase();
+  if (event.environment && event.environment.toUpperCase() !== IAP_ENV) {
+    return json({ ok: true, ignored_env: event.environment });
+  }
+
   // Only consumable (non-renewing) purchases grant credits. Other events (TEST, CANCELLATION,
   // subscription types) are acknowledged with 200 so RevenueCat doesn't retry them.
   if (event.type !== 'NON_RENEWING_PURCHASE') return json({ ok: true, ignored: event.type ?? 'unknown' });
