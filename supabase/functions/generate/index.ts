@@ -137,9 +137,23 @@ Deno.serve(async (req) => {
       (async () => {
         try {
           const prompt = buildPrompt(brief);
-          const result = GEMINI_API_KEY
-            ? await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: selfie, mimeType: mt, prompt })
-            : mockResult(selfie, mt);
+          let result;
+          if (GEMINI_API_KEY) {
+            // Gemini's image model intermittently replies with text only ("no image in response"),
+            // or briefly rate-limits. Retry AT MOST ONCE on those recoverable cases — every call is a
+            // paid image generation, so the retry is strictly capped to bound cost. Anything else
+            // surfaces immediately.
+            try {
+              result = await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: selfie, mimeType: mt, prompt });
+            } catch (e) {
+              const m = String(e instanceof Error ? e.message : e);
+              if (!/no image|RESOURCE_EXHAUSTED|429|50\d/.test(m)) throw e;
+              await new Promise((r) => setTimeout(r, 400));
+              result = await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: selfie, mimeType: mt, prompt });
+            }
+          } else {
+            result = mockResult(selfie, mt);
+          }
           const outExt = result.mimeType.includes('png') ? 'png' : 'jpg';
           const resultPath = `${user.id}/${genId}-out.${outExt}`;
           await admin.storage.from('generated').upload(resultPath, decodeBase64(result.base64), { contentType: result.mimeType, upsert: true });
@@ -149,11 +163,11 @@ Deno.serve(async (req) => {
           // Stage 2: push-notify the user's devices here once expo-notifications ships.
         } catch (e) {
           const msg = String(e instanceof Error ? e.message : e);
-          // Mark failed (kept for audit), refund the reserved credit, and drop the empty look so no
-          // broken card lingers in "Mes mèches". A watching client sees 'failed' via polling.
+          // Mark failed and refund the reserved credit. KEEP the look (status drives a "failed" card
+          // in "Mes mèches") so the user gets clear feedback + a retry, instead of it silently
+          // vanishing on them.
           await admin.from('generations').update({ status: 'failed', error: msg }).eq('id', genId);
           await admin.from('credit_transactions').delete().eq('id', resv.id);
-          await admin.from('looks').delete().eq('id', look.id);
         }
       })(),
     );
