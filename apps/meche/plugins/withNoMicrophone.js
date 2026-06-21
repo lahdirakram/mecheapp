@@ -1,18 +1,26 @@
-// Mèche never records audio — it only takes a still selfie. expo-camera adds RECORD_AUDIO
-// (Android) and NSMicrophoneUsageDescription (iOS) to the merged manifest/plist by default, which
-// trips store reviews ("why does a photo app want the mic?"). Strip both from the FINAL build.
+// Strip Android permissions Mèche never uses but that libraries / RN inject into the merged
+// manifest: RECORD_AUDIO (no audio capture), SYSTEM_ALERT_WINDOW (no draw-over-apps) and DUMP
+// (diagnostics). Uses the `tools:node="remove"` merger directive so a library-contributed
+// permission is dropped from the FINAL merged manifest. iOS mic is handled by expo-camera's
+// `microphonePermission: false`; the withInfoPlist delete here is a belt-and-suspenders fallback.
 const { withAndroidManifest, withInfoPlist } = require('@expo/config-plugins');
 
-const MIC = 'android.permission.RECORD_AUDIO';
+const REMOVE = [
+  'android.permission.RECORD_AUDIO',
+  'android.permission.SYSTEM_ALERT_WINDOW',
+  'android.permission.DUMP',
+];
 
 function withAndroid(config) {
   return withAndroidManifest(config, (cfg) => {
     const manifest = cfg.modResults.manifest;
     manifest.$ = manifest.$ || {};
     manifest.$['xmlns:tools'] = manifest.$['xmlns:tools'] || 'http://schemas.android.com/tools';
-    manifest['uses-permission'] = (manifest['uses-permission'] || []).filter((p) => p?.$?.['android:name'] !== MIC);
-    // Merger directive so a library-contributed RECORD_AUDIO is removed from the merged manifest too.
-    manifest['uses-permission'].push({ $: { 'android:name': MIC, 'tools:node': 'remove' } });
+    manifest['uses-permission'] = manifest['uses-permission'] || [];
+    for (const name of REMOVE) {
+      manifest['uses-permission'] = manifest['uses-permission'].filter((p) => p?.$?.['android:name'] !== name);
+      manifest['uses-permission'].push({ $: { 'android:name': name, 'tools:node': 'remove' } });
+    }
     return cfg;
   });
 }
@@ -24,6 +32,6 @@ function withIos(config) {
   });
 }
 
-module.exports = function withNoMicrophone(config) {
+module.exports = function withTrimmedAndroidPermissions(config) {
   return withIos(withAndroid(config));
 };

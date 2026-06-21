@@ -48,7 +48,8 @@
         "expo-camera",
         {
           "cameraPermission": "Mèche utilise la caméra pour ton selfie d'essayage.",
-          "recordAudioAndroid": false
+          "recordAudioAndroid": false,
+          "microphonePermission": false
         }
       ],
       "expo-sharing",
