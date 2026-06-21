@@ -1,70 +1,150 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400&display=swap');
+/* Mèche legal pages — same design system as the marketing landing (Meche Landing.html):
+   Fraunces / Instrument Serif / Geist / Geist Mono on the caramel paper palette, with the
+   landing's sticky nav and dark footer so the legal pages blend straight into the site. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg: #fcf8f4;
-  --ink: #1a1410;
-  --mute: #8a7f76;
-  --sable: #b07f3c;
-  --line: #e7ddd2;
+  --ink: #15110e;
+  --ink-2: #2a2520;
+  --paper: #fcf8f4;
+  --paper-2: #f2ece6;
+  --line: #eee5de;
+  --muted: #8e8580;
+  --muted-2: #4a4339;
+  --coral: #b07f3c;
+  --coral-soft: #f0e2cf;
 }
 * { box-sizing: border-box; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 48px 24px 96px;
-  color: var(--ink);
-  background: var(--bg);
-  line-height: 1.7;
+html, body {
+  margin: 0; padding: 0;
+  background: var(--paper); color: var(--ink);
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px; line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
 }
-a { color: var(--ink); }
+::selection { background: var(--coral); color: var(--paper); }
+a { color: inherit; text-decoration: none; }
 
-header.top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 36px;
-}
-
-/* "mèche" wordmark, exact spec from the Mèche Brand Identity (.wm .gw::after):
-   Fraunces 400, letter-spacing -0.045em; the è is a plain "e" + a 22°-tilted caramel
-   stroke (top .18em, left .18em, w .5em, h .07em, transform-origin left center). */
+/* ---- wordmark (è = e + 22° caramel stroke) ---- */
 .wm {
-  font-family: "Fraunces", Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  font-size: 30px;
-  line-height: 1;
-  letter-spacing: -0.045em;
+  font-family: 'Fraunces', serif; font-weight: 400;
+  letter-spacing: -0.03em; line-height: 1;
+  position: relative; display: inline-block; white-space: nowrap;
   color: var(--ink);
-  text-decoration: none;
-  display: inline-block;
 }
-.wm .gw { position: relative; }
+.wm .gw { position: relative; display: inline-block; line-height: 1; }
 .wm .gw::after {
-  content: "";
-  position: absolute;
-  top: 0.18em;
-  left: 0.18em;
-  width: 0.5em;
-  height: 0.07em;
-  background: var(--sable);
+  content: ''; position: absolute;
+  top: 0.18em; left: 0.18em;
+  width: 0.5em; height: 0.07em;
+  background: var(--coral);
+  transform: rotate(22deg); transform-origin: left center;
   border-radius: 999px;
-  transform-origin: left center;
-  transform: rotate(22deg);
 }
 
-.lang { font-size: 0.8rem; letter-spacing: 0.06em; }
-.lang a { color: var(--mute); text-decoration: none; padding: 0 4px; }
-.lang a.active { color: var(--ink); font-weight: 600; }
-.lang span { color: var(--line); }
+/* ---- nav (matches the landing) ---- */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 40px;
+  background: rgba(245, 241, 234, 0.85);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.nav .wm { font-size: 22px; }
+.nav .nav-right { display: flex; align-items: center; gap: 20px; }
+.nav .lang {
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+}
+.nav .lang a { color: var(--muted); padding: 0 4px; }
+.nav .lang a.active { color: var(--ink); }
+.nav .lang span { color: var(--line); }
+.nav-cta {
+  font-family: 'Geist', sans-serif; font-size: 13px; font-weight: 500;
+  padding: 10px 18px; border-radius: 999px;
+  background: var(--ink); color: var(--paper);
+  transition: transform .15s ease, background .15s ease;
+}
+.nav-cta:hover { transform: translateY(-1px); background: var(--coral); }
+@media (max-width: 720px) { .nav { padding: 14px 20px; } }
 
-h1 { font-size: 1.7rem; margin: 0 0 4px; }
-h2 { font-size: 1.05rem; margin: 2rem 0 6px; }
-p, li { margin: 0 0 0.9rem; }
-ul { padding-left: 1.2rem; }
-.updated { color: var(--mute); font-size: 0.85rem; margin-bottom: 2rem; }
+/* ---- legal content ---- */
+main.legal { max-width: 760px; margin: 0 auto; padding: 76px 40px 96px; }
+@media (max-width: 720px) { main.legal { padding: 48px 20px 72px; } }
+main.legal h1 {
+  font-family: 'Fraunces', serif; font-weight: 400;
+  font-size: clamp(38px, 5.4vw, 56px); line-height: 1.04;
+  letter-spacing: -0.028em; margin: 0 0 12px; text-wrap: balance;
+}
+main.legal h1 em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral); }
+main.legal .updated {
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  margin: 0 0 40px;
+}
+main.legal .lead {
+  font-family: 'Instrument Serif', serif; font-style: italic;
+  font-size: 22px; line-height: 1.4; color: var(--muted-2); margin: 0 0 36px;
+}
+main.legal h2 {
+  font-family: 'Fraunces', serif; font-weight: 500;
+  font-size: 24px; letter-spacing: -0.015em; line-height: 1.2;
+  margin: 44px 0 10px;
+}
+main.legal p, main.legal li { font-size: 16px; line-height: 1.7; color: var(--muted-2); margin: 0 0 14px; }
+main.legal strong, main.legal b { color: var(--ink); font-weight: 600; }
+main.legal a { color: var(--coral); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+main.legal a:hover { color: var(--ink); }
+main.legal ul { padding-left: 1.2rem; margin: 0 0 14px; }
+main.legal li { margin-bottom: 8px; }
 
-.nav { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-size: 0.9rem; }
-.nav a { margin-right: 1.2rem; color: var(--mute); }
-.home-links { margin-top: 1.5rem; }
-.home-links a { display: inline-block; margin-right: 1.2rem; font-weight: 600; }
+/* cross-links between legal pages */
+.legal-nav {
+  margin-top: 52px; padding-top: 24px; border-top: 1px solid var(--line);
+  display: flex; gap: 28px; flex-wrap: wrap;
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+.legal-nav a { color: var(--muted); }
+.legal-nav a:hover { color: var(--coral); }
+
+/* legal hub index list */
+.hub-links { display: flex; flex-direction: column; margin-top: 8px; }
+.hub-links a {
+  display: flex; justify-content: space-between; align-items: center; gap: 24px;
+  padding: 26px 0; border-top: 1px solid var(--line);
+  font-family: 'Fraunces', serif; font-size: clamp(22px, 3vw, 28px);
+  letter-spacing: -0.01em; line-height: 1.1;
+}
+.hub-links a:last-child { border-bottom: 1px solid var(--line); }
+.hub-links a .arr { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 1.1em; color: var(--coral); transition: transform .2s ease; }
+.hub-links a:hover .arr { transform: translateX(4px); }
+
+/* ---- footer (matches the landing) ---- */
+footer.site { background: var(--ink); color: rgba(245, 241, 234, 0.7); padding: 80px 40px 32px; }
+.foot-inner { max-width: 1320px; margin: 0 auto; }
+.foot-top {
+  display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 48px;
+  padding-bottom: 56px; border-bottom: 1px solid rgba(245, 241, 234, 0.15);
+}
+@media (max-width: 880px) { .foot-top { grid-template-columns: 1fr 1fr; } }
+.foot-top .wm { color: var(--paper); font-size: 56px; line-height: 0.9; margin-bottom: 16px; }
+.foot-top .tag { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 18px; color: rgba(245, 241, 234, 0.7); max-width: 280px; }
+.foot-col h5 {
+  font-family: 'Geist Mono', monospace; font-size: 10.5px;
+  letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245, 241, 234, 0.5); margin: 0 0 18px;
+}
+.foot-col a { display: block; font-size: 14px; padding: 6px 0; color: rgba(245, 241, 234, 0.8); }
+.foot-col .soon { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 6px 0; color: rgba(245, 241, 234, 0.4); cursor: default; }
+.foot-col .soon .badge { font-family: 'Geist Mono', monospace; font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--coral); border: 1px solid rgba(176, 127, 60, 0.45); padding: 2px 6px; border-radius: 999px; }
+.foot-col a:hover { color: var(--coral); }
+.foot-bot {
+  padding-top: 28px;
+  display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  font-family: 'Geist Mono', monospace; font-size: 10.5px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: rgba(245, 241, 234, 0.4);
+}
+.foot-bot a { color: inherit; }
+.foot-bot a:hover { color: var(--coral); }

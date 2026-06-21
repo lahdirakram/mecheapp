@@ -1,0 +1,1116 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mèche · Vois-toi avant.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #15110e;
+    --ink-2: #2a2520;
+    --paper: #fcf8f4;
+    --paper-2: #f2ece6;
+    --line: #eee5de;
+    --muted: #8e8580;
+    --muted-2: #4a4339;
+    --coral: #b07f3c;
+    --coral-soft: #f0e2cf;
+    --plum: #2a2520;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--coral); color: var(--paper); }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+
+  .italic { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  .wm { font-family: 'Fraunces', serif; font-weight: 400; letter-spacing: -0.03em; line-height: 1; position: relative; display: inline-block; white-space: nowrap; }
+  .wm .gw { position: relative; display: inline-block; line-height: 1; }
+  .wm .gw::after {
+    content: ''; position: absolute;
+    top: 0.18em; left: 0.18em;
+    width: 0.5em; height: 0.07em;
+    background: var(--coral);
+    transform: rotate(22deg);
+    transform-origin: left center;
+    border-radius: 999px;
+  }
+
+  /* ---------------- BRANDMARK ---------------- */
+  .brandmark {
+    display: flex; justify-content: center;
+    padding: 44px 40px 8px;
+  }
+  .brandmark .wm { font-size: clamp(52px, 9vw, 96px); color: var(--ink); }
+  @media (max-width: 720px) {
+    .brandmark { padding: 32px 20px 4px; }
+  }
+
+  /* ---------------- HERO ---------------- */
+  .hero {
+    padding: 64px 40px 88px;
+    max-width: 1320px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.1fr 1fr;
+    gap: 64px; align-items: center;
+  }
+  @media (max-width: 980px) {
+    .hero { grid-template-columns: 1fr; padding: 40px 20px 56px; gap: 48px; }
+    .hero > div:first-child { text-align: center; }
+    .hero > div:first-child .sub { margin-left: auto; margin-right: auto; }
+    .hero .cta-row { justify-content: center; }
+  }
+  .hero .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2);
+    background: var(--coral-soft);
+    padding: 8px 14px; border-radius: 999px;
+    margin-bottom: 28px;
+  }
+  .hero .eyebrow .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--coral); flex-shrink: 0; }
+  @media (max-width: 560px) {
+    .hero .eyebrow {
+      align-items: flex-start; gap: 8px;
+      font-size: 10px; letter-spacing: 0.12em; line-height: 1.5;
+      padding: 8px 12px; border-radius: 14px;
+    }
+    .hero .eyebrow .dot { margin-top: 6px; }
+  }
+  .hero h1 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: clamp(52px, 7.4vw, 104px);
+    line-height: 0.96; letter-spacing: -0.038em;
+    margin: 0 0 28px;
+    text-wrap: balance;
+  }
+  .hero h1 em {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    color: var(--coral);
+  }
+  .hero .sub {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: clamp(20px, 2vw, 24px);
+    line-height: 1.4; color: var(--muted-2);
+    margin: 0 0 36px; max-width: 540px;
+  }
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'Geist', sans-serif; font-weight: 500; font-size: 16px;
+    padding: 16px 24px; border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer; transition: transform .15s ease, background .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: var(--coral); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { border-color: var(--ink); }
+  .btn .arrow { font-family: 'Fraunces', serif; font-style: italic; font-size: 18px; line-height: 1; }
+  .hero .micro {
+    display: flex; gap: 24px; align-items: center;
+    margin-top: 26px;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .hero .micro b { color: var(--ink); font-weight: 500; }
+
+  /* ------- HERO TRY-ON CARD ------- */
+  .tryon-stage {
+    position: relative;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .tryon-card {
+    width: 100%; max-width: 460px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 18px;
+    box-shadow: 0 40px 80px -50px rgba(60, 30, 20, 0.45);
+    position: relative;
+  }
+  .tryon-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 8px 14px;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  }
+  .tryon-head .live { color: var(--coral); display: inline-flex; align-items: center; gap: 6px; }
+  .tryon-head .live::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: var(--coral); animation: blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .portrait {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--paper-2);
+  }
+  .portrait .shot {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: 50% 12%;
+    animation: shotIn .5s ease;
+  }
+  @keyframes shotIn { from { opacity: 0; transform: scale(1.02); } to { opacity: 1; transform: none; } }
+
+  .portrait .tag {
+    position: absolute; top: 14px; left: 14px;
+    background: rgba(255,255,255,0.95);
+    color: var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 999px;
+  }
+  .portrait .tag.coral { background: var(--coral); color: var(--paper); }
+  .portrait .name {
+    position: absolute; left: 16px; bottom: 16px; right: 16px;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .portrait .name .lbl {
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.85; margin-bottom: 4px;
+  }
+  .portrait .name .which {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 26px; letter-spacing: -0.02em; line-height: 1;
+  }
+  .portrait .name .which em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral-soft); }
+
+  /* ---------------- PRESS BAR ---------------- */
+  .press-bar {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-2);
+    padding: 24px 40px;
+  }
+  .press-inner {
+    max-width: 1320px; margin: 0 auto;
+    display: flex; align-items: center; gap: 48px; flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .press-inner .lbl {
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  }
+  .press {
+    display: flex; gap: 40px; flex-wrap: wrap;
+    font-family: 'Fraunces', serif; font-size: 22px;
+    color: var(--ink-2); opacity: 0.7;
+  }
+  .press .vogue { font-style: italic; letter-spacing: 0.04em; }
+  .press .elle { letter-spacing: 0.3em; font-weight: 500; }
+  .press .konbini { font-family: 'Geist', sans-serif; font-weight: 600; letter-spacing: -0.03em; }
+  .press .nylon { font-weight: 500; letter-spacing: 0.18em; }
+  .press .biba { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .press .numero { letter-spacing: 0.12em; }
+
+  /* ---------------- SECTION SHELL ---------------- */
+  section.s { padding: 120px 40px; max-width: 1320px; margin: 0 auto; }
+  @media (max-width: 720px) { section.s { padding: 80px 20px; } }
+  .s-head { margin-bottom: 56px; max-width: 720px; }
+  .s-eyebrow {
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--coral);
+    display: block; margin-bottom: 16px;
+  }
+  .s-title {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 56px);
+    line-height: 1.05; letter-spacing: -0.025em;
+    margin: 0 0 18px; text-wrap: balance;
+  }
+  .s-title em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral); }
+  .s-desc {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 22px; line-height: 1.4; color: var(--muted-2);
+    margin: 0; max-width: 580px;
+  }
+
+  /* ---------------- BEFORE / AFTER STRIP ---------------- */
+  .ba-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    margin-top: 16px;
+  }
+  @media (max-width: 880px) { .ba-strip { grid-template-columns: repeat(2, 1fr); } }
+  .ba-strip .frame {
+    aspect-ratio: 3 / 4;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+  .ba-strip .frame .tag {
+    position: absolute; bottom: 10px; left: 10px;
+    background: rgba(255,255,255,0.92); color: var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 999px;
+  }
+  .ba-strip .frame .num {
+    position: absolute; top: 10px; right: 10px;
+    background: var(--ink); color: var(--paper);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 4px 8px; border-radius: 999px;
+  }
+  /* real try-on shots — same face, different looks */
+  .shot-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: 50% 12%;
+    background: var(--paper-2);
+  }
+
+  /* ---------------- 3 PATHS ---------------- */
+  .paths {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px;
+  }
+  @media (max-width: 980px) { .paths { grid-template-columns: 1fr; } }
+  .path {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 22px; padding: 32px;
+    display: flex; flex-direction: column;
+    min-height: 360px;
+  }
+  .path.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .path.coral { background: var(--coral); color: var(--paper); border-color: var(--coral); }
+  .path .n {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 14px; color: var(--coral); margin-bottom: 14px;
+  }
+  .path.dark .n, .path.coral .n { color: rgba(245,241,234,0.75); }
+  .path h3 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 30px; line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+  .path h3 em { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .path p {
+    margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--muted-2);
+  }
+  .path.dark p, .path.coral p { color: rgba(245,241,234,0.8); }
+  .path .demo {
+    margin-top: auto; padding-top: 28px;
+  }
+
+  /* path demos */
+  .demo-prompt {
+    padding: 16px;
+    background: var(--paper-2);
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 18px; color: var(--ink); line-height: 1.4;
+  }
+  .demo-prompt .opa { opacity: 0.5; }
+  .demo-prompt .cur {
+    display: inline-block; width: 2px; height: 18px;
+    background: var(--coral);
+    vertical-align: middle; margin-left: 2px;
+    animation: blink 1s steps(2) infinite;
+  }
+  .demo-prompt .examples {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px;
+  }
+  .demo-prompt .ex {
+    padding: 5px 10px; border-radius: 999px;
+    background: #fff; border: 1px solid var(--line);
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 13px;
+  }
+
+  .demo-ai {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .demo-ai .mini {
+    aspect-ratio: 3 / 4;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .demo-ai .mini.on {
+    outline: 2px solid var(--coral); outline-offset: -1px;
+  }
+  .demo-ai .mini .tag {
+    position: absolute; bottom: 8px; left: 8px;
+    background: rgba(255,255,255,0.95); color: var(--ink);
+    font-family: 'Geist Mono', monospace; font-size: 8px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 999px;
+  }
+  .demo-ai .label {
+    grid-column: span 2;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(245,241,234,0.7);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .demo-ai .label .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--coral); }
+
+  .demo-gallery {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  }
+  .demo-gallery .mini {
+    aspect-ratio: 3 / 4;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ---------------- HOW IT WORKS ---------------- */
+  .how {
+    background: var(--ink); color: var(--paper);
+    padding: 120px 40px;
+  }
+  .how-inner { max-width: 1320px; margin: 0 auto; }
+  .how .s-title { color: var(--paper); }
+  .how .s-desc { color: rgba(245, 241, 234, 0.7); }
+  .steps {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+    margin-top: 48px;
+  }
+  @media (max-width: 880px) { .steps { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 540px) { .steps { grid-template-columns: 1fr; } }
+  .step {
+    border-top: 1px solid rgba(245, 241, 234, 0.18);
+    padding-top: 24px;
+  }
+  .step .n {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 14px; color: var(--coral); margin-bottom: 14px;
+  }
+  .step h4 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 26px; line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0 0 12px;
+  }
+  .step h4 em { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .step p {
+    margin: 0; font-size: 14px; line-height: 1.55;
+    color: rgba(245, 241, 234, 0.7);
+  }
+  .step .opt {
+    margin-top: 16px;
+    display: inline-block;
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--coral);
+    padding: 4px 9px; border-radius: 999px;
+    border: 1px solid rgba(197, 101, 76, 0.4);
+  }
+
+  /* ---------------- 5 REASONS ---------------- */
+  .reasons {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 980px) { .reasons { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .reasons { grid-template-columns: 1fr; } }
+  .reason {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 20px; padding: 28px;
+    display: flex; flex-direction: column;
+    min-height: 260px;
+  }
+  .reason.span-2 { grid-column: span 2; }
+  .reason.span-3 { grid-column: span 3; }
+  .reason.span-6 { grid-column: span 6; }
+  .reason.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .reason.coral { background: var(--coral); color: var(--paper); border-color: var(--coral); }
+  .reason.cream { background: var(--paper-2); }
+  @media (max-width: 980px) {
+    .reason.span-3, .reason.span-2, .reason.span-6 { grid-column: span 2; }
+  }
+  @media (max-width: 540px) {
+    .reason.span-3, .reason.span-2, .reason.span-6 { grid-column: span 1; }
+  }
+  .reason .num {
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 14px;
+    color: var(--coral); margin-bottom: 16px;
+  }
+  .reason.dark .num, .reason.coral .num { color: inherit; opacity: 0.75; }
+  .reason h3 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 26px; line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+  .reason h3 em { font-family: 'Instrument Serif', serif; font-style: italic; }
+  .reason.span-3 h3, .reason.span-6 h3 { font-size: 36px; }
+  .reason p {
+    margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--muted-2);
+  }
+  .reason.dark p, .reason.coral p { color: rgba(245, 241, 234, 0.8); }
+  .reason .viz {
+    margin-top: auto; padding-top: 20px;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+  .reason.dark .viz, .reason.coral .viz { color: rgba(245,241,234,0.6); }
+
+  /* ---------------- TESTIMONIALS ---------------- */
+  .quotes {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  @media (max-width: 880px) { .quotes { grid-template-columns: 1fr; } }
+  .quote {
+    background: var(--paper-2); border: 1px solid var(--line);
+    border-radius: 20px; padding: 32px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 240px;
+  }
+  .quote q {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 22px; line-height: 1.35; color: var(--ink);
+    quotes: '“' '”';
+  }
+  .quote q em { color: var(--coral); }
+  .quote .who {
+    margin-top: 24px; display: flex; align-items: center; gap: 12px;
+  }
+  .quote .av {
+    width: 40px; height: 40px; border-radius: 999px;
+    background: linear-gradient(135deg, #d8b98a, #b07f3c);
+    flex-shrink: 0;
+  }
+  .quote .who-text { display: flex; flex-direction: column; }
+  .quote .who-text b { font-weight: 500; font-size: 14px; }
+  .quote .who-text span {
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------------- PRICING ---------------- */
+  .plans-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 32px; flex-wrap: wrap;
+    margin-bottom: 48px;
+  }
+  .plans-head .s-eyebrow { color: var(--coral); }
+  .plans {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    align-items: stretch;
+  }
+  @media (max-width: 980px) { .plans { grid-template-columns: 1fr; } }
+  .plan {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 20px; padding: 32px;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .plan.lite { background: var(--paper-2); }
+  .plan.pro {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
+    transform: translateY(-12px);
+    box-shadow: 0 30px 60px -40px rgba(60, 30, 20, 0.45);
+  }
+  @media (max-width: 980px) { .plan.pro { transform: none; } }
+  .plan-badge {
+    position: absolute; top: -12px; left: 24px;
+    background: var(--coral); color: var(--paper);
+    font-family: 'Geist Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 999px;
+  }
+  .plan-head { padding-bottom: 24px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+  .plan.pro .plan-head { border-color: rgba(245,241,234,0.18); }
+  .plan-name {
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .plan.pro .plan-name { color: var(--coral); }
+  .plan-name em {
+    font-family: 'Fraunces', serif; font-style: normal; font-weight: 400;
+    text-transform: none; letter-spacing: -0.01em; color: var(--ink);
+    font-size: 24px; margin-left: 6px;
+  }
+  .plan.pro .plan-name em { color: var(--paper); }
+  .plan-price { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .plan-price .big {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 56px; letter-spacing: -0.03em; line-height: 1;
+  }
+  .plan-price .per {
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+  .plan.pro .plan-price .per { color: rgba(245,241,234,0.6); }
+  .plan-credits {
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--coral);
+    margin-top: 4px;
+  }
+  .plan-sub {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 16px; color: var(--muted-2);
+    margin-top: 6px;
+  }
+  .plan.pro .plan-sub { color: rgba(245,241,234,0.75); }
+  .plan-list {
+    list-style: none; padding: 0; margin: 0 0 28px;
+    display: flex; flex-direction: column; gap: 10px;
+    flex: 1;
+  }
+  .plan-list li {
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 14px; line-height: 1.45;
+  }
+  .plan-list li .c {
+    font-family: 'Fraunces', serif; font-size: 14px;
+    color: var(--coral); flex-shrink: 0;
+  }
+  .plan.pro .plan-list li .c { color: var(--coral); }
+  .plan-list li b { font-weight: 500; color: var(--ink); }
+  .plan.pro .plan-list li b { color: var(--paper); }
+  .plan-list li.out { opacity: 0.45; }
+  .plan-list li.out .c { color: var(--muted); }
+  .btn-full { width: 100%; justify-content: center; }
+  .plan.pro .btn-ghost { color: var(--paper); border-color: rgba(245,241,234,0.3); }
+  .plan.pro .btn-ghost:hover { border-color: var(--paper); background: rgba(245,241,234,0.06); }
+  .plan.pro .btn-primary { background: var(--coral); color: var(--paper); }
+  .plan.pro .btn-primary:hover { background: var(--paper); color: var(--ink); }
+  .plans-foot {
+    margin-top: 40px;
+    display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------------- FAQ ---------------- */
+  .faq { display: flex; flex-direction: column; }
+  .faq-item {
+    border-top: 1px solid var(--line);
+    padding: 28px 0;
+  }
+  .faq-item:last-child { border-bottom: 1px solid var(--line); }
+  .faq-item summary {
+    list-style: none; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; gap: 24px;
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 24px; letter-spacing: -0.01em; line-height: 1.2;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item .icon {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 28px; color: var(--coral); line-height: 1;
+    transition: transform .25s ease;
+    flex-shrink: 0;
+  }
+  .faq-item[open] .icon { transform: rotate(45deg); }
+  .faq-item p {
+    margin: 16px 0 0; font-size: 15px; line-height: 1.65; color: var(--muted-2);
+    max-width: 720px;
+  }
+
+  /* ---------------- FINAL CTA ---------------- */
+  .final {
+    text-align: center; padding: 160px 40px 120px;
+    max-width: 980px; margin: 0 auto;
+  }
+  .final h2 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: clamp(56px, 8.2vw, 132px);
+    line-height: 0.94; letter-spacing: -0.04em;
+    margin: 0 0 32px; text-wrap: balance;
+  }
+  .final h2 em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--coral); }
+  .final .sub {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 24px; color: var(--muted-2); margin: 0 0 40px;
+  }
+  .final .stores {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    margin-top: 24px;
+  }
+  .store {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 20px;
+    background: var(--ink); color: var(--paper);
+    border-radius: 14px;
+    font-family: 'Geist', sans-serif; font-size: 13px; font-weight: 500;
+    transition: transform .15s ease;
+  }
+  .store:hover { transform: translateY(-1px); background: var(--coral); }
+  .store .glyph { width: 22px; height: 22px; flex-shrink: 0; }
+  .store .small { font-size: 9px; opacity: 0.7; display: block; letter-spacing: 0.1em; text-transform: uppercase; }
+  .store .big { font-size: 14px; font-weight: 500; line-height: 1.1; }
+  .store .txt { display: flex; flex-direction: column; text-align: left; }
+
+  /* ---------------- FOOTER ---------------- */
+  footer.site {
+    background: var(--ink); color: rgba(245,241,234,0.7);
+    padding: 80px 40px 32px;
+  }
+  .foot-inner { max-width: 1320px; margin: 0 auto; }
+  .foot-top {
+    display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 48px;
+    padding-bottom: 56px; border-bottom: 1px solid rgba(245,241,234,0.15);
+  }
+  @media (max-width: 880px) { .foot-top { grid-template-columns: 1fr 1fr; } }
+  .foot-top .wm { color: var(--paper); font-size: 56px; line-height: 0.9; margin-bottom: 16px; }
+  .foot-top .tag {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 18px; color: rgba(245,241,234,0.7); max-width: 280px;
+  }
+  .foot-col h5 {
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(245,241,234,0.5); margin: 0 0 18px;
+  }
+  .foot-col a {
+    display: block; font-size: 14px; padding: 6px 0;
+    color: rgba(245,241,234,0.8);
+  }
+  .foot-col .soon {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; padding: 6px 0; color: rgba(245,241,234,0.4);
+    cursor: default;
+  }
+  .foot-col .soon .badge {
+    font-family: 'Geist Mono', monospace; font-size: 8px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--coral);
+    border: 1px solid rgba(176,127,60,0.45);
+    padding: 2px 6px; border-radius: 999px;
+  }
+  .foot-col a:hover { color: var(--coral); }
+  .foot-bot {
+    padding-top: 28px;
+    display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+    font-family: 'Geist Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(245,241,234,0.4);
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ BRAND ============ -->
+<div class="brandmark">
+  <span class="wm" aria-label="Mèche">m<span class="gw">e</span>che</span>
+</div>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div>
+    <span class="eyebrow"><span class="dot"></span>Try-on virtuel · coupe, couleur, mèches</span>
+    <h1>Vois-toi <em>avant.</em></h1>
+    <p class="sub">Mèche essaie la transformation à ta place. Coupe, couleur, mèches, lissage. Tu vois vraiment ce que ça donne avant qu'on touche un cheveu.</p>
+    <div class="cta-row">
+      <a href="#download" class="store js-store" aria-label="Télécharger l'app">
+        <svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <span class="txt"><span class="big">Télécharger l'app</span></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="tryon-stage">
+    <div class="tryon-card">
+      <div class="tryon-head">
+        <span class="live">Try-on · live</span>
+        <span>essai #03</span>
+      </div>
+      <div class="portrait" id="hero-portrait">
+        <img class="shot" id="hero-shot" src="/looks/pixie.jpg" alt="Essai de coiffure Mèche sur le même visage" />
+        <span class="tag coral">Try-on</span>
+        <div class="name">
+          <div class="lbl">Toi avec…</div>
+          <div class="which" id="hero-which"><em>Pixie</em> brune</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+
+
+<!-- ============ 3 PATHS ============ -->
+<section class="s" id="paths">
+  <div class="s-head">
+    <span class="s-eyebrow">Trois façons d'essayer</span>
+    <h2 class="s-title">Repère dans le <em>feed,</em> laisse l'IA proposer, ou décris-le.</h2>
+    <p class="s-desc">On ne sait pas tous quoi demander chez le coiffeur. Mèche te montre des looks portés par d'autres, t'en propose, ou t'écoute. Coupe, couleur, mèches : tu choisis comment trouver.</p>
+  </div>
+
+  <div class="paths">
+    <div class="path dark">
+      <div class="n">Voie 01 ·</div>
+      <h3>Une coupe te plaît dans le <em>feed</em> ? Essaie-la sur toi.</h3>
+      <p>Tu fais défiler des vrais looks portés par de vraies têtes. Celui-ci te plaît ? Un tap, et Mèche te le pose sur ton visage à toi. Pas sur un mannequin.</p>
+      <div class="demo">
+        <div class="demo-ai" style="grid-template-columns:1fr 1fr;">
+          <div class="mini">
+            <img class="shot-img" src="/looks/feed-person.jpg" alt="Une coupe repérée sur quelqu'un dans le feed" />
+            <span class="tag">dans le feed</span>
+          </div>
+          <div class="mini on">
+            <img class="shot-img" src="/looks/boucles.jpg" alt="La même coupe posée sur ton visage" />
+            <span class="tag">sur toi →</span>
+          </div>
+          <div class="label" style="color:rgba(245,241,234,0.8);">
+            <span class="dot" style="background:var(--paper);"></span>
+            tu repères · tu tapes · c'est ton visage
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="path coral">
+      <div class="n">Voie 02 ·</div>
+      <h3>L'IA <em>te propose</em>.</h3>
+      <p>L'IA regarde ton visage, ton style, tes looks gardés, et te suggère une coupe, une couleur ou un balayage faits pour toi. Avec le pourquoi.</p>
+      <div class="demo">
+        <div class="demo-ai">
+          <div class="mini on">
+            <img class="shot-img" src="/looks/boucles.jpg" alt="Suggestion de l'IA pour toi" />
+            <span class="tag">proposé pour toi</span>
+          </div>
+          <div class="mini">
+            <img class="shot-img" src="/looks/carre.jpg" alt="Autre suggestion de l'IA" />
+            <span class="tag">ou plutôt…</span>
+          </div>
+          <div class="label" style="color:rgba(245,241,234,0.8);">
+            <span class="dot" style="background:var(--paper);"></span>
+            visage ovale · streetwear · printemps
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="path">
+      <div class="n">Voie 03 ·</div>
+      <h3>Ou <em>décris-le.</em></h3>
+      <p>« Un carré flou caramel, doux à l'épaule. » Tu écris ou tu dictes, en français comme en anglais. Mèche comprend et te le montre, sans le vocabulaire du salon.</p>
+      <div class="demo">
+        <div class="demo-prompt">
+          <span class="opa">« Un carré flou caramel,</span><br/>
+          doux à l'épaule…»<span class="cur"></span>
+          <div class="examples">
+            <span class="ex">Wolf cut châtain</span>
+            <span class="ex">Reflets miel</span>
+            <span class="ex">Balayage froid</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BEFORE / AFTER ============ -->
+<section class="s" style="padding-top: 32px;">
+  <div class="s-head">
+    <span class="s-eyebrow">Un essai · puis un autre · puis un autre</span>
+    <h2 class="s-title">Un look à la fois. <em>Autant</em> que tu veux.</h2>
+    <p class="s-desc">Mèche génère une photo à la fois. Ton vrai visage, ce look-là, en HD. Essaie-en un, garde-le, recommence. Ton vestiaire les aligne pour comparer.</p>
+  </div>
+  <div class="ba-strip">
+    <div class="frame"><img class="shot-img" src="/looks/balayage.jpg" alt="Même visage, balayage caramel" /><span class="tag">Balayage caramel</span><span class="num">·01</span></div>
+    <div class="frame"><img class="shot-img" src="/looks/pixie.jpg" alt="Même visage, coupe pixie" /><span class="tag">Pixie brune</span><span class="num">·02</span></div>
+    <div class="frame"><img class="shot-img" src="/looks/boucles.jpg" alt="Même visage, boucles cuivrées" /><span class="tag">Boucles cuivrées</span><span class="num">·03</span></div>
+    <div class="frame"><img class="shot-img" src="/looks/carre.jpg" alt="Même visage, carré lissé" /><span class="tag">Carré lissé</span><span class="num">·04</span></div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="s-head">
+      <span class="s-eyebrow" style="color:var(--coral);">Comment ça marche</span>
+      <h2 class="s-title">Un selfie. Un <em>look.</em> Trente secondes.</h2>
+      <p class="s-desc">Selfie, choix du chemin, essai. Chaque génération crée une photo, la tienne, ce look-là. Le premier rendu est offert pour goûter. Tu décides ensuite si tu continues.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="n">Étape 01 ·</div>
+        <h4>Un <em>selfie</em>, ovale dans le cadre.</h4>
+        <p>Bonne lumière, on te dit si c'est bon. Mèche détecte ton visage, ta peau, ta couleur et texture de cheveux.</p>
+      </div>
+      <div class="step">
+        <div class="n">Étape 02 ·</div>
+        <h4>Choisis ton <em>chemin.</em></h4>
+        <p>Repère un look dans le feed, laisse l'IA proposer, ou décris-le. Tu peux mixer les trois.</p>
+      </div>
+      <div class="step">
+        <div class="n">Étape 03 ·</div>
+        <h4>Essaie. Compare. <em>Garde.</em></h4>
+        <p>Une photo à la fois, side-by-side avec ta version actuelle. Sauvegarde tes préférées dans ton vestiaire. Reviens quand tu veux.</p>
+      </div>
+      <div class="step">
+        <div class="n">Étape 04 ·</div>
+        <h4>Réserver, <em>bientôt.</em></h4>
+        <p>Pour l'instant, télécharge ton rendu et montre-le à ton coiffeur. La réservation intégrée arrive prochainement.</p>
+        <div class="opt">Bientôt</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 REASONS ============ -->
+<section class="s" id="why">
+  <div class="s-head">
+    <span class="s-eyebrow">Pourquoi Mèche · trois raisons</span>
+    <h2 class="s-title">Trois raisons de ne plus <em>regretter</em> ton look.</h2>
+    <p class="s-desc">Tout le monde a un fail capillaire. Une coupe ratée, une couleur trop chaude, un balayage qui vire. Mèche existe pour qu'on n'en parle qu'au passé.</p>
+  </div>
+
+
+  <div class="reasons">
+    <div class="reason span-3 coral">
+      <div class="num">01 ·</div>
+      <h3>Tu vois <em>vraiment</em> ton visage.<br/>Pas un mannequin.</h3>
+      <p>Le rendu Mèche, c'est ta tête, ta peau, ta lumière. Pas une photo de banque d'images avec une perruque dessus. Ce que tu vois, c'est ce que tu auras.</p>
+      <div class="viz">0 mannequin · 0 perruque · 0 cliché</div>
+    </div>
+    <div class="reason span-3 dark">
+      <div class="num">02 ·</div>
+      <h3>Tu n'as plus à <em>deviner</em> le vocabulaire.</h3>
+      <p>« Un truc mi-long, dégradé, mais pas un mulet. Avec des reflets, pas trop chauds. » Mèche traduit ce que tu dis en look que le coiffeur reconnaît. Tu arrives au salon avec l'image. Pas avec un Pinterest désordre.</p>
+      <div class="viz">tu décris · il reconnaît · même longueur d'onde</div>
+    </div>
+
+    <div class="reason span-6 cream">
+      <div class="num">03 ·</div>
+      <h3>La réservation, <em>bientôt.</em></h3>
+      <p>D'abord tu vois. La réservation intégrée, trouver un coiffeur près de toi qui sait faire ton look, arrive prochainement. En attendant, télécharge ton rendu et montre-le.</p>
+      <div class="viz">try-on d'abord · réservation bientôt</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="s" style="padding-top: 0;">
+  <div class="quotes">
+    <div class="quote">
+      <q>J'ai essayé <em>quarante coupes</em> en une soirée. Le matin j'avais ma réponse. Le mardi, ma coiffeuse l'avait dans les mains.</q>
+      <div class="who">
+        <div class="av"></div>
+        <div class="who-text"><b>Camille, 26</b><span>Paris 11e · vestiaire 12 looks</span></div>
+      </div>
+    </div>
+    <div class="quote">
+      <q>Première fois que j'arrive au salon en <em>sachant</em> ce que je veux. Ça a changé ma vie capillaire, ouais.</q>
+      <div class="who">
+        <div class="av" style="background:linear-gradient(135deg,#C9B9A0,#2a2520);"></div>
+        <div class="who-text"><b>Yanis, 31</b><span>Lyon · wolf cut depuis 6 mois</span></div>
+      </div>
+    </div>
+    <div class="quote">
+      <q>L'app la plus <em>honnête</em> que j'aie installée. Pas de pub, pas de freemium piégé, pas de fake DM de marque.</q>
+      <div class="who">
+        <div class="av" style="background:linear-gradient(135deg,#f0e2cf,#b07f3c);"></div>
+        <div class="who-text"><b>Margaux, 24</b><span>Marseille · ambassadrice</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section class="s" id="get">
+  <div class="plans-head">
+    <div>
+      <span class="s-eyebrow">Crédits IA · sans abonnement</span>
+      <h2 class="s-title">Tu paies <em>les essais.</em><br/>Pas un abonnement.</h2>
+      <p class="s-desc">Le premier essai est offert. Ensuite, des crédits IA. 1 crédit = 1 photo en HD, sans watermark. Les crédits n'expirent <em>jamais</em>.</p>
+    </div>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Taste</em></div>
+        <div class="plan-price"><span class="big">0,99€</span></div>
+        <div class="plan-credits">5 crédits IA · 0,20€ / essai</div>
+        <div class="plan-sub">Pour quand tu hésites entre deux looks.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>5 essais</b> en HD</span></li>
+        <li><span class="c">↳</span><span>Les trois voies · feed, IA, prompt</span></li>
+        <li><span class="c">↳</span><span>Comparaison côte à côte</span></li>
+        <li><span class="c">↳</span><span>Export sans watermark</span></li>
+      </ul>
+      <a href="#download" class="btn btn-ghost btn-full">Get the app <span class="arrow">↗</span></a>
+    </div>
+
+    <div class="plan pro">
+      <div class="plan-badge">Le plus choisi</div>
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Star</em></div>
+        <div class="plan-price"><span class="big">2,99€</span></div>
+        <div class="plan-credits">20 crédits IA · 0,15€ / essai</div>
+        <div class="plan-sub">Pour vraiment se décider.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>20 essais</b> en HD</span></li>
+        <li><span class="c">↳</span><span>Vestiaire <b>illimité</b></span></li>
+        <li><span class="c">↳</span><span>Les trois voies · feed, IA, prompt</span></li>
+        <li><span class="c">↳</span><span>Partage en un tap</span></li>
+        <li><span class="c">↳</span><span>Économise <b>25%</b> vs Pack Taste</span></li>
+      </ul>
+      <a href="#download" class="btn btn-primary btn-full">Get the app <span class="arrow">↗</span></a>
+    </div>
+
+    <div class="plan lite">
+      <div class="plan-badge">Best value</div>
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Pro</em></div>
+        <div class="plan-price"><span class="big">5,99€</span></div>
+        <div class="plan-credits">50 crédits IA · 0,12€ / essai</div>
+        <div class="plan-sub">Pour les indécis·es chroniques.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>50 essais</b> en HD</span></li>
+        <li><span class="c">↳</span><span>Tout ce qu'il y a dans Star</span></li>
+        <li><span class="c">↳</span><span>Accès anticipé nouvelles coupes</span></li>
+        <li><span class="c">↳</span><span>Résolution <b>4K</b> pour le book</span></li>
+        <li><span class="c">↳</span><span>Économise <b>40%</b> vs Pack Taste</span></li>
+      </ul>
+      <a href="#download" class="btn btn-ghost btn-full">Get the app <span class="arrow">↗</span></a>
+    </div>
+  </div>
+
+  <div class="plans-foot">
+    <span>Crédits sans expiration.</span>
+    <span>Paiement unique · zero abonnement.</span>
+    <span>Tes selfies, chiffrés sur nos serveurs.</span>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="s" id="faq" style="max-width: 920px;">
+  <div class="s-head">
+    <span class="s-eyebrow">FAQ</span>
+    <h2 class="s-title">Les questions qu'on <em>nous pose.</em></h2>
+  </div>
+
+  <div class="faq">
+    <details class="faq-item" open>
+      <summary>Le rendu est vraiment réaliste ?<span class="icon">+</span></summary>
+      <p>Oui. Mèche utilise un modèle entraîné sur des coupes réelles, pas sur des avatars. Il garde ta peau, ta lumière, tes traits, et ne change que les cheveux. Tu peux comparer avant/après dans l'app. Si un rendu te paraît bizarre, signale-le, on le corrige.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Le modèle économique, en clair ?<span class="icon">+</span></summary>
+      <p>Ton premier essai est offert. Ensuite, tu achètes des crédits IA : <b>1 crédit = 1 photo générée en HD, export sans watermark.</b> Trois packs : <b>5 crédits à 0,99€, 20 crédits à 2,99€ (le plus choisi), 50 crédits à 5,99€ (best value).</b> Pas d'abonnement, pas de prélèvement mensuel, pas de carte demandée pour l'essai gratuit. Les crédits achetés n'expirent jamais.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Ça marche sur cheveux bouclés / crépus / texturés ?<span class="icon">+</span></summary>
+      <p>Oui. On a entraîné le modèle sur tous les types de cheveux (1A à 4C), toutes les carnations, tous les genres. Si une texture ou une couleur n'est pas bien rendue, écris-nous, on itère.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Et la partie « réserver un coiffeur » ?<span class="icon">+</span></summary>
+      <p>Elle arrive bientôt. Pour l'instant, quand tu as choisi ta coupe, tu télécharges l'image et tu la montres à ton coiffeur. La réservation intégrée est en cours de développement : trouver près de toi un coiffeur qui sait faire ton look, avec son book et ses créneaux.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Dans quels pays ?<span class="icon">+</span></summary>
+      <p>Le try-on marche partout dans le monde, dès maintenant. La réservation intégrée arrive d'abord en France (Paris, Lyon, Marseille, Bordeaux, Lille, Nantes), puis en Italie et Espagne.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="final" id="download">
+  <h2>Vois-toi <em>avant.</em><br/>Change après.</h2>
+  <p class="sub">Téléchargement gratuit. Premier essai offert. Aucune carte demandée.</p>
+  <div class="stores">
+    <a href="#" class="store" aria-label="Télécharger sur l'App Store">
+      <svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>
+      <span class="txt"><span class="small">Télécharger sur</span><span class="big">App Store</span></span>
+    </a>
+    <a href="#" class="store" aria-label="Disponible sur Google Play">
+      <svg class="glyph" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>
+      <span class="txt"><span class="small">Disponible sur</span><span class="big">Google Play</span></span>
+    </a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site">
+  <div class="foot-inner">
+    <div class="foot-top">
+      <div>
+        <a href="/" class="wm" aria-label="Mèche">m<span class="gw">e</span>che</a>
+        <p class="tag">Vois-toi avant. Change après. Paris vers partout.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Produit</h5>
+        <a href="/#paths">Try-on</a>
+        <a href="/#how">Comment ça marche</a>
+        <a href="/#why">Pourquoi Mèche</a>
+        <a href="/#download">Télécharger</a>
+      </div>
+      <div class="foot-col">
+        <h5>Coiffeurs</h5>
+        <span class="soon">Mèche Pro <span class="badge">Bientôt</span></span>
+        <span class="soon">Rejoindre <span class="badge">Bientôt</span></span>
+        <span class="soon">Tarification <span class="badge">Bientôt</span></span>
+      </div>
+      <div class="foot-col">
+        <h5>Mèche</h5>
+        <a href="#">À propos</a>
+        <a href="/privacy">Confidentialité</a>
+        <a href="/terms">CGU</a>
+        <a href="/mentions-legales">Mentions légales</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 Mèche · Paris</span>
+      <span><a href="/mentions-legales">Mentions légales</a> · <a href="/terms">CGU</a> · <a href="/privacy">Confidentialité</a> · <a href="/privacy">Cookies</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Hero try-on — one face, auto-cycling through four real looks
+  (function(){
+    const shot = document.getElementById('hero-shot');
+    const which = document.getElementById('hero-which');
+    if (!shot || !which) return;
+
+    const looks = [
+      { img: '/looks/pixie.jpg',    name: '<em>Pixie</em> brune' },
+      { img: '/looks/balayage.jpg', name: 'Balayage <em>caramel</em>' },
+      { img: '/looks/boucles.jpg',  name: 'Boucles <em>cuivrées</em>' },
+      { img: '/looks/carre.jpg',    name: 'Carré <em>lissé</em>' },
+    ];
+
+    // preload so swaps don't flash
+    looks.forEach(l => { const im = new Image(); im.src = l.img; });
+
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % looks.length;
+      shot.src = looks[i].img;
+      which.innerHTML = looks[i].name;
+    }, 2600);
+  })();
+
+  // Platform-aware "Get the app" button(s): iOS -> App Store, Android -> Play,
+  // desktop/unknown -> the #download section (which shows both badges).
+  (function(){
+    const APPSTORE_URL = '#'; // TODO: real App Store URL
+    const PLAY_URL = '#';     // TODO: real Google Play URL
+    const APPLE = '<svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>';
+    const PLAY = '<svg class="glyph" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>';
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/.test(ua);
+    let cfg = null;
+    if (isAndroid) cfg = { href: PLAY_URL, icon: PLAY, small: 'Disponible sur', big: 'Google Play' };
+    else if (isIOS) cfg = { href: APPSTORE_URL, icon: APPLE, small: 'Télécharger sur', big: 'App Store' };
+    if (!cfg) return; // desktop/unknown: keep the neutral button -> #download
+    document.querySelectorAll('.js-store').forEach(btn => {
+      btn.setAttribute('href', cfg.href);
+      btn.innerHTML = cfg.icon + '<span class="txt"><span class="small">' + cfg.small + '</span><span class="big">' + cfg.big + '</span></span>';
+    });
+  })();
+</script>
+
+</body>
+</html>

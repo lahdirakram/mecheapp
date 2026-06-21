@@ -2,7 +2,7 @@
   "name": "meche-legal",
   "version": "1.0.0",
   "private": true,
-  "description": "Static server for Mèche legal documents (privacy policy, terms of service).",
+  "description": "Static server for Mèche's marketing landing page and legal documents (privacy policy, terms of service).",
   "engines": {
     "node": ">=18"
   },

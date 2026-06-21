@@ -1,8 +1,10 @@
-// Tiny zero-dependency static server for Mèche's legal pages.
+// Tiny zero-dependency static server for Mèche's landing + legal pages.
 // - serves ./public, binds to Railway's $PORT
 // - /healthz health check
-// - bilingual: /fr/* and /en/* serve explicitly; the canonical /, /privacy, /terms detect the
-//   language (?lang override -> Accept-Language header -> default fr), so the store URLs stay stable
+// - / serves the marketing landing (public/index.html, FR)
+// - bilingual legal: /fr/* and /en/* serve explicitly; the canonical /privacy, /terms,
+//   /mentions-legales detect the language (?lang override -> Accept-Language header -> default fr),
+//   so the store URLs stay stable. /fr and /en land on the legal hub.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -41,6 +43,7 @@ function resolve(req) {
   const url = new URL(req.url, 'http://localhost');
   let p = decodeURIComponent(url.pathname);
   if (p === '/healthz') return { health: true };
+  if (p === '/') return { file: safeJoin('/index.html') }; // marketing landing
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
 
   // static asset (anything with a file extension) -> serve from public root
