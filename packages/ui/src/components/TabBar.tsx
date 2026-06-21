@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MPAL } from '@meche/core';
 import { MIcon, type MIconName } from './MIcon';
 import { MText } from './Type';
@@ -31,6 +32,7 @@ const RIGHT: { id: B2CTab; icon: MIconName; key: 'salons' | 'profile' }[] = [
 export function TabBar({ active, onChange, onPressCenter, dark = false, comingSoon }: TabBarProps) {
   const t = useT();
   const lang = useLang();
+  const insets = useSafeAreaInsets();
   const onColor = dark ? MPAL.inkInv : MPAL.ink;
   const offColor = dark ? 'rgba(255,255,255,0.55)' : MPAL.mute;
   const soonText = lang === 'fr' ? 'Bientôt' : 'Soon';
@@ -63,7 +65,7 @@ export function TabBar({ active, onChange, onPressCenter, dark = false, comingSo
   };
 
   return (
-    <View style={{ position: 'absolute', bottom: 22, left: 14, right: 14, zIndex: 30 }}>
+    <View style={{ position: 'absolute', bottom: Math.max(22, insets.bottom + 8), left: 14, right: 14, zIndex: 30 }}>
       <BlurView
         intensity={dark ? 40 : 60}
         tint={dark ? 'dark' : 'light'}
