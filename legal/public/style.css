@@ -26,7 +26,7 @@ header.top {
   margin-bottom: 36px;
 }
 
-/* "mèche" wordmark — exact spec from the Mèche Brand Identity (.wm .gw::after):
+/* "mèche" wordmark, exact spec from the Mèche Brand Identity (.wm .gw::after):
    Fraunces 400, letter-spacing -0.045em; the è is a plain "e" + a 22°-tilted caramel
    stroke (top .18em, left .18em, w .5em, h .07em, transform-origin left center). */
 .wm {
