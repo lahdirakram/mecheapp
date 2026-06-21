@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animated, Easing, Modal, Pressable, View } from 'react-native';
+import { Animated, Easing, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, MPAL, RADIUS } from '@meche/core';
 import { MText } from './components/Type';
@@ -103,14 +103,12 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       {/* toast — keyed by `n` so each call replays the entrance animation */}
       {toast ? <Toast key={toast.n} message={toast.message} icon={toast.icon} bottom={insets.bottom + 96} /> : null}
 
-      {/* action sheet — in a RN Modal so it renders ABOVE native screen modals (e.g. the result
-          screen presented as a fullScreenModal). A plain root overlay would sit behind such a modal
-          and be untappable. */}
-      <Modal visible={!!sheet} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setSheet(null)}>
-        {sheet ? (
-          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-            <Pressable onPress={() => setSheet(null)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
-            <View style={{ backgroundColor: MPAL.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10, paddingBottom: insets.bottom + 14, paddingHorizontal: 16 }}>
+      {/* action sheet (root overlay). Note: shown from a NATIVE modal screen (e.g. the result
+          fullScreenModal) it would sit behind it on iOS — those screens use Alert.alert instead. */}
+      {sheet ? (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 110, justifyContent: 'flex-end' }}>
+          <Pressable onPress={() => setSheet(null)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
+          <View style={{ backgroundColor: MPAL.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10, paddingBottom: insets.bottom + 14, paddingHorizontal: 16 }}>
             <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: MPAL.border, marginBottom: 12 }} />
             {sheet.title ? (
               <MText variant="mono" size={11} color={MPAL.mute} style={{ textAlign: 'center', letterSpacing: 1.4, marginBottom: sheet.message ? 6 : 10 }}>
@@ -136,10 +134,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
                 </MText>
               </Pressable>
             ))}
-            </View>
           </View>
-        ) : null}
-      </Modal>
+        </View>
+      ) : null}
     </Ctx.Provider>
   );
 }

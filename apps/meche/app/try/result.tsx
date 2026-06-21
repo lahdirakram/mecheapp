@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PanResponder, Pressable, View } from 'react-native';
+import { Alert, PanResponder, Pressable, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDeleteLook, useGeneration, useSaveLook, useSession, useToggleLove } from '@meche/api-client';
-import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useT, useToast, useSheet } from '@meche/ui';
+import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 import { cacheKeyFor } from '../../lib/img';
 
@@ -21,7 +21,6 @@ export default function Result() {
   const params = useLocalSearchParams<{ generationId?: string; lookId?: string; name?: string; after?: string; loved?: string }>();
   const session = useSession();
   const toast = useToast();
-  const sheet = useSheet();
   const { mutate: saveLook } = useSaveLook();
   const { mutate: toggleLove } = useToggleLove();
   const { mutate: deleteLook } = useDeleteLook();
@@ -65,13 +64,16 @@ export default function Result() {
   const generationId = result?.generationId ?? params.generationId;
   const onDelete = () => {
     if (!savedLookId && !generationId) return;
-    sheet({
-      title: lang === 'fr' ? 'Supprimer cette mèche ?' : 'Delete this look?',
-      message: lang === 'fr' ? 'L’essai et sa photo seront définitivement supprimés.' : 'The try-on and its photo will be permanently deleted.',
-      options: [
+    // Native Alert (not the custom sheet): this screen is a fullScreenModal, and a root-rendered
+    // sheet appears BEHIND it on iOS. Alert always presents above the topmost modal.
+    Alert.alert(
+      lang === 'fr' ? 'Supprimer cette mèche ?' : 'Delete this look?',
+      lang === 'fr' ? 'L’essai et sa photo seront définitivement supprimés.' : 'The try-on and its photo will be permanently deleted.',
+      [
+        { text: lang === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
         {
-          label: lang === 'fr' ? 'Supprimer' : 'Delete',
-          destructive: true,
+          text: lang === 'fr' ? 'Supprimer' : 'Delete',
+          style: 'destructive',
           onPress: () =>
             deleteLook(
               { lookId: savedLookId, generationId },
@@ -84,9 +86,8 @@ export default function Result() {
               },
             ),
         },
-        { label: lang === 'fr' ? 'Annuler' : 'Cancel', cancel: true },
       ],
-    });
+    );
   };
   const wRef = useRef(0);
   wRef.current = w;
