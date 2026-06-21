@@ -12,11 +12,22 @@ module.exports = () => {
     expo.name = 'Mèche (staging)';
     expo.scheme = 'meche-staging';
     expo.ios = { ...expo.ios, bundleIdentifier: 'com.meche.app.staging' };
-    expo.android = { ...expo.android, package: 'com.meche.app.staging' };
-    // TODO (staging consoles): once a `com.meche.app.staging` app exists in the staging Firebase
-    // project, set expo.android.googleServicesFile to its file (push won't work until then). Google
-    // Sign-in also needs a staging iOS/Web OAuth client (update the google-signin iosUrlScheme +
-    // EXPO_PUBLIC_GOOGLE_* in the preview profile). Email auth + generation work without this.
+    expo.android = {
+      ...expo.android,
+      package: 'com.meche.app.staging',
+      googleServicesFile: './google-services.staging.json', // staging Firebase app (com.meche.app.staging)
+    };
+    // Google Sign-in: override the iOS URL scheme with the STAGING reversed iOS client id once the
+    // staging OAuth client exists (see GOOGLE_STAGING_IOS_REVERSED below). EXPO_PUBLIC_GOOGLE_* are
+    // set to the staging client ids in eas.json (preview/development).
+    const GOOGLE_STAGING_IOS_REVERSED = process.env.GOOGLE_STAGING_IOS_REVERSED;
+    if (GOOGLE_STAGING_IOS_REVERSED) {
+      expo.plugins = expo.plugins.map((p) =>
+        Array.isArray(p) && p[0] === '@react-native-google-signin/google-signin'
+          ? [p[0], { ...p[1], iosUrlScheme: GOOGLE_STAGING_IOS_REVERSED }]
+          : p,
+      );
+    }
   }
 
   return { expo };
