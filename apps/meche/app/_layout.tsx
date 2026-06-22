@@ -5,6 +5,7 @@ import { SupabaseProvider } from '@meche/api-client';
 import { supabase } from '../lib/supabase';
 import { PurchasesSync } from '../lib/PurchasesSync';
 import { PushSync } from '../lib/PushSync';
+import { TryStoreReset } from '../lib/TryStoreReset';
 
 export default function RootLayout() {
   return (
@@ -12,6 +13,7 @@ export default function RootLayout() {
       <SupabaseProvider client={supabase}>
         <PurchasesSync />
         <PushSync />
+        <TryStoreReset />
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
