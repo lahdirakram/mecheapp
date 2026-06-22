@@ -139,12 +139,11 @@ export default function Generating() {
             goRecharge();
             return;
           }
-          // Anything else: surface the actual server code instead of a vague "failed", so refine
-          // problems (e.g. an old `generate` deploy returning `invalid_image`, or `not_refinable`)
-          // are diagnosable rather than silently generic.
+          // Anything else: log the real code for debugging (console/logs only), show the user a clean
+          // generic message — never raw error codes.
           failedRef.current = true;
-          const detail = code || (status ? `HTTP ${status}` : '');
-          toast(lang === 'fr' ? `Génération impossible${detail ? ` (${detail})` : ''}, réessaie.` : `Generation failed${detail ? ` (${detail})` : ''}, try again.`);
+          console.warn('[generate] unhandled error', { status, code });
+          toast(lang === 'fr' ? 'Génération impossible, réessaie.' : 'Generation failed, try again.');
           router.back();
           return;
         }
