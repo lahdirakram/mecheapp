@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDeleteLook, useSession, useSignedUrls, useWardrobe } from '@meche/api-client';
 import type { HairShape, PortraitMood } from '@meche/core';
-import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useSheet, useT } from '@meche/ui';
+import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useSheet, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 
 // B2C · Mes mèches (17) — kept looks, sort tabs (Récents/Préférés/Pour cet été), staggered
@@ -19,10 +19,24 @@ export default function Wardrobe() {
   const lang = useLang();
   const router = useRouter();
   const session = useSession();
-  const { data } = useWardrobe(session?.user.id);
+  const { data, refetch } = useWardrobe(session?.user.id);
   const sheet = useSheet();
+  const toast = useToast();
   const { mutate: deleteLook } = useDeleteLook();
   const [tab, setTab] = useState(0);
+  // Pull-to-refresh: re-fetch the saved looks. Local `refreshing` state (not the query's isRefetching)
+  // so the background poll for pending generations doesn't trigger the spinner on its own. A ~700ms
+  // floor keeps the spinner visible (the fetch alone is too fast to feel), and a toast confirms it ran.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetch(), new Promise((r) => setTimeout(r, 700))]);
+      toast(lang === 'fr' ? 'À jour' : 'Up to date');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch, toast, lang]);
   const resetTry = useTryStore((s) => s.reset);
   const setSurprise = useTryStore((s) => s.setSurprise);
   // Fresh generic try (reset wipes any stale brief/directMode); "surprise" then routes to Mèche's pick.
@@ -73,7 +87,12 @@ export default function Wardrobe() {
         ))}
       </ScrollView>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MPAL.sable} colors={[MPAL.sable]} />}
+      >
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
           {looks.map((w, i) => {
             // A background try-on still cooking: "generating" placeholder, tap disabled. 'failed'
