@@ -8,13 +8,13 @@ import { captureRef } from 'react-native-view-shot';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGeneration } from '@meche/api-client';
 import { MIcon, MPAL, MText, MWordmark, MPortrait, useLang, useT, useToast } from '@meche/ui';
-import { useTryStore } from '../lib/tryStore';
 import { cacheKeyFor } from '../lib/img';
 
 // The watermarked share card (after-only, or before/after top-bottom split). `s` scales the chrome.
 // This same on-screen node is captured to a PNG, so what you preview is exactly what you share.
 const Card = React.forwardRef<View, { w: number; withBefore: boolean; beforeUri: string | null; afterUri: string | null; name: string }>(
   ({ w, withBefore, beforeUri, afterUri, name }, ref) => {
+    const t = useT();
     const h = (w * 16) / 9;
     const s = w / 360;
     const After = afterUri ? <Image source={{ uri: afterUri, cacheKey: cacheKeyFor(afterUri) }} style={{ flex: 1 }} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" /> : <MPortrait hair="bob" mood="warm" tint={MPAL.ink} />;
@@ -32,11 +32,11 @@ const Card = React.forwardRef<View, { w: number; withBefore: boolean; beforeUri:
           <>
             <View style={{ flex: 1 }}>
               {Before}
-              <Tag text="AVANT" side="l" />
+              <Tag text={t('before').toUpperCase()} side="l" />
             </View>
             <View style={{ flex: 1 }}>
               {After}
-              <Tag text="APRÈS" side="r" />
+              <Tag text={t('after').toUpperCase()} side="r" />
             </View>
             <View style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: Math.max(1, 2 * s), backgroundColor: 'rgba(255,255,255,0.7)' }} />
           </>
@@ -70,7 +70,6 @@ export default function Share() {
   const t = useT();
   const lang = useLang();
   const toast = useToast();
-  const { selfieBase64, mimeType, result } = useTryStore();
   const params = useLocalSearchParams<{ name?: string; generationId?: string; after?: string }>();
   const { width: screenW, height: screenH } = useWindowDimensions();
   // Size by BOTH width and the space left between header/subtitle and the toggle/buttons, so the
@@ -80,11 +79,12 @@ export default function Share() {
   const [withBefore, setWithBefore] = useState(false);
   const cardRef = useRef<View>(null);
 
-  const review = !result && !!params.generationId;
-  const { data: gen } = useGeneration(review ? params.generationId : undefined);
-  const beforeUri = selfieBase64 ? `data:${mimeType};base64,${selfieBase64}` : gen?.selfieUrl ?? null;
-  const afterUri = result?.uri ?? gen?.resultUrl ?? (params.after || null);
-  const lookName = result?.name ?? params.name ?? (lang === 'fr' ? 'Ma mèche' : 'My look');
+  // Deterministic: the shared card is the generation identified by the params (signed URLs), with the
+  // `after` param as a fallback when it's already a full URL.
+  const { data: gen } = useGeneration(params.generationId);
+  const beforeUri = gen?.selfieUrl ?? null;
+  const afterUri = gen?.resultUrl ?? (params.after || null);
+  const lookName = params.name ?? (lang === 'fr' ? 'Ma mèche' : 'My look');
 
   // Pre-capture the on-screen card to a PNG file in the background (native resolution) so Share/Save
   // are instant — the same file is shared or saved to Photos.

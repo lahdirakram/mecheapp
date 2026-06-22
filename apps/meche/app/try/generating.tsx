@@ -25,11 +25,27 @@ export default function Generating() {
   const lang = useLang();
   const toast = useToast();
   const qc = useQueryClient();
-  const { selfieBase64, mimeType, brief, setResult } = useTryStore();
+  const { selfieBase64, mimeType, brief, refineFrom, result, setRefine } = useTryStore();
   const [pct, setPct] = useState(0);
   const doneRef = useRef(false);
   const failedRef = useRef(false);
+  // The finished generation, for the navigation effect below.
+  const completedRef = useRef<{ id: string; lookId?: string; name: string } | null>(null);
+  // Snapshot the refine target once and clear it, so a later normal generation can't reuse it.
+  const refineRef = useRef<string | null>(refineFrom);
+  // Loader backdrop only (cosmetic): on a refine, the look being refined (seeded into the store by the
+  // result screen); otherwise the just-captured selfie; else the placeholder.
+  const bgUri = refineRef.current ? result?.uri ?? null : selfieBase64 ? `data:${mimeType};base64,${selfieBase64}` : null;
   const scanY = useRef(new Animated.Value(0)).current;
+
+  // Recharge is a modal at the ROOT, a sibling of the `try` fullScreenModal — while this loader sits
+  // deep inside the `try` nested stack. So back()/replace() here only move WITHIN `try` and strand the
+  // user on the prompt screen. Dismiss the whole `try` modal first, then surface recharge over the
+  // tabs (deferred a tick so the dismiss settles before the push).
+  const goRecharge = (low?: boolean) => {
+    router.dismissAll();
+    setTimeout(() => router.push(low ? '/recharge?low=1' : '/recharge'), 0);
+  };
 
   // Continuous scan-line sweep — runs regardless of progress so the loader never looks frozen,
   // even while Gemini takes its time.
@@ -56,40 +72,56 @@ export default function Generating() {
       });
     }, 130);
 
+    const refine = refineRef.current;
+    setRefine(null); // consumed — don't let it leak into a later generation
+
     (async () => {
-      if (!selfieBase64) {
-        // No real selfie (skipped / no camera) → simulate and fall back to a placeholder result.
+      if (!selfieBase64 && !refine) {
+        // No real selfie (skipped / no camera) and not a refine → simulate, then land on a placeholder
+        // result (no generation id → the result screen shows portraits).
         setTimeout(() => {
-          if (!cancelled) {
-            setResult(null);
-            doneRef.current = true;
-          }
+          if (!cancelled) doneRef.current = true;
         }, 2400);
         return;
       }
       const name = brief.lookName || (brief.prompt ? brief.prompt.slice(0, 40) : lang === 'fr' ? 'Ma mèche' : 'My look');
       try {
+        // Pre-flight credit check — by FAR the most common block. Routing to recharge here doesn't
+        // depend on parsing the Functions error shape on-device (which proved unreliable: the no-credit
+        // 402 was slipping through to the generic catch). `generate` still re-checks atomically, and
+        // the daily/hourly caps below still come back as errors. (rpc never throws → safe pre-flight.)
+        const { data: bal } = await supabase.rpc('my_credit_balance');
+        if (cancelled) return;
+        if (typeof bal === 'number' && bal <= 0) {
+          failedRef.current = true;
+          goRecharge(true);
+          return;
+        }
         // The generation now runs server-side, decoupled from this screen: /generate reserves the
         // credit, records a PENDING look, and returns immediately. The pre-flight errors below are
-        // the only synchronous ones; the AI itself finishes in the background.
-        const { data, error } = await supabase.functions.invoke('generate', { body: { selfieBase64, mimeType, brief, name } });
+        // the only synchronous ones; the AI itself finishes in the background. On a refine pass the
+        // server reloads the original selfie + previous result, so no selfie is sent from here.
+        const body = refine ? { refineFrom: refine, brief, name } : { selfieBase64, mimeType, brief, name };
+        const { data, error } = await supabase.functions.invoke('generate', { body });
         if (cancelled) return;
         if (error) {
+          // The Functions error wraps the Response on `.context` (and the client also surfaces it on
+          // `.response`). Read both defensively — the on-device shape isn't always what we expect.
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const ctx = (error as any)?.context;
-          const status: number | undefined = ctx?.status;
+          const e = error as any;
+          const ctx = e?.context ?? e?.response;
+          let status: number | undefined = typeof ctx?.status === 'number' ? ctx.status : undefined;
           let code: string | undefined;
           try {
-            code = (await ctx?.json?.())?.error;
+            const body = ctx && typeof ctx.json === 'function' ? await ctx.json() : undefined;
+            code = body?.error;
+            if (status == null && typeof body?.status === 'number') status = body.status;
           } catch {
             /* body may be unreadable */
           }
           if (status === 402 || code === 'no_credits') {
             failedRef.current = true;
-            // Pop the loader (so the user can't land back on it) THEN show recharge over the
-            // previous screen — closing it returns to the suggestion/idea screen, not the home.
-            if (router.canGoBack()) router.back();
-            router.push('/recharge?low=1');
+            goRecharge(true);
             return;
           }
           if (code === 'daily_cap') {
@@ -97,19 +129,24 @@ export default function Generating() {
             // Global free-look ceiling for the day is reached. Paid credits bypass it, so point the
             // user to recharge (their purchased looks go through immediately).
             toast(lang === 'fr' ? "Beaucoup de monde aujourd'hui, on a atteint la limite des essais gratuits. Prends des crédits pour continuer maintenant, ou reviens demain." : "Lots of people today, so we've reached the free-look limit. Grab credits to keep going now, or come back tomorrow.");
-            if (router.canGoBack()) router.back();
-            router.push('/recharge');
+            goRecharge();
             return;
           }
           if (status === 429 || code === 'rate_limited') {
             failedRef.current = true;
             // Hourly cap on FREE looks only — paid credits aren't rate-limited, so offer recharge.
             toast(lang === 'fr' ? "Tu as enchaîné beaucoup d'essais gratuits. Prends des crédits pour continuer maintenant, ou réessaie dans quelques minutes." : "You've done a lot of free looks in a row. Grab credits to keep going now, or try again in a few minutes.");
-            if (router.canGoBack()) router.back();
-            router.push('/recharge');
+            goRecharge();
             return;
           }
-          throw error;
+          // Anything else: surface the actual server code instead of a vague "failed", so refine
+          // problems (e.g. an old `generate` deploy returning `invalid_image`, or `not_refinable`)
+          // are diagnosable rather than silently generic.
+          failedRef.current = true;
+          const detail = code || (status ? `HTTP ${status}` : '');
+          toast(lang === 'fr' ? `Génération impossible${detail ? ` (${detail})` : ''}, réessaie.` : `Generation failed${detail ? ` (${detail})` : ''}, try again.`);
+          router.back();
+          return;
         }
         // Enqueued (status: 'pending'). The credit is reserved and a placeholder look now exists, so
         // refresh both — if the user leaves, the look shows up in "Mes mèches" on its own.
@@ -124,12 +161,11 @@ export default function Generating() {
         while (!cancelled) {
           await new Promise((r) => setTimeout(r, 1500));
           if (cancelled) return;
-          const { data: g } = await supabase.from('generations').select('status, result_path, match').eq('id', genId).single();
+          const { data: g } = await supabase.from('generations').select('status').eq('id', genId).single();
           if (cancelled) return;
           if (g?.status === 'done') {
-            // The result is PRIVATE (the user's face) → mint a short-lived signed URL for display.
-            const { data: signed } = await supabase.storage.from('generated').createSignedUrl(g.result_path as string, 3600);
-            setResult({ uri: signed?.signedUrl ?? '', match: (g.match as number) ?? 0, generationId: genId, name, savedLookId: lookId });
+            // Done → the result screen loads the before/after from this generation id (signed there).
+            completedRef.current = { id: genId, lookId, name };
             doneRef.current = true;
             return;
           }
@@ -165,7 +201,16 @@ export default function Generating() {
 
   useEffect(() => {
     if (pct >= 100 && doneRef.current && !failedRef.current) {
-      const to = setTimeout(() => router.replace('/try/result'), 300);
+      const to = setTimeout(() => {
+        const c = completedRef.current;
+        // Deterministic: the result screen is driven solely by the generation id. A real generation
+        // (normal OR refine) carries its id; the no-camera placeholder path has none.
+        if (c) {
+          router.replace({ pathname: '/try/result', params: { generationId: c.id, lookId: c.lookId ?? '', name: c.name, fresh: '1' } });
+        } else {
+          router.replace('/try/result');
+        }
+      }, 300);
       return () => clearTimeout(to);
     }
   }, [pct, router]);
@@ -176,8 +221,8 @@ export default function Generating() {
   return (
     <View style={{ flex: 1, backgroundColor: '#0a0908' }}>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.85 }}>
-        {selfieBase64 ? (
-          <Image source={{ uri: `data:${mimeType};base64,${selfieBase64}` }} style={{ flex: 1 }} contentFit="cover" />
+        {bgUri ? (
+          <Image source={{ uri: bgUri }} style={{ flex: 1 }} contentFit="cover" />
         ) : (
           <MPortrait hair="medium" mood="warm" tint={ACCENT} />
         )}
