@@ -6,9 +6,9 @@
 // flips the rows to 'done'; on failure it refunds the credit and removes the empty look. So a
 // try-on survives the user leaving the loader — it appears in "Mes mèches" when ready.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { decodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
+import { decodeBase64, encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import { cors } from '../_shared/cors.ts';
-import { buildPrompt, generateWithGemini, mockResult, type Brief } from '../_shared/tryon.ts';
+import { buildPrompt, buildRefinePrompt, generateWithGemini, mockResult, normalizeRefinement, type Brief } from '../_shared/tryon.ts';
 import { parseImageInput } from '../_shared/validate.ts';
 
 // Supabase Edge Runtime: keeps the worker alive to finish `promise` after the response is sent.
@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
   const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
   const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash-image';
+  const GEMINI_TEXT_MODEL = Deno.env.get('GEMINI_TEXT_MODEL') ?? 'gemini-2.5-flash';
 
   // Hoisted so the outer catch can refund the reservation if a synchronous setup step fails.
   let admin: Admin | null = null;
@@ -71,24 +72,79 @@ Deno.serve(async (req) => {
     const user = userData.user;
     if (!user) return json({ error: 'unauthorized' }, 401);
 
-    const { selfieBase64, mimeType = 'image/jpeg', brief = {}, name } = (await req.json()) as {
+    const { selfieBase64, mimeType = 'image/jpeg', brief = {}, name, refineFrom } = (await req.json()) as {
       selfieBase64?: string;
       mimeType?: string;
       brief?: Brief;
       name?: string;
+      /** When set, refine a previous (done) generation: keep its selfie as the "before" and EDIT its
+       *  previous result image with the new brief — all reloaded server-side (no client selfie). */
+      refineFrom?: string;
     };
-    // Validate + normalize the image (size cap, MIME allowlist, valid base64) before any decode/upload.
-    let selfie: string;
-    let mt: string;
-    try {
-      const img = parseImageInput(selfieBase64, mimeType);
-      selfie = img.base64;
-      mt = img.mimeType;
-    } catch (e) {
-      return json({ error: 'invalid_image', detail: String(e instanceof Error ? e.message : e) }, 400);
-    }
 
     admin = createClient(SUPABASE_URL, SERVICE);
+
+    // `selfie`/`mt` = the image STORED as this generation's selfie_path (the "before"). `modelB64`/
+    // `modelMime` = the SINGLE image actually sent to the model. They differ on a refine: the before
+    // stays the original selfie, but the model edits the PREVIOUS RESULT (single-image edit is what the
+    // model follows best — sending two images made it copy the previous look and ignore the tweak).
+    let selfie: string;
+    let mt: string;
+    let modelB64: string;
+    let modelMime: string;
+    let genBrief: Brief = brief;
+    let prompt: string;
+
+    if (refineFrom) {
+      // Refine pass — the source images live in storage; reload them instead of trusting the client.
+      const { data: prev } = await admin
+        .from('generations')
+        .select('selfie_path, result_path, brief, user_id, status')
+        .eq('id', refineFrom)
+        .maybeSingle();
+      if (!prev || prev.user_id !== user.id) return json({ error: 'not_found' }, 404);
+      if (prev.status !== 'done' || !prev.selfie_path || !prev.result_path) return json({ error: 'not_refinable' }, 400);
+      const refinement = (brief.prompt ?? '').trim();
+      if (!refinement) return json({ error: 'empty_refinement' }, 400);
+
+      const [sBlob, rBlob] = await Promise.all([
+        admin.storage.from('selfies').download(prev.selfie_path as string),
+        admin.storage.from('generated').download(prev.result_path as string),
+      ]);
+      if (sBlob.error || rBlob.error || !sBlob.data || !rBlob.data) throw new Error('refine_source_missing');
+      // before = the ORIGINAL selfie (unchanged across refines); the model edits the PREVIOUS RESULT.
+      selfie = encodeBase64(new Uint8Array(await sBlob.data.arrayBuffer()));
+      mt = (prev.selfie_path as string).endsWith('.png') ? 'image/png' : 'image/jpeg';
+      modelB64 = encodeBase64(new Uint8Array(await rBlob.data.arrayBuffer()));
+      modelMime = (prev.result_path as string).endsWith('.png') ? 'image/png' : 'image/jpeg';
+      const prevBrief = (prev.brief ?? {}) as Brief;
+      // Normalize the (often French, often negated) tweak into a clear English imperative so the image
+      // model honors it ("moins de couleur" → "less saturated", not "add color"). Best-effort: fall
+      // back to the raw text. One cheap text call, bounded to this single refine.
+      let change = refinement;
+      if (GEMINI_API_KEY) {
+        try {
+          change = await normalizeRefinement({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, instruction: refinement });
+        } catch {
+          /* keep the raw instruction */
+        }
+      }
+      // Keep a readable record of what the USER asked (their own words), carrying the look name forward.
+      genBrief = { ...prevBrief, prompt: refinement, lookName: name?.trim() || prevBrief.lookName };
+      prompt = buildRefinePrompt(prevBrief, change);
+    } else {
+      // Fresh try-on — validate + normalize the client image (size cap, MIME allowlist, valid base64).
+      try {
+        const img = parseImageInput(selfieBase64, mimeType);
+        selfie = img.base64;
+        mt = img.mimeType;
+      } catch (e) {
+        return json({ error: 'invalid_image', detail: String(e instanceof Error ? e.message : e) }, 400);
+      }
+      modelB64 = selfie;
+      modelMime = mt;
+      prompt = buildPrompt(brief);
+    }
 
     // Credit ledger, oldest first — we replay it to split the balance into free vs purchased pools.
     const { data: txs } = await admin
@@ -122,9 +178,14 @@ Deno.serve(async (req) => {
     // BEFORE we reserve the credit / kick off the paid Gemini call so a blocked request costs
     // nothing. Paid looks skip ALL of this: every call is covered by money the user spent.
     if (!isPaidLook) {
-      // GEN_DAILY_CAP is the hard ceiling on uncompensated AI spend: ~€0.02/look, so 1000 looks ≈
-      // €20/day max. Tune live with `supabase secrets set GEN_DAILY_CAP=N` (picked up next call).
-      const DAILY_CAP = Number(Deno.env.get('GEN_DAILY_CAP') ?? '1000');
+      // Hard ceiling on uncompensated AI spend (free/ad looks). Expressed as a DAILY EURO BUDGET ÷ the
+      // estimated per-look cost — the gate still counts `generations` rows (the only real-time signal;
+      // Google bills async, and a "live euro spend" would just be count × unit price anyway). Upside:
+      // when the price moves, change one var (GEN_COST_PER_LOOK_EUR) and the €/day budget holds.
+      // Default: €20/day ÷ €0.04 = 500 looks. GEN_DAILY_CAP still wins as an explicit count override.
+      const COST_PER_LOOK = Number(Deno.env.get('GEN_COST_PER_LOOK_EUR') ?? '0.04');
+      const DAILY_BUDGET = Number(Deno.env.get('GEN_DAILY_BUDGET_EUR') ?? '20');
+      const DAILY_CAP = Number(Deno.env.get('GEN_DAILY_CAP') ?? Math.floor(DAILY_BUDGET / COST_PER_LOOK));
       const startOfDay = new Date();
       startOfDay.setUTCHours(0, 0, 0, 0);
       const { count: todayCount } = await admin
@@ -162,9 +223,9 @@ Deno.serve(async (req) => {
 
     // Pending generation + its wardrobe look. image_url / result_path stay null until the AI
     // finishes; the wardrobe shows a "generating" placeholder meanwhile (driven by status).
-    const { error: genErr } = await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief, status: 'pending' });
+    const { error: genErr } = await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief: genBrief, status: 'pending' });
     if (genErr) throw genErr;
-    const lookName = (name && name.trim()) || (brief.lookName || brief.prompt || '').slice(0, 40) || 'Ma mèche';
+    const lookName = (name && name.trim()) || (genBrief.lookName || genBrief.prompt || '').slice(0, 40) || 'Ma mèche';
     const { data: look, error: lookErr } = await admin
       .from('looks')
       .insert({ user_id: user.id, name: lookName, generation_id: genId, loved: false })
@@ -177,23 +238,23 @@ Deno.serve(async (req) => {
     EdgeRuntime.waitUntil(
       (async () => {
         try {
-          const prompt = buildPrompt(brief);
           let result;
           if (GEMINI_API_KEY) {
             // Gemini's image model intermittently replies with text only ("no image in response"),
             // or briefly rate-limits. Retry AT MOST ONCE on those recoverable cases — every call is a
             // paid image generation, so the retry is strictly capped to bound cost. Anything else
-            // surfaces immediately.
+            // surfaces immediately. (`prompt`/`modelB64` were resolved synchronously above.)
+            const call = () => generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: modelB64, mimeType: modelMime, prompt });
             try {
-              result = await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: selfie, mimeType: mt, prompt });
+              result = await call();
             } catch (e) {
               const m = String(e instanceof Error ? e.message : e);
               if (!/no image|RESOURCE_EXHAUSTED|429|50\d/.test(m)) throw e;
               await new Promise((r) => setTimeout(r, 400));
-              result = await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: selfie, mimeType: mt, prompt });
+              result = await call();
             }
           } else {
-            result = mockResult(selfie, mt);
+            result = mockResult(modelB64, modelMime);
           }
           const outExt = result.mimeType.includes('png') ? 'png' : 'jpg';
           const resultPath = `${user.id}/${genId}-out.${outExt}`;

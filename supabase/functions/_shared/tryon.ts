@@ -24,21 +24,58 @@ export function buildPrompt(brief: Brief): string {
   );
 }
 
+// Refine prompt: TWO images are sent — image 1 is the original selfie (the identity to preserve),
+// image 2 is the previously generated look the user is iterating on. We keep image 2's hairstyle as
+// the starting point and apply the user's adjustment on top, while keeping image 1's face.
+export function buildRefinePrompt(_prevBrief: Brief, change: string): string {
+  // SINGLE-image edit of the previous result. `change` is expected to be a clear English imperative
+  // (see normalizeRefinement) — lead with it so it dominates, then minimal guard-rails.
+  const c = change.trim().replace(/[.?!]+$/, '');
+  return (
+    `Edit this photo of a person. ${c}. ` +
+    `This change applies to the HAIR only — keep the exact same face, identity, skin tone, expression, ` +
+    `head pose, framing, lighting and background. Make the change clearly visible; do not return the ` +
+    `photo unchanged. Photorealistic, salon-quality. No text, no watermark.`
+  );
+}
+
+// Turn a short, possibly non-English hair tweak ("moins de couleur", "plus court", "sans frange")
+// into ONE unambiguous English imperative for the image editor. Negations/reductions are the whole
+// point — a raw foreign phrase dropped into the English edit prompt made the model do the opposite
+// (it added color for "moins de couleur"). Best-effort: callers fall back to the raw text on failure.
+export async function normalizeRefinement(opts: { apiKey: string; model: string; instruction: string }): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`;
+  const instruction =
+    `Rewrite this short hairstyle-change request as ONE clear, unambiguous English imperative for an ` +
+    `image editor that edits ONLY hair. Preserve the EXACT intent — especially reductions, removals and ` +
+    `negations (e.g. "moins de couleur" -> "Make the hair color less saturated and more natural"; ` +
+    `"sans frange" -> "Remove the fringe"; "plus court" -> "Make the hair noticeably shorter"). ` +
+    `Add nothing the user did not ask for. Output ONLY the imperative sentence. Request: "${opts.instruction}"`;
+  const body = { contents: [{ role: 'user', parts: [{ text: instruction }] }], generationConfig: { temperature: 0.2 } };
+  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`gemini ${res.status}: ${await res.text()}`);
+  const j = await res.json();
+  const text: string = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
+  return text.trim() || opts.instruction;
+}
+
 export async function generateWithGemini(opts: {
   apiKey: string;
   model: string;
   selfieB64: string;
   mimeType: string;
   prompt: string;
+  /** Optional second reference image (e.g. the previous result during a refine pass). */
+  refImageB64?: string;
+  refMimeType?: string;
 }): Promise<TryOnResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`;
+  // Image 1 = selfie (identity), then the optional reference image, then the instruction text.
+  const reqParts: Array<Record<string, unknown>> = [{ inline_data: { mime_type: opts.mimeType, data: opts.selfieB64 } }];
+  if (opts.refImageB64) reqParts.push({ inline_data: { mime_type: opts.refMimeType ?? 'image/png', data: opts.refImageB64 } });
+  reqParts.push({ text: opts.prompt });
   const body = {
-    contents: [
-      {
-        role: 'user',
-        parts: [{ inline_data: { mime_type: opts.mimeType, data: opts.selfieB64 } }, { text: opts.prompt }],
-      },
-    ],
+    contents: [{ role: 'user', parts: reqParts }],
     generationConfig: { responseModalities: ['IMAGE'] },
   };
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
