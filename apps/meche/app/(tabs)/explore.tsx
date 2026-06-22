@@ -51,25 +51,38 @@ export default function Explore() {
   const [h, setH] = useState(Dimensions.get('window').height);
   const listRef = useRef<FlatList<Row>>(null);
   const offsetRef = useRef(0);
-  const dbDoneRef = useRef(false); // exhausted the feed_items table → switch to recycling
+  const dbDoneRef = useRef(false); // exhausted the unique recommendations → switch to recycling
   const loadingRef = useRef(false);
   const seenRef = useRef<Set<string>>(new Set());
   const poolRef = useRef<Row[]>([]); // every distinct look loaded, reused for infinite scroll
   const cycleRef = useRef(0);
+  // One seed per session → the reco RPC reshuffles the order on each visit, but stays stable while
+  // paginating this session. Reset whenever the feed re-leads (focus change).
+  const seedRef = useRef(Math.random() * 2 - 1);
+
+  // Best-effort interaction log → feeds cross-session de-dup + personalization. No-op for anon.
+  const userId = session?.user.id;
+  const logEvent = useCallback(
+    (kind: 'seen' | 'like' | 'save' | 'try', cardId: string) => {
+      if (!userId) return;
+      void sb.from('feed_events').insert({ user_id: userId, feed_item_id: cardId.split('#')[0], kind });
+    },
+    [sb, userId],
+  );
 
   const fetchPage = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     if (!dbDoneRef.current) {
-      const from = offsetRef.current;
-      const { data } = await sb.from('feed_items').select('*').order('created_at').range(from, from + PAGE - 1);
+      // Personalized, shuffled page — exclude what we've already shown so the feed keeps moving.
+      const { data } = await sb.rpc('feed_for_user', { p_limit: PAGE, p_seed: seedRef.current, p_exclude: Array.from(seenRef.current) });
       const batch = (data ?? []) as Row[];
-      offsetRef.current = from + PAGE;
       if (batch.length < PAGE) dbDoneRef.current = true;
       const fresh = batch.filter((r) => !seenRef.current.has(r.id));
       fresh.forEach((r) => {
         seenRef.current.add(r.id);
         poolRef.current.push(r);
+        logEvent('seen', r.id);
       });
       if (fresh.length) setItems((prev) => [...prev, ...fresh]);
       loadingRef.current = false;
@@ -87,7 +100,7 @@ export default function Explore() {
       setItems((prev) => [...prev, ...batch]);
     }
     loadingRef.current = false;
-  }, [sb]);
+  }, [sb, logEvent]);
 
   // Lead with the focused (saved) look if any, then load the rest progressively.
   // Reset pagination each time focus changes (the tab persists, so refs would otherwise be stale).
@@ -99,6 +112,7 @@ export default function Explore() {
     seenRef.current = new Set();
     poolRef.current = [];
     cycleRef.current = 0;
+    seedRef.current = Math.random() * 2 - 1; // fresh shuffle each time the feed re-leads
     setItems([]);
     (async () => {
       if (focus) {
@@ -138,7 +152,7 @@ export default function Explore() {
         onEndReached={() => fetchPage()}
         onEndReachedThreshold={0.8}
         ListFooterComponent={rows.length > 0 ? <View style={{ height: 60, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#fff" /></View> : null}
-        renderItem={({ item }) => <Reel card={item} height={h} lang={lang} insetsTop={insets.top} savedImages={savedImages} />}
+        renderItem={({ item }) => <Reel card={item} height={h} lang={lang} insetsTop={insets.top} savedImages={savedImages} onEvent={logEvent} />}
       />
 
       {/* fixed top filter pills */}
@@ -169,7 +183,7 @@ export default function Explore() {
   );
 }
 
-function Reel({ card, height, lang, insetsTop, savedImages }: { card: Row; height: number; lang: Lang; insetsTop: number; savedImages: Set<string> }) {
+function Reel({ card, height, lang, insetsTop, savedImages, onEvent }: { card: Row; height: number; lang: Lang; insetsTop: number; savedImages: Set<string>; onEvent: (kind: 'seen' | 'like' | 'save' | 'try', cardId: string) => void }) {
   const meta = SRC_META[card.kind];
   const router = useRouter();
   const session = useSession();
@@ -196,18 +210,20 @@ function Reel({ card, height, lang, insetsTop, savedImages }: { card: Row; heigh
       // Saved from the feed → "Enregistrées" (no generation_id), with the real feed photo.
       saveLook({ userId: session.user.id, name: card.name[lang], hair: card.hair, mood: card.mood, tag: card.kind, imageUrl: card.image_url ?? undefined });
       setOverride(true);
+      onEvent('save', card.id);
       toast(lang === 'fr' ? 'Enregistré dans Mes mèches.' : 'Saved to My looks.');
     }
   };
 
   const tryThis = () => {
+    onEvent('try', card.id);
     setBrief({ lookName: card.name[lang], prompt: card.descr?.[lang] });
     setDirect(true); // specific look → skip "Ton idée"
     router.push('/try');
   };
 
   const rail = [
-    { ic: 'heart' as const, label: card.loves ?? '', on: liked, onPress: () => setLiked((v) => !v) },
+    { ic: 'heart' as const, label: card.loves ?? '', on: liked, onPress: () => setLiked((v) => { if (!v) onEvent('like', card.id); return !v; }) },
     { ic: 'bookmark' as const, label: isSaved ? (lang === 'fr' ? 'Gardé' : 'Saved') : lang === 'fr' ? 'Garder' : 'Keep', on: isSaved, onPress: onSave },
   ];
 
