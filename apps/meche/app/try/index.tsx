@@ -47,6 +47,7 @@ export default function Selfie() {
   const cameraRef = useRef<CameraView>(null);
   const setSelfie = useTryStore((s) => s.setSelfie);
   const directMode = useTryStore((s) => s.directMode);
+  const surprise = useTryStore((s) => s.surprise);
 
   // `busy` guards against the double-tap that fires a second capture/import before the first
   // settles. `shot` holds the captured/imported photo while the user reviews it (validate/retake).
@@ -73,8 +74,8 @@ export default function Selfie() {
   };
 
   // After the selfie: a specific look ("Essayer ce look") generates straight away; "coupe surprise"
-  // is handled on "Ton idée" (it auto-asks Mèche to fill the prompt); otherwise the "Ton idée" hub.
-  const next = directMode ? '/try/generating' : '/try/idea';
+  // hands off to the dedicated "L'IA te propose" screen; otherwise the "Ton idée" prompt hub.
+  const next = directMode ? '/try/generating' : surprise ? '/try/aipropose' : '/try/idea';
 
   // Strip the `data:<mime>;base64,…` prefix expo returns on web; keep the real mime.
   const splitDataUri = (raw: string, fallbackMime: string) => {
