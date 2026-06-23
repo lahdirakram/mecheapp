@@ -24,6 +24,7 @@ const TYPES = {
 };
 
 function safeJoin(rel) {
+  if (rel.indexOf('\0') !== -1) return null; // reject null-byte injection
   const filePath = path.normalize(path.join(ROOT, rel));
   return filePath.startsWith(ROOT) ? filePath : null; // path-traversal guard
 }
@@ -66,8 +67,15 @@ function resolve(req) {
   return { notFound: true };
 }
 
-const server = http.createServer((req, res) => {
-  const r = resolve(req);
+function handle(req, res) {
+  let r;
+  try {
+    r = resolve(req);
+  } catch {
+    // malformed URL / bad percent-encoding etc. -> 400, never crash
+    res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' });
+    return res.end('<!doctype html><meta charset="utf-8"><h1>400</h1>');
+  }
   if (r.health) {
     res.writeHead(200, { 'content-type': 'text/plain' });
     return res.end('ok');
@@ -84,6 +92,18 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': TYPES[path.extname(r.file)] || 'application/octet-stream' });
     res.end(data);
   });
+}
+
+const server = http.createServer((req, res) => {
+  try {
+    handle(req, res);
+  } catch {
+    if (!res.headersSent) res.writeHead(500, { 'content-type': 'text/plain' });
+    res.end('error');
+  }
 });
+
+// last-resort safety net: a single bad request must never take the process down
+process.on('uncaughtException', (err) => console.error('uncaughtException', err));
 
 server.listen(PORT, '0.0.0.0', () => console.log(`Mèche legal server listening on :${PORT}`));
