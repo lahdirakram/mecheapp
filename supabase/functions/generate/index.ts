@@ -82,6 +82,18 @@ Deno.serve(async (req) => {
       refineFrom?: string;
     };
 
+    // Untrusted free-text: the UI caps these (idea prompt 240, refine 120), but a direct API call can't
+    // be trusted. REJECT an abusive payload rather than truncate it — a clamp would silently corrupt a
+    // long-but-legit prompt and degrade the result. Ceiling sits far above any real prompt: production
+    // data shows suggestion prompts reach ~574 chars (p99 ~474), so 1000 clears them with margin while
+    // still refusing genuine multi-KB abuse (no Gemini call, no cost).
+    const MAX_PROMPT = 1000;
+    if (typeof brief.prompt === 'string' && brief.prompt.length > MAX_PROMPT) {
+      return json({ error: 'prompt_too_long' }, 400);
+    }
+    // `name` is a short display label (derived from the prompt/suggestion), safe to cap defensively.
+    const safeName = typeof name === 'string' ? name.slice(0, 80) : name;
+
     admin = createClient(SUPABASE_URL, SERVICE);
 
     // `selfie`/`mt` = the image STORED as this generation's selfie_path (the "before"). `modelB64`/
@@ -130,7 +142,7 @@ Deno.serve(async (req) => {
         }
       }
       // Keep a readable record of what the USER asked (their own words), carrying the look name forward.
-      genBrief = { ...prevBrief, prompt: refinement, lookName: name?.trim() || prevBrief.lookName };
+      genBrief = { ...prevBrief, prompt: refinement, lookName: safeName?.trim() || prevBrief.lookName };
       prompt = buildRefinePrompt(prevBrief, change);
     } else {
       // Fresh try-on — validate + normalize the client image (size cap, MIME allowlist, valid base64).
@@ -225,7 +237,7 @@ Deno.serve(async (req) => {
     // finishes; the wardrobe shows a "generating" placeholder meanwhile (driven by status).
     const { error: genErr } = await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief: genBrief, status: 'pending' });
     if (genErr) throw genErr;
-    const lookName = (name && name.trim()) || (genBrief.lookName || genBrief.prompt || '').slice(0, 40) || 'Ma mèche';
+    const lookName = (safeName && safeName.trim()) || (genBrief.lookName || genBrief.prompt || '').slice(0, 40) || 'Ma mèche';
     const { data: look, error: lookErr } = await admin
       .from('looks')
       .insert({ user_id: user.id, name: lookName, generation_id: genId, loved: false })

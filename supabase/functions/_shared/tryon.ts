@@ -122,7 +122,7 @@ export async function suggestWithGemini(opts: {
     `Write "name", "description" and "reasons" in ${langName}. "name" is a short evocative salon name (max 4 words). ` +
     `"description" is 1–2 warm sentences explaining why it suits this person specifically. ` +
     `"reasons" is 3–4 very short tags (2–3 words each). ` +
-    `"prompt" must be in ENGLISH: a detailed description of ONLY the target hair (cut, length, texture, color, fringe) for an image generator — no mention of the face.`;
+    `"prompt" must be in ENGLISH: a detailed description of ONLY the target hair (cut, length, texture, color, fringe) for an image generator, with no mention of the face.`;
   const body = {
     contents: [
       {
@@ -151,6 +151,8 @@ export async function suggestWithGemini(opts: {
   const text: string = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
   if (!text) throw new Error('gemini: empty suggestion');
   const parsed = JSON.parse(text) as Suggestion;
+  // Nothing is truncated here — a full, detailed suggestion is what we want, and /generate accepts up
+  // to 1000 chars (rejecting only genuine abuse), so the prompt always passes through intact.
   return {
     name: parsed.name?.trim() || (opts.lang === 'fr' ? 'Ta coupe sur-mesure' : 'Your tailored cut'),
     description: parsed.description?.trim() || '',
