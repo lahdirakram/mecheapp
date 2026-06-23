@@ -23,6 +23,17 @@ const TYPES = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+// Cache policy by extension. Images/styles rarely change -> cache hard so
+// browsers and Cloudflare's edge serve them without re-hitting the origin.
+// HTML is short-lived so legal copy updates show up quickly.
+function cacheControl(ext) {
+  if (ext === '.jpg' || ext === '.png' || ext === '.svg' || ext === '.ico') {
+    return 'public, max-age=2592000, stale-while-revalidate=86400'; // 30d
+  }
+  if (ext === '.css' || ext === '.js') return 'public, max-age=86400'; // 1d
+  return 'public, max-age=300'; // html: 5min
+}
+
 function safeJoin(rel) {
   if (rel.indexOf('\0') !== -1) return null; // reject null-byte injection
   const filePath = path.normalize(path.join(ROOT, rel));
@@ -84,13 +95,33 @@ function handle(req, res) {
     res.writeHead(r.file === null ? 400 : 404, { 'content-type': 'text/html; charset=utf-8' });
     return res.end('<!doctype html><meta charset="utf-8"><h1>404</h1><p><a href="/">Accueil / Home</a></p>');
   }
-  fs.readFile(r.file, (err, data) => {
-    if (err) {
+  const ext = path.extname(r.file);
+  fs.stat(r.file, (err, stat) => {
+    if (err || !stat.isFile()) {
       res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
       return res.end('<!doctype html><meta charset="utf-8"><h1>404</h1><p><a href="/">Accueil / Home</a></p>');
     }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(r.file)] || 'application/octet-stream' });
-    res.end(data);
+    const etag = `"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
+    const headers = {
+      'content-type': TYPES[ext] || 'application/octet-stream',
+      'cache-control': cacheControl(ext),
+      'etag': etag,
+      'last-modified': stat.mtime.toUTCString(),
+    };
+    // Conditional request -> 304, no body. Saves the whole image on revalidation.
+    const inm = req.headers['if-none-match'];
+    if (inm && inm === etag) {
+      res.writeHead(304, headers);
+      return res.end();
+    }
+    fs.readFile(r.file, (rErr, data) => {
+      if (rErr) {
+        res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
+        return res.end('<!doctype html><meta charset="utf-8"><h1>404</h1>');
+      }
+      res.writeHead(200, headers);
+      res.end(data);
+    });
   });
 }
 
