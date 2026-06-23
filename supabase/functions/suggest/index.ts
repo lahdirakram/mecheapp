@@ -33,10 +33,13 @@ Deno.serve(async (req) => {
       lang?: 'fr' | 'en';
       exclude?: string[];
     };
+    // The client controls `exclude`, and it's injected into the prompt — cap the count + per-item
+    // length so it can't be abused as a free-text / prompt-injection channel.
+    const safeExclude = (Array.isArray(exclude) ? exclude : []).slice(-6).map((s) => String(s).slice(0, 40));
 
     // No key, or no selfie → canned suggestion so the flow always works.
     if (!GEMINI_API_KEY || !selfieBase64) {
-      return json({ ...mockSuggestion(lang, exclude), provider: 'mock' });
+      return json({ ...mockSuggestion(lang, safeExclude), provider: 'mock' });
     }
 
     // Validate the image (size cap, MIME allowlist, valid base64) before sending it to the model.
@@ -53,12 +56,13 @@ Deno.serve(async (req) => {
     // Rate-limit this free, paid-model-backed endpoint per user — concurrency-safe (advisory-locked
     // count+insert in a single RPC, so parallel requests can't bypass the cap).
     const admin = createClient(SUPABASE_URL, SERVICE);
-    const SUGGEST_HOURLY_CAP = Number(Deno.env.get('SUGGEST_HOURLY_CAP') ?? '20');
-    const { data: allowed, error: rlErr } = await admin.rpc('reserve_suggest_call', { p_user: user.id, p_max: SUGGEST_HOURLY_CAP });
+    const SUGGEST_HOURLY_CAP = Number(Deno.env.get('SUGGEST_HOURLY_CAP') ?? '20'); // per user
+    const SUGGEST_DAILY_CAP = Number(Deno.env.get('SUGGEST_DAILY_CAP') ?? '20000'); // global backstop, all users
+    const { data: allowed, error: rlErr } = await admin.rpc('reserve_suggest_call', { p_user: user.id, p_max: SUGGEST_HOURLY_CAP, p_daily_max: SUGGEST_DAILY_CAP });
     if (rlErr) throw rlErr;
     if (!allowed) return json({ error: 'rate_limited' }, 429);
 
-    const suggestion = await suggestWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, selfieB64: selfie, mimeType: mt, lang, exclude });
+    const suggestion = await suggestWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, selfieB64: selfie, mimeType: mt, lang, exclude: safeExclude });
     return json({ ...suggestion, provider: 'gemini' });
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e);
