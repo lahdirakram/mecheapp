@@ -32,10 +32,18 @@ export default function Recharge() {
   const sb = useSupabase();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
-  // May be reached via push (profile) OR via replace from the generating screen on a 402 — in the
-  // latter case there's no history, so close to a safe screen instead of an unhandled GO_BACK.
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/explore'));
-  const { low } = useLocalSearchParams<{ low?: string }>();
+  // May arrive from a refine that ran out of credits (carries the source generation id `g`): on close
+  // we return to that result so the user can retry the refine, instead of landing on the home tab.
+  const { low, g, name: lookName, lookId } = useLocalSearchParams<{ low?: string; g?: string; name?: string; lookId?: string }>();
+  // Reached via push (profile) OR from the generating screen on a no-credits block. There may be no
+  // history, so close to a safe screen instead of an unhandled GO_BACK.
+  const close = () => {
+    if (g) {
+      router.replace({ pathname: '/try/result', params: { generationId: g, name: lookName ?? '', lookId: lookId ?? '' } });
+      return;
+    }
+    router.canGoBack() ? router.back() : router.replace('/(tabs)/explore');
+  };
   const lowBalance = low === '1';
   const { data } = useCreditPacks();
   const packs = (data ?? []) as Pack[];

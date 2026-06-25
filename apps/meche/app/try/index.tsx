@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Svg, { Defs, Ellipse, Mask, Rect } from 'react-native-svg';
 import { MIcon, MPAL, MText, MPortrait, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
+import { useExitTry } from '../../lib/useExitTry';
 
 // B2C · Selfie (02) — live camera viewfinder with a dashed caramel oval guide. Uses the real
 // device camera (expo-camera); falls back to the MPortrait placeholder when permission is
@@ -48,6 +49,7 @@ export default function Selfie() {
   const setSelfie = useTryStore((s) => s.setSelfie);
   const directMode = useTryStore((s) => s.directMode);
   const surprise = useTryStore((s) => s.surprise);
+  const exitTry = useExitTry();
 
   // `busy` guards against the double-tap that fires a second capture/import before the first
   // settles. `shot` holds the captured/imported photo while the user reviews it (validate/retake).
@@ -139,7 +141,7 @@ export default function Selfie() {
         <OvalGuide />
 
         {/* close — exits the flow, same as the camera screen */}
-        <Pressable hitSlop={8} onPress={() => router.back()} style={{ position: 'absolute', top: insets.top + 8, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable hitSlop={8} onPress={() => exitTry()} style={{ position: 'absolute', top: insets.top + 8, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
           <MIcon name="x" size={18} color="#fff" />
         </Pressable>
 
@@ -201,7 +203,7 @@ export default function Selfie() {
 
       {/* top bar */}
       <View style={{ position: 'absolute', top: insets.top + 8, left: 0, right: 0, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable hitSlop={8} onPress={() => exitTry()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
           <MIcon name="x" size={18} color="#fff" />
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.92)' }}>

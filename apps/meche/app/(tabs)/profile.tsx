@@ -9,6 +9,7 @@ import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, 
 import { getPushEnabled } from '../../lib/notifPref';
 import { setPushPreference } from '../../lib/push';
 import { openLegal } from '../../lib/legal';
+import { cacheKeyFor } from '../../lib/img';
 
 type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; image_url?: string | null; generation_id?: string | null };
 
@@ -209,7 +210,8 @@ export default function Profile() {
             >
               <View style={{ aspectRatio: 3 / 4 }}>
                 {srcOf(w.image_url) ? (
-                  <Image source={{ uri: srcOf(w.image_url), cacheKey: w.image_url ?? undefined }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" recyclingKey={w.image_url ?? undefined} />
+                  // Stable cacheKey (token stripped); no recyclingKey (horizontal ScrollView, no recycling).
+                  <Image source={{ uri: srcOf(w.image_url), cacheKey: cacheKeyFor(srcOf(w.image_url)) }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" />
                 ) : (
                   <MPortrait hair={w.hair} mood={w.mood} tint={i % 3 === 0 ? MPAL.ink : undefined} />
                 )}

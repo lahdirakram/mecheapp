@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCredits, useSession } from '@meche/api-client';
 import { FONTS, MIcon, MPAL, MText, PrimaryButton, pOnDark, useLang, useT } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
+import { useExitTry } from '../../lib/useExitTry';
 
 // B2C · Ton idée — prompt-first intent screen after the selfie. The prompt is the hero (with
 // example chips), and "L'IA te propose" is the highlighted zero-effort path. No manual sliders:
@@ -21,6 +22,7 @@ export default function Idea() {
   const session = useSession();
   const { data: credits } = useCredits(session?.user.id);
   const setBrief = useTryStore((s) => s.setBrief);
+  const exitTry = useExitTry();
 
   const [prompt, setPrompt] = useState('');
 
@@ -37,7 +39,8 @@ export default function Idea() {
         <MText variant="mono" size={10} color={MPAL.mute} style={{ letterSpacing: 1.6 }}>
           {lang === 'fr' ? 'ÉTAPE 2 · TON IDÉE' : 'STEP 2 · YOUR IDEA'}
         </MText>
-        <Pressable hitSlop={8} onPress={() => router.dismissAll()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+        {/* X = close the whole flow and land back on the home tab (see useExitTry). */}
+        <Pressable hitSlop={8} onPress={() => exitTry()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
           <MIcon name="x" size={18} />
         </Pressable>
       </View>

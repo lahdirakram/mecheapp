@@ -28,7 +28,6 @@ export default function RootLayout() {
           <Stack.Screen name="try" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
           <Stack.Screen name="recharge" options={{ presentation: 'modal' }} />
           <Stack.Screen name="share" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="look" options={{ presentation: 'modal' }} />
         </Stack>
       </SupabaseProvider>
     </AppProviders>

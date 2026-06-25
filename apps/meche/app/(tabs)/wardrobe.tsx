@@ -7,6 +7,7 @@ import { useDeleteLook, useSession, useSignedUrls, useWardrobe } from '@meche/ap
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useSheet, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
+import { cacheKeyFor } from '../../lib/img';
 
 // B2C · Mes mèches (17) — kept looks, sort tabs (Récents/Préférés/Pour cet été), staggered
 // grid + a "surprise cut" prompt. Ported from MScreenWardrobe. Falls back to demo looks until
@@ -99,6 +100,7 @@ export default function Wardrobe() {
             // shows a retry card (credit was refunded). Otherwise it's a normal saved look.
             const pending = w.generation?.status === 'pending';
             const failed = w.generation?.status === 'failed';
+            const uri = srcOf(w.image_url);
             return (
             <Pressable
               key={w.id}
@@ -128,8 +130,11 @@ export default function Wardrobe() {
                     {lang === 'fr' ? 'ÉCHEC · RÉESSAYER' : 'FAILED · RETRY'}
                   </MText>
                 </View>
-              ) : srcOf(w.image_url) ? (
-                <Image source={{ uri: srcOf(w.image_url), cacheKey: w.image_url ?? undefined }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" recyclingKey={w.image_url ?? undefined} />
+              ) : uri ? (
+                // cacheKey = stable path (token stripped) so the rotating signed URL still hits one cache
+                // entry, shared with the result screen. No recyclingKey: this is a ScrollView (no view
+                // recycling), and on Android recyclingKey + a changing uri blanked thumbnails.
+                <Image source={{ uri, cacheKey: cacheKeyFor(uri) }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" />
               ) : (
                 <MPortrait hair={w.hair} mood={w.mood} tint={i % 3 === 0 ? MPAL.ink : undefined} />
               )}

@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { MPAL, MText, MPortrait, useLang, useT, useToast } from '@meche/ui';
 import { supabase } from '../../lib/supabase';
 import { useTryStore } from '../../lib/tryStore';
+import { useExitTry } from '../../lib/useExitTry';
 
 // B2C · Génération (09) — dark loader that WATCHES a background generation. /generate enqueues the
 // try-on server-side and returns immediately; this screen polls the generation row until it's done.
@@ -21,6 +22,7 @@ const STEPS_EN = ['FACE ANALYSIS', 'READING THE IDEA', 'COMPOSITION', 'FINALISIN
 
 export default function Generating() {
   const router = useRouter();
+  const exitTry = useExitTry();
   const t = useT();
   const lang = useLang();
   const toast = useToast();
@@ -38,13 +40,36 @@ export default function Generating() {
   const bgUri = refineRef.current ? result?.uri ?? null : selfieBase64 ? `data:${mimeType};base64,${selfieBase64}` : null;
   const scanY = useRef(new Animated.Value(0)).current;
 
-  // Recharge is a modal at the ROOT, a sibling of the `try` fullScreenModal — while this loader sits
-  // deep inside the `try` nested stack. So back()/replace() here only move WITHIN `try` and strand the
-  // user on the prompt screen. Dismiss the whole `try` modal first, then surface recharge over the
-  // tabs (deferred a tick so the dismiss settles before the push).
+  // Recharge is a modal at the ROOT, a sibling of the `try` fullScreenModal, while this loader sits
+  // deep inside the `try` nested stack. Surface recharge over the TABS: leave the try flow first, then
+  // push recharge (deferred a tick so the navigation settles before the push).
   const goRecharge = (low?: boolean) => {
-    router.dismissAll();
-    setTimeout(() => router.push(low ? '/recharge?low=1' : '/recharge'), 0);
+    const src = refineRef.current;
+    // Pop the try modal off the root stack first so recharge sits over the TABS (closing it then returns
+    // home, or to the result on a refine via the `g` param below). See useExitTry for why dismissAll/
+    // navigate didn't work from inside the nested try stack.
+    exitTry();
+    setTimeout(() => {
+      if (src) {
+        // A refine ran out of credits: carry the source generation so recharge returns to that result
+        // after the purchase (the user retries the refine), instead of dumping them on the home tab.
+        router.push({ pathname: '/recharge', params: { low: low ? '1' : '', g: src, name: result?.name ?? '', lookId: result?.savedLookId ?? '' } });
+      } else {
+        router.push(low ? '/recharge?low=1' : '/recharge');
+      }
+    }, 0);
+  };
+
+  // Where to send the user when a generation FAILS (not no-credits — that goes to recharge). A refine
+  // returns to its source result so they can retry without retyping; a first generation pops back to
+  // the idea/path screen it came from.
+  const failBack = () => {
+    const src = refineRef.current;
+    if (src) {
+      router.replace({ pathname: '/try/result', params: { generationId: src, lookId: result?.savedLookId ?? '', name: result?.name ?? '' } });
+    } else {
+      router.back();
+    }
   };
 
   // Continuous scan-line sweep — runs regardless of progress so the loader never looks frozen,
@@ -144,7 +169,7 @@ export default function Generating() {
           failedRef.current = true;
           console.warn('[generate] unhandled error', { status, code });
           toast(lang === 'fr' ? 'Génération impossible, réessaie.' : 'Generation failed, try again.');
-          router.back();
+          failBack();
           return;
         }
         // Enqueued (status: 'pending'). The credit is reserved and a placeholder look now exists, so
@@ -171,7 +196,7 @@ export default function Generating() {
           if (g?.status === 'failed') {
             failedRef.current = true;
             toast(lang === 'fr' ? 'Génération impossible, ton crédit est conservé.' : "Generation failed, your credit was kept.");
-            router.back();
+            failBack();
             return;
           }
           // Taking longer than expected → stop waiting on-screen and let it finish in the
@@ -179,7 +204,7 @@ export default function Generating() {
           if (Date.now() - startedAt > 60000) {
             failedRef.current = true; // suppress the auto-navigation to /result
             toast(lang === 'fr' ? 'Ça prend un peu plus de temps. On le dépose dans Mes mèches dès que c’est prêt.' : "This is taking longer than usual. It'll land in My looks as soon as it's ready.");
-            router.back();
+            failBack();
             return;
           }
         }
@@ -187,7 +212,7 @@ export default function Generating() {
         if (cancelled) return;
         failedRef.current = true;
         toast(lang === 'fr' ? 'Génération impossible, réessaie.' : 'Generation failed, try again.');
-        router.back();
+        failBack();
       }
     })();
 

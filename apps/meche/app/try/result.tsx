@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCredits, useDeleteLook, useGeneration, useSaveLook, useSession, useToggleLove } from '@meche/api-client';
 import { FONTS, MIcon, MPAL, MText, MPortrait, TopBar, useLang, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
+import { useExitTry } from '../../lib/useExitTry';
 import { cacheKeyFor } from '../../lib/img';
 
 // B2C · Avant / après (10) — draggable comparison. Left reveals the generated "after", right
@@ -21,6 +22,7 @@ export default function Result() {
   // The store is NOT a source of truth for what this screen shows — `setResult` only seeds the loader
   // backdrop on a refine. Everything displayed comes from the generation identified by the params.
   const { setBrief, setRefine, setResult } = useTryStore();
+  const exitTry = useExitTry();
   const params = useLocalSearchParams<{ generationId?: string; lookId?: string; name?: string; after?: string; loved?: string; fresh?: string }>();
   const session = useSession();
   const { data: credits } = useCredits(session?.user.id);
@@ -99,7 +101,8 @@ export default function Result() {
               {
                 onSuccess: () => {
                   toast(lang === 'fr' ? 'Mèche supprimée.' : 'Look deleted.');
-                  router.dismissAll();
+                  // Deleted → leave the flow and land on Mes mèches (where the remaining looks live).
+                  exitTry('/(tabs)/wardrobe');
                 },
                 onError: () => toast(lang === 'fr' ? 'Suppression impossible.' : 'Could not delete.'),
               },
@@ -122,9 +125,12 @@ export default function Result() {
     // Seed the loader backdrop with the look being refined (the generating screen has no local selfie
     // on a refine). This is the ONLY thing the store result feeds now — purely cosmetic.
     if (afterUri) setResult({ uri: afterUri, match: gen?.match ?? 0, generationId, name: title, savedLookId });
-    // Keep `refineText` as-is — if the pass fails and we land back here, the user can retry without
-    // retyping. A successful refine navigates to a fresh result screen, so it won't linger.
-    router.push('/try/generating');
+    // Keep `refineText` as-is so a failed pass that lands back here can be retried without retyping.
+    // REPLACE (not push): without this the refine stack grows one result per pass
+    // ([selfie, idea, result1, result2, ...]), leaking memory and making the back-stack meaningless.
+    // The loader replaces itself with the fresh result, so the pile stays [selfie, idea, result].
+    // On failure the loader replaces back to THIS source result (see generating.tsx failBack).
+    router.replace('/try/generating');
   };
 
   const wRef = useRef(0);
@@ -168,7 +174,7 @@ export default function Result() {
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top, paddingBottom: kb }}>
       <TopBar
-        onBack={() => router.dismissAll()}
+        onBack={() => exitTry()}
         right={
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable hitSlop={6} onPress={onSave} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: saved ? MPAL.ink : 'rgba(0,0,0,0.05)' }}>
@@ -282,7 +288,9 @@ export default function Result() {
 
       {/* actions */}
       <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 14, paddingBottom: insets.bottom + 16 }}>
-        <Pressable onPress={() => router.back()} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: MPAL.border }}>
+        {/* "Voir d'autres" → Mes mèches. exitTry pops the whole try modal off the root stack (regardless
+            of refine depth) then selects the wardrobe, where this just-saved look lives. */}
+        <Pressable onPress={() => exitTry('/(tabs)/wardrobe')} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: MPAL.border }}>
           <MIcon name="sparkle" size={15} color={MPAL.ink} />
           <MText variant="bodySemibold" size={14} color={MPAL.ink}>
             {t('see_more')}

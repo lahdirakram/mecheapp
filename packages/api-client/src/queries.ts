@@ -120,6 +120,13 @@ export function useSignedUrls(bucket: string, paths: (string | null | undefined)
   return useQuery({
     queryKey: ['signed', bucket, list.join('|')],
     enabled: list.length > 0,
+    // Signed URLs are valid 3600s. WITHOUT this, the query re-runs on every mount/focus/poll and mints
+    // FRESH URLs (the ?token rotates) → the image `uri` changes constantly. On Android expo-image then
+    // re-blanks the picture on each uri change even with a stable cacheKey, so thumbnails flickered out
+    // "every other time". Keep the same URLs for ~50min (well inside the 1h validity) so the uri is
+    // stable; the on-disk cache (keyed by the stable path) means an expired token never needs a refetch.
+    staleTime: 50 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     queryFn: async () => {
       const map: Record<string, string> = {};
       const { data, error } = await sb.storage.from(bucket).createSignedUrls(list, 3600);

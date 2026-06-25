@@ -174,8 +174,10 @@ export default function AIPropose() {
                 <MIcon name="arrowRight" size={14} color="#fff" />
               </Pressable>
             </View>
-            {/* back to the prompt screen to write the cut yourself */}
-            <Pressable onPress={() => router.replace('/try/idea')} style={{ alignSelf: 'center', marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12 }}>
+            {/* back to the prompt screen to write the cut yourself. dismissTo (POP_TO): pops back to an
+                existing `idea` (the idea→aipropose path, preserving its typed prompt) or pushes one (the
+                surprise path, which reaches aipropose straight from the selfie). Never duplicates idea. */}
+            <Pressable onPress={() => router.dismissTo('/try/idea')} style={{ alignSelf: 'center', marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12 }}>
               <MIcon name="chevronLeft" size={14} color={MPAL.mute} />
               <MText variant="bodySemibold" size={13} color={MPAL.mute}>
                 {lang === 'fr' ? 'Plutôt écrire mon idée' : 'Describe it myself instead'}
