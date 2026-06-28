@@ -1,15 +1,16 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useMemo, useState } from 'react';
-import { useAuth, useBookings, useCredits, useCreditPacks, useProfile, useSession, useSignedUrls, useWardrobe } from '@meche/api-client';
+import { useAuth, useBookings, useCredits, useCreditPacks, useProfile, useSession, useWardrobe } from '@meche/api-client';
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, useT, useToast } from '@meche/ui';
 import { getPushEnabled } from '../../lib/notifPref';
 import { setPushPreference } from '../../lib/push';
 import { openLegal } from '../../lib/legal';
 import { cacheKeyFor } from '../../lib/img';
+import { useLocalImages } from '../../lib/localImages';
 
 type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; image_url?: string | null; generation_id?: string | null };
 
@@ -46,9 +47,12 @@ export default function Profile() {
   const upcoming = ((bookings as { starts_at: string }[] | undefined) ?? []).filter((b) => new Date(b.starts_at).getTime() > Date.now()).length;
   // "Tes derniers essais" = AI generations only (not feed-saved inspiration photos).
   const recent = ((looksData as Look[] | undefined) ?? []).filter((w) => w.generation_id).slice(0, 4);
-  // Generated images are private paths → sign; feed photos are external URLs (pass through).
-  const { data: signed = {} } = useSignedUrls('generated', useMemo(() => recent.map((w) => w.image_url), [recent]));
-  const srcOf = (u?: string | null) => (!u ? undefined : /^https?:\/\//.test(u) ? u : signed[u]);
+  // Generated images are private paths → resolve to a durable local file (downloaded once, then served
+  // from disk with zero egress); feed photos are external URLs (pass through).
+  const { data: local = {}, pending: imgPending } = useLocalImages('generated', useMemo(() => recent.map((w) => w.image_url), [recent]));
+  const srcOf = (u?: string | null) => (!u ? undefined : /^https?:\/\//.test(u) ? u : local[u]);
+  // A storage image still downloading → loader, not the "no image" illustration.
+  const imgLoading = (u?: string | null) => !!u && !/^https?:\/\//.test(u) && imgPending.has(u);
 
   const soon = (title: string) => toast(lang === 'fr' ? `${title} arrive bientôt.` : `${title} is coming soon.`, { icon: 'sparkle' });
   // Two-step + visually distinct: only "delete" is destructive (red) and it opens its own confirm,
@@ -212,6 +216,10 @@ export default function Profile() {
                 {srcOf(w.image_url) ? (
                   // Stable cacheKey (token stripped); no recyclingKey (horizontal ScrollView, no recycling).
                   <Image source={{ uri: srcOf(w.image_url), cacheKey: cacheKeyFor(srcOf(w.image_url)) }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" />
+                ) : imgLoading(w.image_url) ? (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator color={MPAL.sable} />
+                  </View>
                 ) : (
                   <MPortrait hair={w.hair} mood={w.mood} tint={i % 3 === 0 ? MPAL.ink : undefined} />
                 )}

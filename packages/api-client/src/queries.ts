@@ -107,7 +107,15 @@ export function useGeneration(id: string | undefined) {
         const { data: signed } = await sb.storage.from('generated').createSignedUrl(data.result_path as string, 3600);
         resultUrl = signed?.signedUrl ?? null;
       }
-      return { selfieUrl, resultUrl, match: (data.match as number | null) ?? null };
+      // Expose raw storage paths too: the app prefers a durable local copy (downloaded once) and only
+      // falls back to these signed URLs when the local cache misses and a re-download fails.
+      return {
+        selfieUrl,
+        resultUrl,
+        selfiePath: (data.selfie_path as string | null) ?? null,
+        resultPath: (data.result_path as string | null) ?? null,
+        match: (data.match as number | null) ?? null,
+      };
     },
   });
 }

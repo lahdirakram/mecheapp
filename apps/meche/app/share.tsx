@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGeneration } from '@meche/api-client';
 import { MIcon, MPAL, MText, MWordmark, MPortrait, useLang, useT, useToast } from '@meche/ui';
 import { cacheKeyFor } from '../lib/img';
+import { localFirstUri, useLocalImage } from '../lib/localImages';
 
 // The watermarked share card (after-only, or before/after top-bottom split). `s` scales the chrome.
 // This same on-screen node is captured to a PNG, so what you preview is exactly what you share.
@@ -82,8 +83,11 @@ export default function Share() {
   // Deterministic: the shared card is the generation identified by the params (signed URLs), with the
   // `after` param as a fallback when it's already a full URL.
   const { data: gen } = useGeneration(params.generationId);
-  const beforeUri = gen?.selfieUrl ?? null;
-  const afterUri = gen?.resultUrl ?? (params.after || null);
+  // Prefer the durable local copy (downloaded once); fall back to the signed URL only on a cache miss.
+  const beforeLocal = useLocalImage('selfies', gen?.selfiePath);
+  const afterLocal = useLocalImage('generated', gen?.resultPath);
+  const beforeUri = localFirstUri(beforeLocal, gen?.selfieUrl ?? null);
+  const afterUri = localFirstUri(afterLocal, gen?.resultUrl ?? (params.after || null));
   const lookName = params.name ?? (lang === 'fr' ? 'Ma mèche' : 'My look');
 
   // Pre-capture the on-screen card to a PNG file in the background (native resolution) so Share/Save

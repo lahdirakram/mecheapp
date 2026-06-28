@@ -3,11 +3,12 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from '
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDeleteLook, useSession, useSignedUrls, useWardrobe } from '@meche/api-client';
+import { useDeleteLook, useSession, useWardrobe } from '@meche/api-client';
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, TopBar, useLang, useSheet, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 import { cacheKeyFor } from '../../lib/img';
+import { useLocalImages } from '../../lib/localImages';
 
 // B2C · Mes mèches (17) — kept looks, sort tabs (Récents/Préférés/Pour cet été), staggered
 // grid + a "surprise cut" prompt. Ported from MScreenWardrobe. Falls back to demo looks until
@@ -59,9 +60,12 @@ export default function Wardrobe() {
   };
 
   const base = (data ?? []) as Look[]; // real saved looks only — no demo fallback
-  // Generated images are private storage paths → sign for display; feed photos are external URLs.
-  const { data: signed = {} } = useSignedUrls('generated', useMemo(() => base.map((l) => l.image_url), [base]));
-  const srcOf = (u?: string | null) => (!u ? undefined : /^https?:\/\//.test(u) ? u : signed[u]);
+  // Generated images are private storage paths → resolve to a durable local file (downloaded once,
+  // then served from disk with zero egress); feed photos are external URLs and pass through untouched.
+  const { data: local = {}, pending: imgPending } = useLocalImages('generated', useMemo(() => base.map((l) => l.image_url), [base]));
+  const srcOf = (u?: string | null) => (!u ? undefined : /^https?:\/\//.test(u) ? u : local[u]);
+  // A storage image that hasn't landed on disk yet → show a loader (not the "no image" illustration).
+  const imgLoading = (u?: string | null) => !!u && !/^https?:\/\//.test(u) && imgPending.has(u);
   // Tout · Mes essais (generated, has generation_id) · Enregistrées (saved from feed/galerie)
   const looks: Look[] = tab === 1 ? base.filter((l) => l.generation_id) : tab === 2 ? base.filter((l) => !l.generation_id) : base;
   const tabs = [lang === 'fr' ? 'Tout' : 'All', lang === 'fr' ? 'Mes essais' : 'My tries', lang === 'fr' ? 'Enregistrées' : 'Saved'];
@@ -135,6 +139,10 @@ export default function Wardrobe() {
                 // entry, shared with the result screen. No recyclingKey: this is a ScrollView (no view
                 // recycling), and on Android recyclingKey + a changing uri blanked thumbnails.
                 <Image source={{ uri, cacheKey: cacheKeyFor(uri) }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" />
+              ) : imgLoading(w.image_url) ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator color={MPAL.sable} />
+                </View>
               ) : (
                 <MPortrait hair={w.hair} mood={w.mood} tint={i % 3 === 0 ? MPAL.ink : undefined} />
               )}

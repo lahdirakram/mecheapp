@@ -8,6 +8,7 @@ import { FONTS, MIcon, MPAL, MText, MPortrait, TopBar, useLang, useT, useToast }
 import { useTryStore } from '../../lib/tryStore';
 import { useExitTry } from '../../lib/useExitTry';
 import { cacheKeyFor } from '../../lib/img';
+import { localFirstUri, useLocalImage } from '../../lib/localImages';
 
 // B2C · Avant / après (10) — draggable comparison. Left reveals the generated "after", right
 // shows the "before"; white divider + round handle. Ported from MScreenResult.
@@ -57,10 +58,13 @@ export default function Result() {
     };
   }, []);
 
-  // before/after are the generation's private files (signed on read). The `after` param is only a
-  // fallback for when it's already a full URL (e.g. a share deep-link).
-  const beforeUri = gen?.selfieUrl ?? null;
-  const afterUri = gen?.resultUrl ?? (params.after && /^https?:\/\//.test(params.after) ? params.after : null);
+  // before/after are the generation's private files. Prefer a durable local copy (downloaded once,
+  // then zero egress); fall back to the signed URL only if the local cache misses and re-download
+  // fails. The `after` param is a fallback for when it's already a full URL (e.g. a share deep-link).
+  const beforeLocal = useLocalImage('selfies', gen?.selfiePath);
+  const afterLocal = useLocalImage('generated', gen?.resultPath);
+  const beforeUri = localFirstUri(beforeLocal, gen?.selfieUrl ?? null);
+  const afterUri = localFirstUri(afterLocal, gen?.resultUrl ?? (params.after && /^https?:\/\//.test(params.after) ? params.after : null));
   const title = params.name ?? (lang === 'fr' ? 'Ma mèche' : 'My look');
   const savedLookId = params.lookId;
 
