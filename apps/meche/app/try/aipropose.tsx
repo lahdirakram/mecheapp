@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MIcon, MPAL, MText, TopBar, useLang, useT, useToast } from '@meche/ui';
 import { supabase } from '../../lib/supabase';
 import { useTryStore } from '../../lib/tryStore';
+import { useExitTry } from '../../lib/useExitTry';
 
 type Suggestion = { name: string; description: string; reasons: string[]; prompt: string };
 
@@ -24,11 +25,24 @@ export default function AIPropose() {
   const t = useT();
   const lang = useLang();
   const toast = useToast();
+  const exitTry = useExitTry();
   const { selfieBase64, mimeType, setBrief } = useTryStore();
   const [loading, setLoading] = useState(true);
   const [sug, setSug] = useState<Suggestion | null>(null);
   const excludeRef = useRef<string[]>([]);
   const pulse = useRef(new Animated.Value(1)).current;
+
+  // Suggest itself is free, but a suggestion is only useful if the user can actually generate it
+  // afterwards (1 credit). With 0 credits we block the whole path here and send them to recharge,
+  // rather than letting them collect suggestions they can't act on. Mirrors generating.tsx's handoff:
+  // recharge lives at the ROOT, so leave the nested try stack first, then push it a tick later.
+  const goRecharge = () => {
+    // Explain the block in one short line (the toast lives at the root, so it survives leaving the
+    // try flow below): a suggestion exists to be tried on the photo, and that try costs a credit.
+    toast(lang === 'fr' ? 'Recharge pour que Mèche te propose une coupe à essayer.' : 'Recharge so Mèche can suggest a look to try.');
+    exitTry();
+    setTimeout(() => router.push('/recharge?low=1'), 0);
+  };
 
   const fetchSuggestion = async () => {
     setLoading(true);
@@ -37,8 +51,27 @@ export default function AIPropose() {
         body: { selfieBase64, mimeType, lang, exclude: excludeRef.current },
       });
       if (error) {
+        // The Functions error wraps the Response on `.context` (the client also surfaces it on
+        // `.response`). Read both + the parsed body defensively: generating.tsx found the no-credit
+        // 402 slipping through `.context.status` alone on-device, which would mask the gate as a
+        // canned fallback here. Server enforces the gate too (a direct call bypasses the pre-flight),
+        // so honour its 402/no_credits by routing to recharge rather than showing a fake suggestion.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const status: number | undefined = (error as any)?.context?.status;
+        const e = error as any;
+        const ctx = e?.context ?? e?.response;
+        let status: number | undefined = typeof ctx?.status === 'number' ? ctx.status : undefined;
+        let code: string | undefined;
+        try {
+          const body = ctx && typeof ctx.json === 'function' ? await ctx.json() : undefined;
+          code = body?.error;
+          if (status == null && typeof body?.status === 'number') status = body.status;
+        } catch {
+          /* body may be unreadable */
+        }
+        if (status === 402 || code === 'no_credits') {
+          goRecharge();
+          return;
+        }
         if (status === 503) toast(lang === 'fr' ? 'IA occupée, réessaie dans un instant.' : 'AI busy, try again shortly.');
         setSug(FALLBACK(lang));
       } else {
@@ -54,7 +87,21 @@ export default function AIPropose() {
   };
 
   useEffect(() => {
-    void fetchSuggestion();
+    let cancelled = false;
+    (async () => {
+      // Pre-flight credit gate (rpc never throws → safe). 0 credits → skip the suggest call entirely
+      // and route to recharge, so we never serve a suggestion the user can't generate.
+      const { data: bal } = await supabase.rpc('my_credit_balance');
+      if (cancelled) return;
+      if (typeof bal === 'number' && bal <= 0) {
+        goRecharge();
+        return;
+      }
+      void fetchSuggestion();
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

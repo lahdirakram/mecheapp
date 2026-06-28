@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCredits, useSession } from '@meche/api-client';
-import { FONTS, MIcon, MPAL, MText, PrimaryButton, pOnDark, useLang, useT } from '@meche/ui';
+import { FONTS, MIcon, MPAL, MText, PrimaryButton, pOnDark, useLang, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 import { useExitTry } from '../../lib/useExitTry';
 
@@ -19,6 +19,7 @@ export default function Idea() {
   const router = useRouter();
   const t = useT();
   const lang = useLang();
+  const toast = useToast();
   const session = useSession();
   const { data: credits } = useCredits(session?.user.id);
   const setBrief = useTryStore((s) => s.setBrief);
@@ -110,8 +111,19 @@ export default function Idea() {
           <View style={{ flex: 1, height: 1, backgroundColor: MPAL.border }} />
         </View>
 
-        {/* AI proposes — highlighted */}
-        <Pressable onPress={() => router.push('/try/aipropose')} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, backgroundColor: MPAL.ink, overflow: 'hidden' }}>
+        {/* AI proposes — highlighted. Suggest is free, but it only leads somewhere if the user can
+            generate (1 credit), so at 0 credits we skip straight to recharge instead of aipropose. */}
+        <Pressable
+          onPress={() => {
+            if ((credits ?? 0) <= 0) {
+              toast(lang === 'fr' ? 'Recharge pour que Mèche te propose une coupe à essayer.' : 'Recharge so Mèche can suggest a look to try.');
+              router.push('/recharge?low=1');
+              return;
+            }
+            router.push('/try/aipropose');
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, backgroundColor: MPAL.ink, overflow: 'hidden' }}
+        >
           <View style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: `${ON_DARK}33` }} />
           <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: ON_DARK, alignItems: 'center', justifyContent: 'center' }}>
             <MIcon name="sparkle" size={22} color="#fff" fill="#fff" stroke={0} />

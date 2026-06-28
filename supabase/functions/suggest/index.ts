@@ -27,6 +27,14 @@ Deno.serve(async (req) => {
     const user = userData.user;
     if (!user) return json({ error: 'unauthorized' }, 401);
 
+    // Credit gate. Suggest is free to RUN, but a suggestion is worthless without a credit to generate
+    // it, so we refuse it at 0 credits — the client can't be trusted to enforce this (a direct API
+    // call would bypass any front-end guard). Same balance + 402/no_credits contract as /generate.
+    // security-definer my_credit_balance() keys off auth.uid(), so the user JWT scopes it correctly.
+    const { data: balance, error: balErr } = await userClient.rpc('my_credit_balance');
+    if (balErr) throw balErr;
+    if (typeof balance === 'number' && balance <= 0) return json({ error: 'no_credits' }, 402);
+
     const { selfieBase64, mimeType = 'image/jpeg', lang = 'fr', exclude = [] } = (await req.json()) as {
       selfieBase64?: string;
       mimeType?: string;
