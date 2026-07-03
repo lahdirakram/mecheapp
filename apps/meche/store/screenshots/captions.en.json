@@ -1,0 +1,47 @@
+{
+  "size": { "w": 1284, "h": 2778 },
+  "slides": [
+    {
+      "raw": "IMG_0024.PNG",
+      "theme": "dark",
+      "kicker": "MÈCHE · AI TRY-ON",
+      "headline": "See the cut {before} the cut.",
+      "subhead": "Before / after on your real photo. Without cutting a thing."
+    },
+    {
+      "raw": "IMG_0022.PNG",
+      "theme": "light",
+      "kicker": "STEP 1 · YOUR IDEA",
+      "headline": "Describe it. AI {creates} it.",
+      "subhead": "Blunt bob, wolf cut, pixie... type your idea or let Mèche choose."
+    },
+    {
+      "raw": "IMG_0023.PNG",
+      "theme": "dark",
+      "kicker": "AI GENERATION",
+      "headline": "Your new look in {20 seconds}.",
+      "subhead": "A realistic result, true to your face."
+    },
+    {
+      "raw": "IMG_0020.PNG",
+      "theme": "light",
+      "kicker": "YOUR COLLECTION",
+      "headline": "One photo. A {thousand} looks.",
+      "subhead": "Save your try-ons, compare, find your favorite."
+    },
+    {
+      "raw": "IMG_0026.PNG",
+      "theme": "light",
+      "kicker": "SHARE",
+      "headline": "Show, ask, {decide}.",
+      "subhead": "Send your before / after to your stylist or friends."
+    },
+    {
+      "raw": "IMG_0021.PNG",
+      "theme": "dark",
+      "kicker": "NO SUBSCRIPTION",
+      "headline": "From {€0.99}.",
+      "subhead": "Credits, no subscription. Pay only for what you use."
+    }
+  ]
+}
