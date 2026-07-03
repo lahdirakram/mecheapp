@@ -1,0 +1,105 @@
+=====================================================================
+ LOU — RUNWAY PACK (Gen-4)  ·  Mèche
+ Prompts prêts à coller. L'ordre compte : (A) génère l'image de Lou,
+ (B) charge-la comme Reference, (C) colle les prompts vidéo plan par plan.
+ Les prompts visuels sont en ANGLAIS (Runway marche mieux ainsi).
+ Le texte/voix-off FR est listé à part, à ajouter au montage.
+=====================================================================
+
+
+---------------------------------------------------------------------
+ A. IMAGE DE RÉFÉRENCE — génère Lou d'abord (Runway Image / Gen-4 Image)
+    Objectif : 1 portrait net, neutre, qui servira de Reference à tous
+    les plans vidéo. Format 9:16 pour l'app, 16:9 pour le web.
+---------------------------------------------------------------------
+
+PROMPT (image):
+Portrait of Lou, a warm and approachable hairstylist in her late
+twenties, friendly confident smile, natural relaxed expression,
+shoulder-length wavy brown hair, minimal makeup, wearing a simple
+modern stylist apron over a plain top. Soft natural window light,
+clean light studio background, shallow depth of field, photorealistic,
+editorial beauty photography, eye-level, looking at camera.
+
+NEGATIVE / À ÉVITER:
+cartoon, plastic skin, heavy makeup, exaggerated, distorted hands,
+text, logos, watermark.
+
+ASTUCE: garde la MÊME seed et la MÊME image de référence pour tous les
+plans, sinon le visage change d'un plan à l'autre.
+
+
+---------------------------------------------------------------------
+ B. RÉGLAGES RUNWAY (à faire une fois)
+---------------------------------------------------------------------
+- Charge l'image A dans "References" (tag: @lou).
+- Aspect ratio : 9:16 (app / stories) ou 16:9 (site / YouTube).
+- Durée : 5s ou 10s par plan.
+- Réutilise @lou dans CHAQUE prompt vidéo pour garder le même visage.
+
+
+---------------------------------------------------------------------
+ C. PLANS VIDÉO — copie/colle un bloc par génération
+---------------------------------------------------------------------
+
+PLAN 1 — Hook / accroche (5s)
+@lou looks directly into the camera with a friendly knowing smile,
+soft natural light, clean bright studio, subtle slow push-in on her
+face, she tilts her head slightly as if about to share a secret,
+photorealistic, shallow depth of field, warm inviting mood.
+
+PLAN 2 — Le selfie (5s)
+@lou holds a smartphone at arm's length toward a young woman off
+camera, gesturing warmly to take a selfie, natural window light, bright
+modern space, gentle handheld camera, she smiles encouragingly,
+photorealistic, candid lifestyle feel.
+
+PLAN 3 — L'aperçu magique (5s)
+Close-up of a smartphone screen showing a woman's selfie transforming
+into a new hairstyle, smooth morph from before to after, @lou's hand
+holding the phone, soft reflections, clean UI glow, shallow depth of
+field, satisfying reveal, photorealistic.
+
+PLAN 4 — La réaction (5s)
+A young woman looks at her phone and breaks into a delighted surprised
+smile, touching her hair, @lou beside her sharing the excitement, warm
+natural light, bright salon-like space, gentle handheld camera,
+authentic joyful moment, photorealistic.
+
+PLAN 5 — Diversité des looks (5s)
+Quick series of confident portraits of different people of varied skin
+tones, hair textures and ages, each with a fresh stylish haircut,
+turning toward camera and smiling, clean bright background, soft light,
+upbeat rhythm, photorealistic editorial beauty.
+
+PLAN 6 — Signature / fin (5s)
+@lou gives a warm confident nod to the camera and a small inviting
+gesture, soft natural light, clean minimal background with space for a
+logo, slow gentle push-in, photorealistic, calm friendly close.
+
+
+---------------------------------------------------------------------
+ D. VOIX-OFF / TEXTE À L'ÉCRAN (FR — à ajouter au montage, PAS dans Runway)
+---------------------------------------------------------------------
+Plan 1 : "Tu hésites sur ta nouvelle coupe ?"
+Plan 2 : "Envoie-moi un selfie."
+Plan 3 : "Je te montre le résultat avant le coiffeur."
+Plan 4 : "Carré, frange, blond, tu testes tout."
+Plan 5 : "Pour toutes les têtes, toutes les envies."
+Plan 6 : "Sois de la mèche."  +  logo Mèche
+
+Version EN (miroir) :
+1 "Not sure about your next haircut?" · 2 "Send me a selfie." ·
+3 "I show you the result before the salon." · 4 "Bob, fringe, blond,
+try it all." · 5 "Every hair, every mood." · 6 "Get in on Mèche."
+
+
+---------------------------------------------------------------------
+ E. RAPPELS
+---------------------------------------------------------------------
+- Même @lou (référence + seed) sur tous les plans = visage cohérent.
+- Pas de texte généré DANS la vidéo Runway (souvent illisible) :
+  ajoute titres et logo au montage.
+- 9:16 pour l'app/onboarding et les stories ; 16:9 pour le site.
+- Garde le ton : chaleureux, vrai, jamais survolté.
+=====================================================================
