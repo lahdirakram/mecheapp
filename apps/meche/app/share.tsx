@@ -152,7 +152,9 @@ export default function Share() {
       // Lazy-loaded: expo-media-library's native module isn't available on web, and a top-level
       // import would crash the whole web bundle.
       const MediaLibrary = await import('expo-media-library');
-      const perm = await MediaLibrary.requestPermissionsAsync(false, ['photo']); // photos only, no audio/video prompt
+      // writeOnly: Android 13+ saves without any permission, ≤12 asks WRITE_EXTERNAL_STORAGE,
+      // iOS asks add-only access. Keeps READ_MEDIA_IMAGES out of the manifest (Play policy).
+      const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) {
         toast(lang === 'fr' ? 'Autorise l’accès aux photos pour enregistrer.' : 'Allow photo access to save.');
         return;

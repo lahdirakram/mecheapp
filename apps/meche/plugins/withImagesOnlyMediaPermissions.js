@@ -1,10 +1,17 @@
-// Mèche only uses IMAGES (save generated looks, pick a photo). expo-media-library /
-// expo-image-picker declare the full Android 13+ granular media set by default, including
-// READ_MEDIA_VIDEO and READ_MEDIA_AUDIO. Strip those so the manifest (and the Play "data safety"
-// section) only advertises photo access. Keeps READ_MEDIA_IMAGES + READ_MEDIA_VISUAL_USER_SELECTED.
+// Mèche never reads the media library: picking goes through the system Photo Picker
+// (no permission) and saving uses writeOnly MediaLibrary access (no permission on 13+,
+// WRITE_EXTERNAL_STORAGE on ≤12). expo-media-library's config plugin still injects the
+// Android 13+ granular read set (READ_MEDIA_IMAGES/VIDEO/AUDIO + VISUAL_USER_SELECTED)
+// by default. Strip it all so the manifest never triggers Google Play's photo/video
+// permissions declaration.
 const { withAndroidManifest } = require('@expo/config-plugins');
 
-const REMOVE = ['android.permission.READ_MEDIA_VIDEO', 'android.permission.READ_MEDIA_AUDIO'];
+const REMOVE = [
+  'android.permission.READ_MEDIA_IMAGES',
+  'android.permission.READ_MEDIA_VIDEO',
+  'android.permission.READ_MEDIA_AUDIO',
+  'android.permission.READ_MEDIA_VISUAL_USER_SELECTED',
+];
 
 module.exports = function withImagesOnlyMediaPermissions(config) {
   return withAndroidManifest(config, (cfg) => {
