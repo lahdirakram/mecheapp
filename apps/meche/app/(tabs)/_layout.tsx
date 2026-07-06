@@ -1,7 +1,8 @@
 import { Redirect, Tabs, useRouter } from 'expo-router';
 import { View } from 'react-native';
-import { useAuthLoading, useSession } from '@meche/api-client';
+import { useAuthLoading, useProfile, useSession } from '@meche/api-client';
 import { MPAL, TabBar, type B2CTab } from '@meche/ui';
+import { NotAClient } from '../../components/NotAClient';
 import { useTryStore } from '../../lib/tryStore';
 
 // Minimal shape of the props expo-router hands its tabBar (avoids a direct dep on
@@ -36,11 +37,14 @@ function CustomTabBar({ state, navigation }: TabBarRenderProps) {
 export default function TabsLayout() {
   const session = useSession();
   const loading = useAuthLoading();
+  const { data: profile } = useProfile(session?.user.id);
 
   // Auth guard: signing out (session → null) or arriving unauthenticated returns to Welcome,
   // instead of stranding the user on a tab showing 0 credits.
   if (loading) return <View style={{ flex: 1, backgroundColor: MPAL.bg }} />;
   if (!session) return <Redirect href="/welcome" />;
+  // Strict separation: a Mèche Pro (stylist) account never enters the client app.
+  if (profile && profile.role === 'pro') return <NotAClient />;
 
   return (
     <Tabs tabBar={(props) => <CustomTabBar {...props} />} screenOptions={{ headerShown: false }}>
