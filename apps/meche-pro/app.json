@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.mechepro.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -18,8 +19,9 @@
     "android": {
       "package": "com.mechepro.app",
       "adaptiveIcon": {
-        "backgroundColor": "#FCF8F4",
-        "foregroundImage": "./assets/icon.png"
+        "backgroundColor": "#15110E",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -43,7 +45,8 @@
         {
           "photosPermission": "Mèche Pro utilise une photo de ta galerie pour l'essayage."
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "extra": {
       "router": {},

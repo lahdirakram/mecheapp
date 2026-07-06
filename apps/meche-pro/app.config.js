@@ -15,5 +15,13 @@ module.exports = () => {
     expo.android = { ...expo.android, package: 'com.mechepro.app.staging' };
   }
 
+  // Google Sign-In needs a per-bundle-id iOS OAuth client. The plugin is only added once the
+  // reversed iOS client id exists (set per profile in eas.json); until then builds ship without
+  // Google and the app hides the button (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID also unset).
+  const GOOGLE_IOS_REVERSED = process.env.GOOGLE_IOS_REVERSED_CLIENT_ID;
+  if (GOOGLE_IOS_REVERSED) {
+    expo.plugins = [...expo.plugins, ['@react-native-google-signin/google-signin', { iosUrlScheme: GOOGLE_IOS_REVERSED }]];
+  }
+
   return { expo };
 };

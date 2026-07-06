@@ -5,14 +5,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 import { LegalConsent } from '../../components/LegalConsent';
+import { SocialBusyOverlay, SocialButtons, useSocialAuth } from '../../components/SocialAuth';
 
-// Onboarding · Sign-in. Email-only in V1 (see signup).
+// Onboarding · Sign-in. Apple/Google + email, same set as signup.
 export default function SignIn() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
   const lang = useLang();
   const { signInEmail } = useAuth();
+  const social = useSocialAuth();
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [show, setShow] = useState(false);
@@ -50,7 +52,9 @@ export default function SignIn() {
           {lang === 'fr' ? 'Content de te revoir.' : 'Good to see you again.'}
         </MText>
 
-        <View style={{ marginTop: 22, gap: 12 }}>
+        <SocialButtons onApple={social.onApple} onGoogle={social.onGoogle} showApple={social.showApple} showGoogle={social.showGoogle} />
+
+        <View style={{ marginTop: social.any ? 14 : 22, gap: 12 }}>
           <TextField label={t('email_label')} icon="mail" value={email} onChangeText={setEmail} placeholder={t('email_ph')} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
           <TextField
             label={t('pwd_label')}
@@ -92,6 +96,8 @@ export default function SignIn() {
           </MText>
         </View>
       </ScrollView>
+
+      <SocialBusyOverlay visible={social.busy} />
     </View>
   );
 }

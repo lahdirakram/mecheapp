@@ -6,15 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 import { LegalConsent } from '../../components/LegalConsent';
+import { SocialBusyOverlay, SocialButtons, useSocialAuth } from '../../components/SocialAuth';
 
-// Onboarding · Email sign-up (role: pro). Email-only in V1; social providers need per-bundle-id
-// OAuth clients and land with the store release.
+// Onboarding · Sign-up (role: pro). Apple/Google (create-or-sign-in via signInWithIdToken, then
+// claim_pro_role server-side) or email + password.
 export default function SignupEmail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
   const lang = useLang();
   const { signUpEmail } = useAuth();
+  const social = useSocialAuth();
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [show, setShow] = useState(false);
@@ -65,7 +67,9 @@ export default function SignupEmail() {
           {lang === 'fr' ? ' et un mot de passe.' : ' and a password.'}
         </MText>
 
-        <View style={{ marginTop: 24, gap: 14 }}>
+        <SocialButtons onApple={social.onApple} onGoogle={social.onGoogle} showApple={social.showApple} showGoogle={social.showGoogle} />
+
+        <View style={{ marginTop: social.any ? 14 : 24, gap: 14 }}>
           <TextField
             label={t('email_label')}
             icon="mail"
@@ -115,6 +119,8 @@ export default function SignupEmail() {
           </MText>
         </View>
       </ScrollView>
+
+      <SocialBusyOverlay visible={social.busy} />
     </View>
   );
 }
