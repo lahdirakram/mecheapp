@@ -1,17 +1,18 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { MPAL, PPAL } from '@meche/core';
+import { MPAL } from '@meche/core';
 import { MIcon, type MIconName } from './MIcon';
 import { MText } from './Type';
 import { useLang } from '../i18n';
 
-export type ProTab = 'today' | 'demandes' | 'agenda' | 'salon';
+// V1 pro nav: Studio, Essais | (Essayer) | Salon. Demandes/Agenda return with the marketplace
+// phases (the right side has a free slot for Demandes).
+export type ProTab = 'studio' | 'essais' | 'salon';
 
 const LABELS: Record<ProTab | 'try', { fr: string; en: string }> = {
-  today: { fr: 'Aujourd’hui', en: 'Today' },
-  demandes: { fr: 'Demandes', en: 'Requests' },
-  agenda: { fr: 'Agenda', en: 'Agenda' },
+  studio: { fr: 'Studio', en: 'Studio' },
+  essais: { fr: 'Essais', en: 'Try-ons' },
   salon: { fr: 'Salon', en: 'Salon' },
   try: { fr: 'Essayer', en: 'Try on' },
 };
@@ -21,53 +22,25 @@ export interface PTabBarProps {
   onChange: (tab: ProTab) => void;
   /** Central caramel button — launches "Essai Mèche au fauteuil". */
   onPressCenter: () => void;
-  /** Unread requests count → badge on the Demandes tab. */
-  unread?: number;
 }
 
 const LEFT: { id: ProTab; icon: MIconName }[] = [
-  { id: 'today', icon: 'flame' },
-  { id: 'demandes', icon: 'mail' },
+  { id: 'studio', icon: 'flame' },
+  { id: 'essais', icon: 'bookmark' },
 ];
-const RIGHT: { id: ProTab; icon: MIconName }[] = [
-  { id: 'agenda', icon: 'calendar' },
-  { id: 'salon', icon: 'user' },
-];
+const RIGHT: { id: ProTab; icon: MIconName }[] = [{ id: 'salon', icon: 'user' }];
 
-/** Pro floating glass tab bar — same visual language as B2C, with an unread badge. */
-export function PTabBar({ active, onChange, onPressCenter, unread = 0 }: PTabBarProps) {
+/** Pro floating glass tab bar — same visual language as B2C. */
+export function PTabBar({ active, onChange, onPressCenter }: PTabBarProps) {
   const lang = useLang();
   const onColor = MPAL.ink;
   const offColor = MPAL.mute;
 
   const renderTab = (it: { id: ProTab; icon: MIconName }) => {
     const on = active === it.id;
-    const showBadge = it.id === 'demandes' && unread > 0;
     return (
       <Pressable key={it.id} onPress={() => onChange(it.id)} style={{ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 6 }}>
-        <View>
-          <MIcon name={it.icon} size={20} color={on ? onColor : offColor} fill={on ? onColor : 'none'} stroke={on ? 0 : 1.7} />
-          {showBadge ? (
-            <View
-              style={{
-                position: 'absolute',
-                top: -4,
-                right: -6,
-                minWidth: 15,
-                height: 15,
-                borderRadius: 8,
-                paddingHorizontal: 3,
-                backgroundColor: PPAL.warn,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <MText variant="bodyBold" size={9} color="#fff">
-                {unread > 9 ? '9+' : String(unread)}
-              </MText>
-            </View>
-          ) : null}
-        </View>
+        <MIcon name={it.icon} size={20} color={on ? onColor : offColor} fill={on ? onColor : 'none'} stroke={on ? 0 : 1.7} />
         <MText variant="bodySemibold" size={10} color={on ? onColor : offColor}>
           {LABELS[it.id][lang]}
         </MText>

@@ -234,6 +234,132 @@ export function useToggleLove() {
 }
 
 // ─── Pro ────────────────────────────────────────────────────────────────────
+
+// The signed-in pro's salon, with its stylist(s) and services. V1 is 1 owner = 1 salon; null →
+// the onboarding screen. Oldest-first + limit(1) (NOT maybeSingle) so a stray duplicate row can
+// never error the query and strand the user on onboarding.
+export function useMySalon(userId: string | undefined) {
+  const sb = useSupabase();
+  return useQuery({
+    queryKey: ['mysalon', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('salons')
+        .select('*, stylists(*), services(*)')
+        .eq('owner_id', userId!)
+        .order('created_at', { ascending: true })
+        .limit(1);
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+}
+
+// Onboarding: create the salon + its (single, V1) stylist in one go. The full row is written
+// straight into the ['mysalon'] cache so the tabs gate sees it IMMEDIATELY — invalidate-then-
+// navigate raced the refetch and bounced the user back to onboarding.
+export function useCreateSalon() {
+  const sb = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { ownerId: string; name: string; city?: string; stylistName: string }) => {
+      const { data: salon, error } = await sb
+        .from('salons')
+        .insert({ owner_id: input.ownerId, name: input.name, city: input.city ?? null, area: input.city ?? null })
+        .select('*')
+        .single();
+      if (error) throw error;
+      const { data: stylist, error: stylistErr } = await sb
+        .from('stylists')
+        .insert({ salon_id: salon.id, profile_id: input.ownerId, name: input.stylistName })
+        .select('*')
+        .single();
+      if (stylistErr) throw stylistErr;
+      return { ...salon, stylists: [stylist], services: [] };
+    },
+    onSuccess: (salon, input) => {
+      qc.setQueryData(['mysalon', input.ownerId], salon);
+    },
+  });
+}
+
+export function useUpdateSalon() {
+  const sb = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...fields }: { id: string; name?: string; city?: string; phone?: string; bio?: string; hours_text?: string; cover_path?: string }) => {
+      const { error } = await sb.from('salons').update(fields).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mysalon'] }),
+  });
+}
+
+// Replace the salon's service list (V1 editing is "the whole list at once" — a handful of rows).
+export function useSaveServices() {
+  const sb = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ salonId, services }: { salonId: string; services: { name: string; price_est?: string; duration_min?: number }[] }) => {
+      const { error: delErr } = await sb.from('services').delete().eq('salon_id', salonId);
+      if (delErr) throw delErr;
+      if (services.length) {
+        const { error } = await sb.from('services').insert(services.map((s) => ({ ...s, salon_id: salonId })));
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mysalon'] }),
+  });
+}
+
+export interface ProStatus {
+  lifetime: number;
+  month: number;
+  sub_active: boolean;
+  sub_status: string | null;
+  period_end: string | null;
+}
+
+// Quota display for the Studio screen (enforcement is server-side in /generate).
+export function useProStatus(userId: string | undefined) {
+  const sb = useSupabase();
+  return useQuery({
+    queryKey: ['prostatus', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await sb.rpc('my_pro_status');
+      if (error) throw error;
+      return data as ProStatus;
+    },
+  });
+}
+
+export function useAddPortfolioItem() {
+  const sb = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (item: { stylistId: string; name: string; imagePath: string }) => {
+      const { error } = await sb.from('portfolio_items').insert({ stylist_id: item.stylistId, name: item.name, image_path: item.imagePath });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portfolio'] }),
+  });
+}
+
+export function useDeletePortfolioItem() {
+  const sb = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, imagePath }: { id: string; imagePath?: string | null }) => {
+      const { error } = await sb.from('portfolio_items').delete().eq('id', id);
+      if (error) throw error;
+      if (imagePath) await sb.storage.from('portfolio').remove([imagePath]);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portfolio'] }),
+  });
+}
+
 export function useRequests() {
   const sb = useSupabase();
   return useQuery({

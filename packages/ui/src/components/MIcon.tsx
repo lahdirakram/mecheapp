@@ -9,7 +9,7 @@ export type MIconName =
   | 'heart' | 'bookmark' | 'share' | 'sparkle' | 'compass' | 'home' | 'pin' | 'user'
   | 'chevronLeft' | 'chevronRight' | 'plus' | 'check' | 'star' | 'flame' | 'grid' | 'mic'
   | 'cam' | 'flip' | 'settings' | 'crown' | 'x' | 'arrowUp' | 'arrowRight' | 'instagram'
-  | 'tiktok' | 'snap' | 'link' | 'calendar' | 'apple' | 'google' | 'mail' | 'lock' | 'zap' | 'coin' | 'trash' | 'copy' | 'download' | 'image';
+  | 'tiktok' | 'snap' | 'link' | 'calendar' | 'apple' | 'google' | 'mail' | 'lock' | 'zap' | 'coin' | 'trash' | 'copy' | 'download' | 'image' | 'search';
 
 export interface MIconProps {
   name: MIconName;
@@ -96,6 +96,13 @@ function paths(name: MIconName): React.ReactNode {
           <Path d="m13 9 3-3-3-3" />
           <Path d="M20 18H8a4 4 0 0 1-4-4v-2" />
           <Path d="m11 15-3 3 3 3" />
+        </G>
+      );
+    case 'search':
+      return (
+        <G>
+          <Circle cx="11" cy="11" r="7" />
+          <Path d="M21 21l-4.35-4.35" />
         </G>
       );
     case 'settings':
