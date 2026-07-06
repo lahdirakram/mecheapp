@@ -17,6 +17,18 @@ type RcEvent = {
   app_user_id?: string;
   product_id?: string;
   environment?: string;
+  /** Subscription events: when the current period ends (ms epoch). */
+  expiration_at_ms?: number;
+};
+
+// Mèche Pro subscription events → upsert into `subscriptions` (one row per owner). The /generate
+// quota check only trusts current_period_end, so a CANCELLATION keeps access until the paid period
+// runs out and an EXPIRATION (past expiration_at_ms) cuts it off naturally.
+const SUB_EVENTS = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION', 'PRODUCT_CHANGE', 'CANCELLATION', 'EXPIRATION', 'BILLING_ISSUE']);
+const SUB_STATUS: Record<string, string> = {
+  CANCELLATION: 'cancelled',
+  EXPIRATION: 'expired',
+  BILLING_ISSUE: 'billing_issue',
 };
 
 Deno.serve(async (req) => {
@@ -44,10 +56,6 @@ Deno.serve(async (req) => {
   // App Store/Play user cannot produce sandbox transactions, so it's not a fraud vector, and it's
   // what lets you test purchases on the internal/TestFlight track without a real charge.
 
-  // Only consumable (non-renewing) purchases grant credits. Other events (TEST, CANCELLATION,
-  // subscription types) are acknowledged with 200 so RevenueCat doesn't retry them.
-  if (event.type !== 'NON_RENEWING_PURCHASE') return json({ ok: true, ignored: event.type ?? 'unknown' });
-
   const eventId = event.id;
   const userId = event.app_user_id;
   const productId = event.product_id;
@@ -58,6 +66,30 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE);
+
+  // ── Mèche Pro subscription (meche_pro_monthly) ─────────────────────────────
+  if (SUB_EVENTS.has(event.type ?? '') && productId.startsWith('meche_pro')) {
+    const { error } = await admin.from('subscriptions').upsert(
+      {
+        owner_id: userId,
+        plan: 'pro',
+        status: SUB_STATUS[event.type ?? ''] ?? 'active',
+        current_period_end: event.expiration_at_ms ? new Date(event.expiration_at_ms).toISOString() : null,
+        rc_entitlement: 'pro',
+        rc_product_id: productId,
+        environment: event.environment ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'owner_id' },
+    );
+    if (error) return json({ error: 'sub_upsert_failed', detail: error.message }, 500);
+    return json({ ok: true, subscription: true, userId, until: event.expiration_at_ms ?? null });
+  }
+
+  // ── B2C consumable credit packs ────────────────────────────────────────────
+  // Only consumable (non-renewing) purchases grant credits. Anything else (TEST, unknown
+  // subscription products) is acknowledged with 200 so RevenueCat doesn't retry.
+  if (event.type !== 'NON_RENEWING_PURCHASE') return json({ ok: true, ignored: event.type ?? 'unknown' });
 
   // Resolve how many credits this SKU is worth (and the internal pack id) from credit_packs.
   const { data: pack } = await admin.from('credit_packs').select('id, credits').eq('product_id', productId).maybeSingle();

@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     const user = userData.user;
     if (!user) return json({ error: 'unauthorized' }, 401);
 
-    const { selfieBase64, mimeType = 'image/jpeg', brief = {}, name, refineFrom } = (await req.json()) as {
+    const { selfieBase64, mimeType = 'image/jpeg', brief = {}, name, refineFrom, clientName } = (await req.json()) as {
       selfieBase64?: string;
       mimeType?: string;
       brief?: Brief;
@@ -80,6 +80,8 @@ Deno.serve(async (req) => {
       /** When set, refine a previous (done) generation: keep its selfie as the "before" and EDIT its
        *  previous result image with the new brief — all reloaded server-side (no client selfie). */
       refineFrom?: string;
+      /** Pro app: optional client first name, stored on the look for the per-client history. */
+      clientName?: string;
     };
 
     // Untrusted free-text: the UI caps these (idea prompt 240, refine 120), but a direct API call can't
@@ -95,6 +97,39 @@ Deno.serve(async (req) => {
     const safeName = typeof name === 'string' ? name.slice(0, 80) : name;
 
     admin = createClient(SUPABASE_URL, SERVICE);
+
+    // ── Pro path (Mèche Pro app) ────────────────────────────────────────────────────────────────
+    // Pros don't use the B2C credit ledger: 3 lifetime free try-ons to discover the Studio, then an
+    // active subscription (granted by the RevenueCat webhook into `subscriptions`) with a hard
+    // monthly quota. Enforced HERE, never client-side, so the paid Gemini call stays capped.
+    const { data: prof } = await admin.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    const isPro = prof?.role === 'pro';
+    let proQuotaLeft = 0;
+    if (isPro) {
+      const PRO_FREE_TRIALS = Number(Deno.env.get('PRO_FREE_TRIALS') ?? '3');
+      const PRO_MONTHLY_QUOTA = Number(Deno.env.get('PRO_MONTHLY_QUOTA') ?? '100');
+      const { data: sub } = await admin.from('subscriptions').select('current_period_end').eq('owner_id', user.id).maybeSingle();
+      const subActive = !!sub?.current_period_end && new Date(sub.current_period_end as string).getTime() > Date.now();
+      if (subActive) {
+        const monthStart = new Date();
+        monthStart.setUTCDate(1);
+        monthStart.setUTCHours(0, 0, 0, 0);
+        const { count: monthCount } = await admin
+          .from('generations')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('created_at', monthStart.toISOString());
+        if ((monthCount ?? 0) >= PRO_MONTHLY_QUOTA) return json({ error: 'pro_quota_exceeded' }, 402);
+        proQuotaLeft = PRO_MONTHLY_QUOTA - (monthCount ?? 0) - 1;
+      } else {
+        const { count: lifetime } = await admin
+          .from('generations')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        if ((lifetime ?? 0) >= PRO_FREE_TRIALS) return json({ error: 'pro_subscription_required' }, 402);
+        proQuotaLeft = PRO_FREE_TRIALS - (lifetime ?? 0) - 1;
+      }
+    }
 
     // `selfie`/`mt` = the image STORED as this generation's selfie_path (the "before"). `modelB64`/
     // `modelMime` = the SINGLE image actually sent to the model. They differ on a refine: the before
@@ -159,11 +194,15 @@ Deno.serve(async (req) => {
     }
 
     // Credit ledger, oldest first — we replay it to split the balance into free vs purchased pools.
-    const { data: txs } = await admin
-      .from('credit_transactions')
-      .select('delta, reason, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true });
+    // Pro users skip the whole ledger (their quota was enforced above).
+    let balance = 0;
+    const { data: txs } = isPro
+      ? { data: [] }
+      : await admin
+          .from('credit_transactions')
+          .select('delta, reason, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true });
     const txList = (txs ?? []) as { delta: number; reason: string }[];
 
     // Walk the history keeping two running balances. Generations are charged to the FREE pool first
@@ -178,13 +217,14 @@ Deno.serve(async (req) => {
         else paid -= 1;
       } else if (tx.delta > 0) free += tx.delta;
     }
-    const balance = free + paid;
-    if (balance <= 0) return json({ error: 'no_credits' }, 402);
+    balance = free + paid;
+    if (!isPro && balance <= 0) return json({ error: 'no_credits' }, 402);
 
     // A user who still holds ANY purchased credit is exempt from the free-tier caps below — a
     // paying customer is never blocked, even on their first look. The caps apply only once all
-    // purchased credits are spent and the look is drawn from a free/ad credit.
-    const isPaidLook = paid > 0;
+    // purchased credits are spent and the look is drawn from a free/ad credit. Pro try-ons are
+    // always covered (trial is bounded at 3, the subscription at the monthly quota).
+    const isPaidLook = isPro || paid > 0;
 
     // Cost safety guards — only for UNCOMPENSATED looks (free-trial + ad-reward credits), applied
     // BEFORE we reserve the credit / kick off the paid Gemini call so a blocked request costs
@@ -223,10 +263,13 @@ Deno.serve(async (req) => {
     // Reserve 1 credit ATOMICALLY before any paid work: an advisory-locked check+decrement inside
     // the DB so concurrent /generate calls can't over-spend or fire multiple paid AI calls on the
     // same credit. Returns the reservation id, or null when no credit is left. Refunded on failure.
-    const { data: rid, error: resvErr } = await admin.rpc('reserve_generation_credit', { p_user: user.id });
-    if (resvErr) throw resvErr;
-    if (!rid) return json({ error: 'no_credits' }, 402);
-    resvId = rid as string;
+    // Pros have no credits to reserve — their spend is bounded by the quota checks above.
+    if (!isPro) {
+      const { data: rid, error: resvErr } = await admin.rpc('reserve_generation_credit', { p_user: user.id });
+      if (resvErr) throw resvErr;
+      if (!rid) return json({ error: 'no_credits' }, 402);
+      resvId = rid as string;
+    }
 
     const selfiePath = `${user.id}/${genId}-in.jpg`;
     // Store the selfie now so the before/after is available even while the result is still pending.
@@ -238,9 +281,10 @@ Deno.serve(async (req) => {
     const { error: genErr } = await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief: genBrief, status: 'pending' });
     if (genErr) throw genErr;
     const lookName = (safeName && safeName.trim()) || (genBrief.lookName || genBrief.prompt || '').slice(0, 40) || 'Ma mèche';
+    const safeClient = typeof clientName === 'string' && clientName.trim() ? clientName.trim().slice(0, 40) : null;
     const { data: look, error: lookErr } = await admin
       .from('looks')
-      .insert({ user_id: user.id, name: lookName, generation_id: genId, loved: false })
+      .insert({ user_id: user.id, name: lookName, generation_id: genId, loved: false, client_name: safeClient })
       .select('id')
       .single();
     if (lookErr) throw lookErr;
@@ -280,9 +324,9 @@ Deno.serve(async (req) => {
           const msg = String(e instanceof Error ? e.message : e);
           // Mark failed and refund the reserved credit. KEEP the look (status drives a "failed" card
           // in "Mes mèches") so the user gets clear feedback + a retry, instead of it silently
-          // vanishing on them.
+          // vanishing on them. (No reservation to refund on the pro path.)
           await admin.from('generations').update({ status: 'failed', error: msg }).eq('id', genId);
-          await admin.from('credit_transactions').delete().eq('id', resvId);
+          if (resvId) await admin.from('credit_transactions').delete().eq('id', resvId);
           await notifyUser(admin, user.id, 'failed', lookName, genId, look.id);
         }
       })(),
@@ -290,7 +334,7 @@ Deno.serve(async (req) => {
 
     // The client navigates away or watches the loader (polling the generation row) — either way the
     // work is now decoupled from this request.
-    return json({ id: genId, lookId: look.id, status: 'pending', creditsLeft: balance - 1, provider: GEMINI_API_KEY ? 'gemini' : 'mock' });
+    return json({ id: genId, lookId: look.id, status: 'pending', creditsLeft: isPro ? proQuotaLeft : balance - 1, provider: GEMINI_API_KEY ? 'gemini' : 'mock' });
   } catch (e) {
     // A synchronous step failed after the credit was reserved → refund it. The background path has
     // its own refund and is only scheduled once setup fully succeeds, so there's no double refund.
