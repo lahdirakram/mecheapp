@@ -7,6 +7,12 @@
       "runtimeArgs": ["legal/server.js"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "meche-pro-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd apps/meche-pro && source ~/.nvm/nvm.sh && nvm use 22 && npx expo start --web --port 8081"],
+      "port": 8081
     }
   ]
 }

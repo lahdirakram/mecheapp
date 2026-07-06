@@ -10,15 +10,16 @@
     "backgroundColor": "#FCF8F4",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.meche.pro"
+      "bundleIdentifier": "com.mechepro.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.meche.pro",
+      "package": "com.mechepro.app",
       "adaptiveIcon": {
         "backgroundColor": "#FCF8F4",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -28,7 +29,34 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-image"
-    ]
+      "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mèche Pro utilise la caméra pour le selfie d'essayage de ta cliente.",
+          "recordAudioAndroid": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mèche Pro utilise une photo de ta galerie pour l'essayage."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c64392b4-382f-4d90-9f8d-ef8e79c08f40"
+      }
+    },
+    "owner": "akram.lahdir",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c64392b4-382f-4d90-9f8d-ef8e79c08f40"
+    }
   }
 }
