@@ -16,7 +16,9 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9v1ycTlTbN7GGlgyKqOA9A_FvVFKmWS",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "909044731824-hm8v0cs8rlq1nasu4hog32cfo0kid32j.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "909044731824-lpo8m0v2fn6jgjaogdu9db8efklle8jk.apps.googleusercontent.com",
-        "GOOGLE_IOS_REVERSED_CLIENT_ID": "com.googleusercontent.apps.909044731824-lpo8m0v2fn6jgjaogdu9db8efklle8jk"
+        "GOOGLE_IOS_REVERSED_CLIENT_ID": "com.googleusercontent.apps.909044731824-lpo8m0v2fn6jgjaogdu9db8efklle8jk",
+        "EXPO_PUBLIC_RC_IOS_API_KEY": "appl_LpEmUUgUdeOjTznZSIRXvVfdRlZ",
+        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_DUZKCrUJydeJYysPUiFLmdSpunu"
       }
     },
     "preview": {
@@ -30,7 +32,9 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9v1ycTlTbN7GGlgyKqOA9A_FvVFKmWS",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "909044731824-hm8v0cs8rlq1nasu4hog32cfo0kid32j.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "909044731824-lpo8m0v2fn6jgjaogdu9db8efklle8jk.apps.googleusercontent.com",
-        "GOOGLE_IOS_REVERSED_CLIENT_ID": "com.googleusercontent.apps.909044731824-lpo8m0v2fn6jgjaogdu9db8efklle8jk"
+        "GOOGLE_IOS_REVERSED_CLIENT_ID": "com.googleusercontent.apps.909044731824-lpo8m0v2fn6jgjaogdu9db8efklle8jk",
+        "EXPO_PUBLIC_RC_IOS_API_KEY": "appl_LpEmUUgUdeOjTznZSIRXvVfdRlZ",
+        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_DUZKCrUJydeJYysPUiFLmdSpunu"
       }
     },
     "production": {
@@ -42,7 +46,9 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable__j-O5UlodqNWnkyCPt5Mmw_NturInne",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "909044731824-hm8v0cs8rlq1nasu4hog32cfo0kid32j.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "909044731824-oc8dgga05d86b5am1qd0bre484gv3r78.apps.googleusercontent.com",
-        "GOOGLE_IOS_REVERSED_CLIENT_ID": "com.googleusercontent.apps.909044731824-oc8dgga05d86b5am1qd0bre484gv3r78"
+        "GOOGLE_IOS_REVERSED_CLIENT_ID": "com.googleusercontent.apps.909044731824-oc8dgga05d86b5am1qd0bre484gv3r78",
+        "EXPO_PUBLIC_RC_IOS_API_KEY": "appl_LpEmUUgUdeOjTznZSIRXvVfdRlZ",
+        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_DUZKCrUJydeJYysPUiFLmdSpunu"
       }
     }
   },
