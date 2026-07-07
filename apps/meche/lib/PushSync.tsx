@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { useSession } from '@meche/api-client';
@@ -20,6 +21,8 @@ export function PushSync() {
 
   // A try-on push always opens the wardrobe — the finished (or failed) look is right there.
   useEffect(() => {
+    // expo-notifications has no web implementation (dev preview only).
+    if (Platform.OS === 'web') return;
     const open = (data: Record<string, unknown> | undefined) => {
       if (data?.type === 'generation') router.push('/(tabs)/wardrobe');
     };

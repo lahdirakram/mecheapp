@@ -9,6 +9,12 @@
       "autoPort": true
     },
     {
+      "name": "meche-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd apps/meche && source ~/.nvm/nvm.sh && nvm use 22 && npx expo start --web --port 8082"],
+      "port": 8082
+    },
+    {
       "name": "meche-pro-web",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd apps/meche-pro && source ~/.nvm/nvm.sh && nvm use 22 && npx expo start --web --port 8081"],

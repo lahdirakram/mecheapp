@@ -7,21 +7,24 @@
 // and render it from a stable `file://` URI forever after. Supabase stays the durable backup: we only
 // hit the network (mint a signed URL + download) on a real cache miss — first view, reinstall, or new
 // device. Same device, same image → zero egress on every later view.
+import { Platform } from 'react-native';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useSupabase } from '@meche/api-client';
 import { Directory, File, Paths } from 'expo-file-system';
 
-const cacheDir = new Directory(Paths.document, 'imgcache');
+// expo-file-system has no web implementation; on web (dev preview) we skip the local cache
+// entirely and render signed URLs directly.
+const cacheDir = Platform.OS === 'web' ? null : new Directory(Paths.document, 'imgcache');
 
 function ensureDir() {
-  if (!cacheDir.exists) cacheDir.create({ intermediates: true });
+  if (cacheDir && !cacheDir.exists) cacheDir.create({ intermediates: true });
 }
 
 // Stable, collision-free local filename for a (bucket, path) pair. Path keeps the user-id folder +
 // generation id, so two users' files never collide and the name is deterministic across sessions.
 function fileFor(bucket: string, path: string): File {
   const safe = `${bucket}__${path}`.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return new File(cacheDir, safe);
+  return new File(cacheDir!, safe);
 }
 
 // Resolve one private storage path to a local `file://` URI. Returns the cached file immediately when
@@ -32,6 +35,11 @@ async function resolveLocal(
   bucket: string,
   path: string
 ): Promise<string> {
+  if (!cacheDir) {
+    const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) throw error ?? new Error('sign failed');
+    return data.signedUrl;
+  }
   const f = fileFor(bucket, path);
   if (f.exists && f.size > 0) return f.uri;
   ensureDir();
