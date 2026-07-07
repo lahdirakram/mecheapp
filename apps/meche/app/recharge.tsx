@@ -55,6 +55,14 @@ export default function Recharge() {
     void getStorePrices().then(setPrices);
   }, []);
 
+  // CTA carries the selected pack + its live store price ("Obtenir 20 crédits · 2,99 €") so the
+  // purchase is labeled as a plain IAP; no store branding on the button (App Review guideline).
+  const selPack = packs.find((p) => p.id === sel);
+  const selLive = selPack ? prices[selPack.product_id] : undefined;
+  const ctaLabel = selPack
+    ? `${t('pay_get')} ${selPack.credits} ${t('credits')} · ${selLive ? selLive.priceString : selPack.price}`
+    : t('pay_cta');
+
   // Open the store sheet for the selected pack. The store confirms payment, then RevenueCat's
   // webhook grants the credits server-side — so we poll the balance until it lands.
   const buy = async () => {
@@ -204,18 +212,14 @@ export default function Recharge() {
           {busy ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <>
-              {Platform.OS === 'ios' ? (
-                <MIcon name="apple" size={17} color="#fff" fill="#fff" stroke={0} />
-              ) : (
-                <MIcon name="google" size={17} />
-              )}
-              <MText variant="bodySemibold" size={15} color="#fff">
-                {t('pay_cta')}
-              </MText>
-            </>
+            <MText variant="bodySemibold" size={15} color="#fff">
+              {ctaLabel}
+            </MText>
           )}
         </Pressable>
+        <MText size={11} color={MPAL.mute} style={{ textAlign: 'center' }}>
+          {t(Platform.OS === 'android' ? 'pay_secure_android' : 'pay_secure_ios')}
+        </MText>
       </View>
     </View>
   );
