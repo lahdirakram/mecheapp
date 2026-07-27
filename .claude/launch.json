@@ -19,6 +19,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd apps/meche-pro && source ~/.nvm/nvm.sh && nvm use 22 && npx expo start --web --port 8081"],
       "port": 8081
+    },
+    {
+      "name": "backoffice",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "./backoffice/start.sh"],
+      "port": 3100
     }
   ]
 }
