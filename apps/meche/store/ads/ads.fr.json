@@ -1,0 +1,28 @@
+{
+  "creatives": [
+    {
+      "id": "hero",
+      "raw": "IMG_0014.PNG",
+      "theme": "dark",
+      "kicker": "MÈCHE · ESSAYAGE IA",
+      "headline": "Vois la coupe {avant} la coupe.",
+      "subhead": "Avant / après sur ta vraie photo. Sans rien couper."
+    },
+    {
+      "id": "vitesse",
+      "raw": "IMG_0013.PNG",
+      "theme": "dark",
+      "kicker": "GÉNÉRATION IA",
+      "headline": "Ton rendu en {20 secondes}.",
+      "subhead": "Un résultat réaliste, fidèle à ton visage."
+    },
+    {
+      "id": "prix",
+      "raw": "IMG_0019.PNG",
+      "theme": "dark",
+      "kicker": "SANS ABONNEMENT",
+      "headline": "À partir de {0,99 €}.",
+      "subhead": "Des crédits, pas d'abonnement. Tu paies ce que tu utilises."
+    }
+  ]
+}

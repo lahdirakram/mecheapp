@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppProviders, MPAL } from '@meche/ui';
 import { SupabaseProvider } from '@meche/api-client';
 import { supabase } from '../lib/supabase';
+import { AnalyticsSync } from '../lib/AnalyticsSync';
 import { PurchasesSync } from '../lib/PurchasesSync';
 import { PushSync } from '../lib/PushSync';
 import { TryStoreReset } from '../lib/TryStoreReset';
@@ -11,6 +12,7 @@ export default function RootLayout() {
   return (
     <AppProviders>
       <SupabaseProvider client={supabase}>
+        <AnalyticsSync />
         <PurchasesSync />
         <PushSync />
         <TryStoreReset />

@@ -11,7 +11,11 @@ module.exports = () => {
   if (process.env.APP_ENV === 'staging') {
     expo.name = 'Mèche (staging)';
     expo.scheme = 'meche-staging';
-    expo.ios = { ...expo.ios, bundleIdentifier: 'com.meche.app.staging' };
+    expo.ios = {
+      ...expo.ios,
+      bundleIdentifier: 'com.meche.app.staging',
+      googleServicesFile: './GoogleService-Info.staging.plist', // staging Firebase app (com.meche.app.staging)
+    };
     expo.android = {
       ...expo.android,
       package: 'com.meche.app.staging',

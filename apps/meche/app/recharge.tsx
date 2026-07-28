@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreditPacks, useSession, useSupabase } from '@meche/api-client';
 import { MIcon, MPAL, MText, useLang, useT, useToast } from '@meche/ui';
+import { logEvent } from '../lib/analytics';
 import { getStorePrices, purchaseProduct, purchasesAvailable, type StorePrice } from '../lib/purchases';
 
 type Pack = { id: string; credits: number; price: string; unit: string; badge: string | null; product_id: string };
@@ -53,6 +54,10 @@ export default function Recharge() {
   const [prices, setPrices] = useState<Record<string, StorePrice>>({});
   useEffect(() => {
     void getStorePrices().then(setPrices);
+  }, []);
+  useEffect(() => {
+    void logEvent('paywall_viewed', { low_balance: lowBalance ? 1 : 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // CTA carries the selected pack + its live store price ("Obtenir 20 crédits · 2,99 €") so the

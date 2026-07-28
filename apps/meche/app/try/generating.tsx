@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { useQueryClient } from '@tanstack/react-query';
 import { MPAL, MText, MPortrait, useLang, useT, useToast } from '@meche/ui';
+import { logEvent } from '../../lib/analytics';
 import { supabase } from '../../lib/supabase';
 import { useTryStore } from '../../lib/tryStore';
 import { useExitTry } from '../../lib/useExitTry';
@@ -191,6 +192,7 @@ export default function Generating() {
             // Done → the result screen loads the before/after from this generation id (signed there).
             completedRef.current = { id: genId, lookId, name };
             doneRef.current = true;
+            void logEvent('try_on_completed', { refine: refineRef.current ? 1 : 0 });
             return;
           }
           if (g?.status === 'failed') {

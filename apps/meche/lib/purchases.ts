@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { getAppInstanceId } from './analytics';
 
 // RevenueCat (in-app purchases) wrapper. The native module is imported lazily so the web bundle
 // never pulls it in, and every call no-ops gracefully when purchases aren't available (web, Expo
@@ -32,6 +33,16 @@ export async function syncPurchaseUser(appUserId: string): Promise<void> {
     if (!configured) {
       Purchases.configure({ apiKey: apiKey()!, appUserID: appUserId });
       configured = true;
+      // Hand GA4's app instance id to RevenueCat so its server-side purchase events reach the same
+      // GA4 user (Firebase integration), making purchases importable as ad conversions.
+      void getAppInstanceId().then((id) => {
+        if (id) void Purchases.setFirebaseAppInstanceID(id);
+      });
+      // Apple Ads (Search Ads) install attribution: RevenueCat fetches the AdServices token and
+      // exposes campaign data on its dashboard/webhooks. iOS-only, free, no ATT prompt needed.
+      if (Platform.OS === 'ios') {
+        void Purchases.enableAdServicesAttributionTokenCollection();
+      }
     } else {
       await Purchases.logIn(appUserId);
     }
