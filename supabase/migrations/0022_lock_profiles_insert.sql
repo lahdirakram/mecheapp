@@ -1,0 +1,19 @@
+-- Retire au client le droit d'INSERT sur profiles.
+--
+-- Le grant couvrait la colonne `role`, or c'est le seul interrupteur qui bascule un compte sur le
+-- chemin Pro dans la fonction generate (isPro -> pas de registre de crédits, pas de réservation,
+-- quota PRO_FREE_TRIALS). 0020 avait déjà fermé `role` en UPDATE, mais pas en INSERT.
+--
+-- Ce n'était pas exploitable : le trigger on_auth_user_created crée la ligne dès l'inscription
+-- (zéro compte sans profil), il n'existe aucune policy DELETE sur profiles, et un upsert écrivant
+-- `role` aurait besoin d'UPDATE(role) qui est révoqué. Mais ces trois barrières sont un trigger,
+-- une policy absente et une révocation qui visait autre chose : aucune n'a été posée pour protéger
+-- `role`. Le droit était inoffensif par coïncidence, ce qui est exactement le genre de protection
+-- qui tombe au prochain changement de schéma sans que personne fasse le lien.
+--
+-- Sans risque : le code de l'app n'insère jamais dans profiles (la ligne vient du trigger), et
+-- handle_new_user() est en security definer, donc les grants du client ne le concernent pas.
+--
+-- La policy profiles_insert_own reste en place : c'est le grant qui porte la décision, pas la RLS,
+-- et laisser la policy documente l'intention si le droit devait un jour être rendu.
+revoke insert on profiles from anon, authenticated;
