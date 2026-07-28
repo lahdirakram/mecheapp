@@ -568,9 +568,22 @@ dl.kv dd {
 .ba__none {
   display: grid;
   place-items: center;
+  align-content: center;
+  gap: 8px;
   aspect-ratio: 3 / 4;
+  padding: 12px;
+  text-align: center;
   color: var(--mute);
   font-size: 12px;
+}
+/* Chemin en base qui ne pointe sur rien : on le montre, c'est l'information utile. */
+.ba__path {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--warn);
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 .ba__brief {
   margin-top: 10px;
