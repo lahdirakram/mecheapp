@@ -638,6 +638,16 @@
     transition: transform .15s ease;
   }
   .store:hover { transform: translateY(-1px); background: var(--coral); }
+  /* Badge d'un store où l'app n'est pas encore publiée : visible pour annoncer la plateforme,
+     mais ni cliquable ni trompeur. Le clic reste compté (data-umami-event) : c'est le seul
+     signal d'intérêt Android qu'on peut mesurer avant la publication. */
+  .store.soon {
+    background: transparent; color: var(--ink);
+    border: 1px dashed rgba(21,17,14,0.28);
+    cursor: default;
+  }
+  .store.soon:hover { transform: none; background: transparent; }
+  .store.soon .glyph { opacity: 0.55; }
   .store .glyph { width: 22px; height: 22px; flex-shrink: 0; }
   .store .small { font-size: 9px; opacity: 0.7; display: block; letter-spacing: 0.1em; text-transform: uppercase; }
   .store .big { font-size: 14px; font-weight: 500; line-height: 1.1; }
@@ -1021,14 +1031,14 @@
   <h2>Vois-toi <em>avant.</em><br/>Change après.</h2>
   <p class="sub">Téléchargement gratuit. Premier essai offert. Aucune carte demandée.</p>
   <div class="stores">
-    <a href="#" class="store" aria-label="Télécharger sur l'App Store" data-umami-event="store-ios">
+    <a href="https://apps.apple.com/fr/app/m%C3%A8che/id6777728552" class="store" aria-label="Télécharger sur l'App Store" data-umami-event="store-ios">
       <svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>
       <span class="txt"><span class="small">Télécharger sur</span><span class="big">App Store</span></span>
     </a>
-    <a href="#" class="store" aria-label="Disponible sur Google Play" data-umami-event="store-android">
+    <span class="store soon" role="note" aria-label="Bientôt sur Google Play" data-umami-event="store-android">
       <svg class="glyph" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>
-      <span class="txt"><span class="small">Disponible sur</span><span class="big">Google Play</span></span>
-    </a>
+      <span class="txt"><span class="small">Bientôt sur</span><span class="big">Google Play</span></span>
+    </span>
   </div>
 </section>
 
@@ -1096,17 +1106,20 @@
 
   // Platform-aware "Get the app" button(s): iOS -> App Store, Android -> Play,
   // desktop/unknown -> the #download section (which shows both badges).
+  // PLAY_URL reste null tant que l'app n'est pas publiée sur Android : un visiteur Android garde
+  // alors le bouton neutre vers #download, où le badge Play est marqué « Bientôt ». Mieux vaut
+  // l'envoyer vers une annonce honnête que vers un lien mort.
   (function(){
-    const APPSTORE_URL = '#'; // TODO: real App Store URL
-    const PLAY_URL = '#';     // TODO: real Google Play URL
+    const APPSTORE_URL = 'https://apps.apple.com/fr/app/m%C3%A8che/id6777728552';
+    const PLAY_URL = null;    // TODO: remplir à la publication Google Play
     const APPLE = '<svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>';
     const PLAY = '<svg class="glyph" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>';
     const ua = navigator.userAgent || '';
     const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isAndroid = /Android/.test(ua);
     let cfg = null;
-    if (isAndroid) cfg = { href: PLAY_URL, icon: PLAY, small: 'Disponible sur', big: 'Google Play' };
-    else if (isIOS) cfg = { href: APPSTORE_URL, icon: APPLE, small: 'Télécharger sur', big: 'App Store' };
+    if (isAndroid && PLAY_URL) cfg = { href: PLAY_URL, icon: PLAY, small: 'Disponible sur', big: 'Google Play' };
+    else if (isIOS && APPSTORE_URL) cfg = { href: APPSTORE_URL, icon: APPLE, small: 'Télécharger sur', big: 'App Store' };
     if (!cfg) return; // desktop/unknown: keep the neutral button -> #download
     document.querySelectorAll('.js-store').forEach(btn => {
       btn.setAttribute('href', cfg.href);
