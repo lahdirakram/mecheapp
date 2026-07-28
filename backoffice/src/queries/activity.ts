@@ -2,8 +2,10 @@ import 'server-only';
 import { query } from '@/lib/db';
 import { priceCentsSql } from '@/lib/pricing';
 
+/** Miroir de `Brief` dans supabase/functions/_shared/tryon.ts, plus les champs écrits par l'app. */
 export type Brief = {
   lookId?: string;
+  lookName?: string;
   prompt?: string;
   length?: number;
   color?: string;

@@ -16,7 +16,7 @@ export function PushSync() {
     const uid = session?.user?.id ?? null;
     if (!uid || uid === last.current) return;
     last.current = uid;
-    void registerPushToken(uid);
+    void registerPushToken();
   }, [session?.user?.id]);
 
   // A try-on push always opens the wardrobe — the finished (or failed) look is right there.

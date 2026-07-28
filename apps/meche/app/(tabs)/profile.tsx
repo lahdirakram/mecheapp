@@ -31,7 +31,7 @@ export default function Profile() {
   }, []);
   const togglePush = (v: boolean) => {
     setPushOn(v); // optimistic
-    if (session) void setPushPreference(session.user.id, v);
+    if (session) void setPushPreference(v);
   };
   const { data: profile } = useProfile(session?.user.id);
   const { data: credits } = useCredits(session?.user.id);

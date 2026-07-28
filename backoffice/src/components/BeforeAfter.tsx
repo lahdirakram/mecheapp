@@ -32,17 +32,31 @@ export function BeforeAfter({
   resultPath,
   brief,
   error,
+  photosDeleted,
 }: {
   selfiePath: string | null;
   resultPath: string | null;
   brief: string | null;
   error: string | null;
+  /** Essai réussi dont les deux chemins sont nuls : l'utilisateur a supprimé son look. */
+  photosDeleted: boolean;
 }) {
+  const missing = photosDeleted ? 'supprimée par l’utilisateur' : null;
   return (
     <div className="ba">
       <div className="ba__pair">
-        <Cell caption="Avant" bucket="selfies" path={selfiePath} missing="pas de selfie" />
-        <Cell caption="Après" bucket="generated" path={resultPath} missing="pas de résultat" />
+        <Cell
+          caption="Avant"
+          bucket="selfies"
+          path={selfiePath}
+          missing={missing ?? 'pas de selfie'}
+        />
+        <Cell
+          caption="Après"
+          bucket="generated"
+          path={resultPath}
+          missing={missing ?? 'pas de résultat'}
+        />
       </div>
       {error && <p className="ba__err">Erreur de génération : {error}</p>}
       {brief && <pre className="ba__brief">{brief}</pre>}

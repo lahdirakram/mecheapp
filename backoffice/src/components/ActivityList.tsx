@@ -18,6 +18,8 @@ export type ActivityVM = {
   resultPath: string | null;
   error: string | null;
   brief: string | null;
+  /** Essai réussi sans plus aucune photo : le look a été supprimé côté app. */
+  photosDeleted: boolean;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -68,6 +70,7 @@ export function ActivityList({ items }: { items: ActivityVM[] }) {
                 resultPath={it.resultPath}
                 brief={it.brief}
                 error={it.error}
+                photosDeleted={it.photosDeleted}
               />
             )}
           </div>

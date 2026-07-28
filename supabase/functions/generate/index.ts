@@ -105,11 +105,14 @@ Deno.serve(async (req) => {
     const { data: prof } = await admin.from('profiles').select('role').eq('id', user.id).maybeSingle();
     const isPro = prof?.role === 'pro';
     let proQuotaLeft = 0;
+    // Hoisted out of the `if` below: the cost guards further down need to know whether this pro is
+    // actually PAYING. A pro on the free trial is uncompensated spend like any free-tier user.
+    let subActive = false;
     if (isPro) {
       const PRO_FREE_TRIALS = Number(Deno.env.get('PRO_FREE_TRIALS') ?? '3');
       const PRO_MONTHLY_QUOTA = Number(Deno.env.get('PRO_MONTHLY_QUOTA') ?? '100');
       const { data: sub } = await admin.from('subscriptions').select('current_period_end').eq('owner_id', user.id).maybeSingle();
-      const subActive = !!sub?.current_period_end && new Date(sub.current_period_end as string).getTime() > Date.now();
+      subActive = !!sub?.current_period_end && new Date(sub.current_period_end as string).getTime() > Date.now();
       if (subActive) {
         const monthStart = new Date();
         monthStart.setUTCDate(1);
@@ -151,6 +154,14 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!prev || prev.user_id !== user.id) return json({ error: 'not_found' }, 404);
       if (prev.status !== 'done' || !prev.selfie_path || !prev.result_path) return json({ error: 'not_refinable' }, 400);
+      // Owning the ROW is not owning the PATH. The two downloads below use the ADMIN client, which
+      // bypasses storage RLS, so a path pointing outside the caller's own folder would hand back
+      // somebody else's photo. 0021 removed the client's write access to `generations`, but this
+      // stays as defence in depth: it holds for any future writer of these columns too.
+      const ownsPath = (p: string) => p.startsWith(`${user.id}/`);
+      if (!ownsPath(prev.selfie_path as string) || !ownsPath(prev.result_path as string)) {
+        return json({ error: 'not_found' }, 404);
+      }
       const refinement = (brief.prompt ?? '').trim();
       if (!refinement) return json({ error: 'empty_refinement' }, 400);
 
@@ -222,9 +233,15 @@ Deno.serve(async (req) => {
 
     // A user who still holds ANY purchased credit is exempt from the free-tier caps below — a
     // paying customer is never blocked, even on their first look. The caps apply only once all
-    // purchased credits are spent and the look is drawn from a free/ad credit. Pro try-ons are
-    // always covered (trial is bounded at 3, the subscription at the monthly quota).
-    const isPaidLook = isPro || paid > 0;
+    // purchased credits are spent and the look is drawn from a free/ad credit.
+    //
+    // A pro is exempt ONLY while subscribed. The trial used to be exempt too, on the assumption
+    // that "bounded at 3 lifetime" was cap enough — but that bound is a COUNT OF `generations`
+    // ROWS, and the client could delete its own rows (fixed in 0021). Any fresh account can also
+    // call claim_pro_role() (0020). So `isPro` alone opened an unlimited, unrated, unbudgeted path
+    // to the paid model. A free trial is uncompensated spend and belongs under the same ceiling as
+    // every other free look.
+    const isPaidLook = (isPro && subActive) || paid > 0;
 
     // Cost safety guards — only for UNCOMPENSATED looks (free-trial + ad-reward credits), applied
     // BEFORE we reserve the credit / kick off the paid Gemini call so a blocked request costs

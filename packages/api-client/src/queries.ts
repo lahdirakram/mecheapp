@@ -195,8 +195,15 @@ export function useUnsaveLook() {
   });
 }
 
-// Delete a saved look. For a generated essai we also remove the underlying generation row and its
-// private files (selfie + result) so nothing lingers in storage.
+// Delete a saved look. For a generated essai the private files (selfie + result) are removed from
+// storage too, so no photo lingers — but the `generations` ROW IS KEPT, with its paths nulled.
+//
+// Why keep the row: it is the RECEIPT for the credit that was spent. The debit in
+// `credit_transactions` is permanent, so deleting the generation used to leave an unexplainable
+// gap — no way to tell a credit legitimately spent from one lost to a bug. It also reset the
+// counters that `generate` reads back: lifetime count for PRO_FREE_TRIALS, and the per-user
+// hourly cap. Deleting looks therefore handed out extra free pro try-ons and reset the rate limit.
+// The row carries no image once the paths are nulled — only status, brief and timestamps.
 export function useDeleteLook() {
   const sb = useSupabase();
   const qc = useQueryClient();
@@ -214,7 +221,11 @@ export function useDeleteLook() {
           selfiePath ? sb.storage.from('selfies').remove([selfiePath]) : Promise.resolve(),
           resultPath ? sb.storage.from('generated').remove([resultPath]) : Promise.resolve(),
         ]);
-        await sb.from('generations').delete().eq('id', generationId);
+        // Via RPC: 0021 revoked the client's write access to `generations` outright, because the
+        // server reads that table back with service_role (quota counters + the refine download).
+        // Paths nulled only once the files are actually gone, so a failed removal can't leave a
+        // row pointing at nothing.
+        await sb.rpc('forget_generation_media', { p_gen: generationId });
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['looks'] }),

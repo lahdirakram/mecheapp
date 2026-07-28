@@ -47,20 +47,26 @@ function toVM(a: Activity): ActivityVM {
       resultPath: null,
       error: null,
       brief: null,
+      photosDeleted: false,
     };
   }
   const prompt = a.brief?.prompt?.trim();
+  // Un essai réussi sans plus aucun chemin = look supprimé dans l'app (useDeleteLook efface les
+  // fichiers et nulle les chemins, mais garde la ligne comme reçu du crédit). À ne pas confondre
+  // avec un essai qui n'a jamais produit d'image.
+  const photosDeleted = a.status === 'done' && !a.selfie_path && !a.result_path;
   return {
     kind: 'generation',
     id: a.id,
     when: fmtDateTime(a.created_at),
-    title: a.look_name || prompt || 'Essai',
-    meta: briefMeta(a),
+    title: a.look_name || a.brief?.lookName || prompt || 'Essai',
+    meta: [briefMeta(a), photosDeleted ? 'photos supprimées' : ''].filter(Boolean).join(' · '),
     status: a.status,
     selfiePath: a.selfie_path,
     resultPath: a.result_path,
     error: a.error,
     brief: a.brief ? JSON.stringify(a.brief, null, 2) : null,
+    photosDeleted,
   };
 }
 

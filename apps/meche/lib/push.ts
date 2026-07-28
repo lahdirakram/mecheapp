@@ -21,9 +21,12 @@ Notifications.setNotificationHandler({
 // getExpoPushTokenAsync needs the EAS projectId (lives in app.json → extra.eas.projectId).
 const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId;
 
-// Register this device's Expo push token for `userId`. Best-effort: push is a nice-to-have, so any
-// failure (denied permission, simulator, missing projectId) is swallowed and never breaks the app.
-export async function registerPushToken(userId: string): Promise<void> {
+// Register this device's Expo push token for the SIGNED-IN user. No user argument: since 0021 the
+// row is written by a security-definer RPC that derives the owner from auth.uid(), so passing an id
+// would be decorative — and a decorative id is the kind of thing that later reads as a guarantee.
+// Best-effort: push is a nice-to-have, so any failure (denied permission, simulator, missing
+// projectId) is swallowed and never breaks the app.
+export async function registerPushToken(): Promise<void> {
   try {
     if (!Device.isDevice || !projectId) return; // simulators can't mint a token
     if (!(await getPushEnabled())) return; // user turned notifications off
@@ -43,10 +46,12 @@ export async function registerPushToken(userId: string): Promise<void> {
     if (!granted) return;
 
     const token = await Notifications.getExpoPushTokenAsync({ projectId });
-    // One row per (user, token); upsert keeps it idempotent across relaunches.
-    await supabase
-      .from('devices')
-      .upsert({ user_id: userId, expo_push_token: token.data, platform: Platform.OS }, { onConflict: 'user_id,expo_push_token' });
+    // Via RPC: 0021 revoked the client's write access to `devices`, because the backend pushes to
+    // whatever token it finds there with the server's Expo credentials — a client that could write
+    // the table could register a THIRD PARTY's token and use us as a relay. The function derives
+    // the user from auth.uid(), validates the token shape, caps the row count, and reassigns the
+    // token if another account had it (a token identifies a DEVICE, not an account).
+    await supabase.rpc('register_push_token', { p_token: token.data, p_platform: Platform.OS });
   } catch {
     /* non-blocking */
   }
@@ -54,16 +59,16 @@ export async function registerPushToken(userId: string): Promise<void> {
 
 // Profile toggle: persist the choice, then register (on) or drop THIS device's token (off) so the
 // backend stops pushing to it.
-export async function setPushPreference(userId: string, enabled: boolean): Promise<void> {
+export async function setPushPreference(enabled: boolean): Promise<void> {
   await setPushEnabledPref(enabled);
   if (enabled) {
-    await registerPushToken(userId);
+    await registerPushToken();
     return;
   }
   try {
     if (!Device.isDevice || !projectId) return;
     const token = await Notifications.getExpoPushTokenAsync({ projectId });
-    await supabase.from('devices').delete().eq('user_id', userId).eq('expo_push_token', token.data);
+    await supabase.rpc('unregister_push_token', { p_token: token.data });
   } catch {
     /* best-effort */
   }

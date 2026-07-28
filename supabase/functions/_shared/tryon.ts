@@ -85,9 +85,58 @@ export async function generateWithGemini(opts: {
   const parts: any[] = json?.candidates?.[0]?.content?.parts ?? [];
   const img = parts.find((p) => p.inlineData || p.inline_data);
   const data = img?.inlineData?.data ?? img?.inline_data?.data;
-  if (!data) throw new Error('gemini: no image in response');
+  if (!data) throw new Error(noImageReason(json, parts));
   const outMime = img?.inlineData?.mimeType ?? img?.inline_data?.mime_type ?? 'image/png';
   return { base64: data, mimeType: outMime };
+}
+
+/**
+ * Explique POURQUOI la réponse ne contient pas d'image.
+ *
+ * Sans ça, `generations.error` ne contenait que « gemini: no image in response » et on réparait à
+ * l'aveugle : tous les échecs se ressemblaient, alors que le refus de sécurité, la limite de tokens
+ * et le simple caprice du modèle demandent des corrections opposées. L'API dit toujours quelque
+ * chose — `finishReason`, `promptFeedback.blockReason`, les catégories de sécurité déclenchées, et
+ * souvent une phrase d'explication en texte. On garde tout ça, borné en longueur.
+ *
+ * PRÉFIXE = CONTRAT DE RETRY. generate/index.ts filtre sur /no image/ pour décider de relancer.
+ * Un refus de politique ne se répare pas en relançant : le second appel serait payé pour rien.
+ * On préfixe donc « gemini: blocked » dans ce cas, ce qui ne matche PAS le filtre et coupe le
+ * retry ; « gemini: no image » reste pour le vrai caprice intermittent, qui lui vaut un retry.
+ * Conservateur par construction : seules les causes définitivement terminales coupent le retry.
+ */
+const TERMINAL = /^(SAFETY|IMAGE_SAFETY|PROHIBITED_CONTENT|RECITATION|BLOCKLIST|SPII)$/;
+
+// deno-lint-ignore no-explicit-any
+function noImageReason(json: any, parts: any[]): string {
+  const bits: string[] = [];
+  const cand = json?.candidates?.[0];
+
+  const finish = cand?.finishReason;
+  if (finish && finish !== 'STOP') bits.push(`finishReason=${finish}`);
+
+  const blocked = json?.promptFeedback?.blockReason;
+  if (blocked) bits.push(`blockReason=${blocked}`);
+
+  const terminal = Boolean(blocked) || TERMINAL.test(String(finish ?? ''));
+
+  // Uniquement les catégories réellement déclenchées : la liste complète est du bruit.
+  const ratings = [...(cand?.safetyRatings ?? []), ...(json?.promptFeedback?.safetyRatings ?? [])];
+  const tripped = ratings
+    .filter((r) => r?.blocked || (r?.probability && !/NEGLIGIBLE|LOW/.test(r.probability)))
+    .map((r) => `${String(r.category).replace('HARM_CATEGORY_', '')}=${r.probability}${r.blocked ? '/blocked' : ''}`);
+  if (tripped.length) bits.push(`safety[${tripped.join(' ')}]`);
+
+  // Le modèle répond souvent en texte pour expliquer son refus. C'est l'information la plus utile.
+  const said = parts
+    .map((p) => (typeof p?.text === 'string' ? p.text : ''))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (said) bits.push(`texte="${said.slice(0, 300)}"`);
+
+  if (!bits.length) bits.push(`parts=${parts.length} candidates=${json?.candidates?.length ?? 0}`);
+  return `gemini: ${terminal ? 'blocked' : 'no image'} (${bits.join(' · ')})`;
 }
 
 /** Fallback: echo the selfie back as the "result" so the flow runs without a key. */
