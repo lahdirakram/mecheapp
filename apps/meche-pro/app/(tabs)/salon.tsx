@@ -2,7 +2,8 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useMySalon, useProStatus, useSession } from '@meche/api-client';
-import { MIcon, MPAL, MText, PrimaryButton, TopBar, useLang, useToast, type MIconName } from '@meche/ui';
+import { MIcon, MPAL, MText, PrimaryButton, TopBar, useLang, useSheet, useToast, type MIconName } from '@meche/ui';
+import { openLegal } from '../../lib/legal';
 
 // Mirrors the server's quota env (display only).
 const MONTHLY_QUOTA = 100;
@@ -15,6 +16,7 @@ export default function Salon() {
   const router = useRouter();
   const lang = useLang();
   const toast = useToast();
+  const sheet = useSheet();
   const session = useSession();
   const { signOut, deleteAccount } = useAuth();
   const { data: salon } = useMySalon(session?.user.id);
@@ -25,6 +27,18 @@ export default function Salon() {
   const month = status?.month ?? 0;
   const trialLeft = Math.max(0, FREE_TRIALS - (status?.lifetime ?? 0));
   const periodEnd = status?.period_end ? new Date(status.period_end) : null;
+
+  // Same legal sheet as the B2C app's profile screen: the three published documents, one tap away.
+  const openLegalSheet = () =>
+    sheet({
+      title: lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms',
+      options: [
+        { label: lang === 'fr' ? 'Politique de confidentialité' : 'Privacy Policy', onPress: () => openLegal('privacy', lang) },
+        { label: lang === 'fr' ? "Conditions d'utilisation" : 'Terms of Service', onPress: () => openLegal('terms', lang) },
+        { label: lang === 'fr' ? 'Mentions légales' : 'Legal Notice', onPress: () => openLegal('mentions-legales', lang) },
+        { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
+      ],
+    });
 
   // Native OS confirmations (Alert) — validated on device, matches platform conventions.
   const confirmSignOut = () =>
@@ -139,6 +153,15 @@ export default function Salon() {
           <Row icon="grid" label={lang === 'fr' ? 'Mes réalisations' : 'My work'} onPress={() => router.push('/realisations')} />
           <Divider />
           <Row icon="settings" label={lang === 'fr' ? 'Ma fiche salon' : 'My salon page'} onPress={() => router.push('/salon-edit')} />
+        </View>
+
+        <View style={{ borderRadius: 18, borderWidth: 1, borderColor: MPAL.border, overflow: 'hidden' }}>
+          <Row
+            icon="lock"
+            label={lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms'}
+            detail={lang === 'fr' ? 'Politique, CGU, mentions' : 'Policy, Terms, Legal'}
+            onPress={openLegalSheet}
+          />
         </View>
 
         <View style={{ borderRadius: 18, borderWidth: 1, borderColor: MPAL.border, overflow: 'hidden' }}>

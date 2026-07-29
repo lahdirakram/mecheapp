@@ -98,3 +98,24 @@ export async function purchaseProduct(productId: string): Promise<PurchaseResult
     return { error: String((e as Error)?.message ?? e) };
   }
 }
+
+export type RestoreResult = { ok: true; restored: boolean } | { error: string };
+
+/**
+ * Re-attach the store account's past purchases to the signed-in user (Apple 3.1.1: a subscription
+ * must be restorable after a reinstall or on a new device). Like a purchase, the entitlement itself
+ * lands server-side through the RevenueCat webhook; `restored` only says whether the store had
+ * anything active to give back, so the UI can tell "done" from "nothing to restore".
+ */
+export async function restorePurchases(): Promise<RestoreResult> {
+  if (!purchasesAvailable()) return { error: 'unavailable' };
+  try {
+    const Purchases = await rc();
+    const info = await Purchases.restorePurchases();
+    const entitlements: string[] = Object.keys(info?.entitlements?.active ?? {});
+    const subs: string[] = info?.activeSubscriptions ?? [];
+    return { ok: true, restored: entitlements.length > 0 || subs.length > 0 };
+  } catch (e) {
+    return { error: String((e as Error)?.message ?? e) };
+  }
+}

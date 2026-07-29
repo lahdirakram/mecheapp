@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useProStatus, useSession } from '@meche/api-client';
 import { MIcon, MPAL, MText, PWordmark, PrimaryButton, useLang, useToast } from '@meche/ui';
 import { openLegal } from '../lib/legal';
-import { getStorePrices, purchaseProduct, purchasesAvailable } from '../lib/purchases';
+import { getStorePrices, purchaseProduct, purchasesAvailable, restorePurchases } from '../lib/purchases';
 
 // The single V1 plan. The store price is the source of truth when available (tax/localised);
 // the fallback matches the configured product.
@@ -26,6 +26,7 @@ export default function Paywall() {
   const { data: status } = useProStatus(session?.user.id);
   const [price, setPrice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -56,6 +57,27 @@ export default function Paywall() {
       router.back();
     } else if ('error' in res) {
       toast(lang === 'fr' ? 'Achat impossible, réessaie.' : 'Purchase failed, try again.');
+    }
+  };
+
+  // Apple 3.1.1: a restore path must exist for a reinstall or a new device. Shown even when the
+  // subscription reads as active, since that is exactly the case where the local state is wrong.
+  const restore = async () => {
+    if (busy || restoring) return;
+    if (!purchasesAvailable()) {
+      toast(lang === 'fr' ? "La restauration passe par l'app installée depuis le store." : 'Restoring requires the store-installed app.');
+      return;
+    }
+    setRestoring(true);
+    const res = await restorePurchases();
+    setRestoring(false);
+    if ('ok' in res) {
+      // Same refresh path as subscribe: the row is written server-side, the UI just re-reads it.
+      qc.invalidateQueries({ queryKey: ['prostatus'] });
+      if (res.restored) toast(lang === 'fr' ? 'Abonnement restauré.' : 'Subscription restored.', { icon: 'sparkle' });
+      else toast(lang === 'fr' ? 'Aucun achat à restaurer.' : 'No purchases to restore.');
+    } else {
+      toast(lang === 'fr' ? 'Restauration impossible, réessaie.' : 'Restore failed, try again.');
     }
   };
 
@@ -137,6 +159,13 @@ export default function Paywall() {
             </MText>
           </View>
         )}
+
+        {/* Apple 3.1.1: restore, discreet but always reachable (both states) */}
+        <Pressable onPress={restore} disabled={busy || restoring} hitSlop={8} style={{ marginTop: 16, alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 12 }}>
+          <MText size={12} color="rgba(255,255,255,0.7)" style={{ textDecorationLine: 'underline' }}>
+            {restoring ? (lang === 'fr' ? 'Restauration…' : 'Restoring…') : lang === 'fr' ? 'Restaurer mes achats' : 'Restore purchases'}
+          </MText>
+        </Pressable>
 
         {/* Apple 3.1.2: functional Terms + Privacy links on the subscription screen */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 18 }}>
