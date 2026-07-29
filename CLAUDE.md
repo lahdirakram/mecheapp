@@ -63,7 +63,11 @@ wrong belief survives across sessions.
   faut temporiser). Panne prod du 2026-07-29 : projet passé à 8, code tronqué à 6, `verifyOtp`
   répond "invalide", et TOUS les nouveaux comptes restent en attente de vérification pendant que
   Resend affiche "delivered". **Le check** quand une inscription bloque avec un email pourtant
-  livré : compter les chiffres du code reçu AVANT de suspecter le code applicatif. Même panne
+  livré : compter les chiffres du code reçu AVANT de suspecter le code applicatif.
+  **Pourquoi ça a tenu cinq semaines** : staging était resté à 6, seule la prod était à 8. Tous les
+  tests device passaient donc, puisque le build `preview` tape sur staging. Un test vert sur staging
+  ne prouve RIEN sur la prod dès que le comportement dépend d'un réglage de dashboard : ces
+  réglages-là se comparent entre les deux projets, ils ne se testent pas. Même panne
   possible, plus silencieuse, sur le mot de passe oublié (`type: 'recovery'`).
   **Corollaire vérifié** : refaire l'inscription avec la même adresse (le geste naturel quand on
   n'a pas reçu son code, et le seul possible puisque `signin` n'offre aucun renvoi) renvoie bien un
