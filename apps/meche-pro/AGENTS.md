@@ -14,8 +14,12 @@ Demandes/chat (V2) and agenda (V3) are deliberately NOT in this app yet.
 - **Identity**: prod `com.mechepro.app`, staging `com.mechepro.app.staging` (APP_ENV=staging in
   eas.json → app.config.js override, same pattern as apps/meche). EAS project
   `c64392b4-382f-4d90-9f8d-ef8e79c08f40` (@akram.lahdir/meche-pro).
-- **Auth**: email only in V1 (`role: 'pro'` at signup — the DB trigger skips the B2C free credit).
-  Social sign-in waits for per-bundle-id OAuth clients before store release.
+- **Auth**: email + Apple + Google (`role: 'pro'` at signup — the DB trigger skips the B2C free
+  credit). The per-bundle-id iOS OAuth clients now exist, one per profile in `eas.json`; the
+  Google plugin is still added conditionally by `app.config.js` on `GOOGLE_IOS_REVERSED_CLIENT_ID`.
+- **Store launch state**: `docs/meche-pro-launch.md` (what is really done in App Store Connect,
+  RevenueCat and Play, and what each remaining step is blocked by). Copy for the App Store listing
+  is written and waiting in `store/listing.md`.
 - **Quota (server-enforced in supabase/functions/generate)**: 3 lifetime free try-ons, then the
   `meche_pro_monthly` subscription (29,99 €) with 100 try-ons/month; refines count. Client display
   reads `my_pro_status()` rpc. Env overrides: PRO_FREE_TRIALS, PRO_MONTHLY_QUOTA.
