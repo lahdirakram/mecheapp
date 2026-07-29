@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { useAuth } from '@meche/api-client';
+import { takeSignupPassword, useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, MWordmark, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 
 // Onboarding 01d · Vérification email par code (OTP). The signup email carries a 6-digit code
@@ -20,7 +20,7 @@ export default function EmailConfirm() {
   const router = useRouter();
   const t = useT();
   const lang = useLang();
-  const { verifyEmailOtp, resendConfirmation } = useAuth();
+  const { verifyEmailOtp, resendConfirmation, updatePassword } = useAuth();
   const { email } = useLocalSearchParams<{ email?: string }>();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -36,11 +36,21 @@ export default function EmailConfirm() {
     if (code.length < 6 || busy || !email) return;
     setBusy(true);
     const { error } = await verifyEmailOtp(email, code.trim());
-    setBusy(false);
     if (error) {
+      setBusy(false);
       Alert.alert('Oups', lang === 'fr' ? 'Code invalide ou expiré. Réessaie.' : 'Invalid or expired code. Try again.');
       return;
     }
+    // Le mot de passe qui vient d'être saisi devient le bon. Une inscription refaite avec la même
+    // adresse (le geste naturel quand on n'a jamais reçu son code) NE remplace PAS le mot de passe
+    // côté Supabase : le tout premier reste actif, et la personne se retrouverait dehors à sa
+    // prochaine connexion. La session ouverte par verifyOtp autorise la correction, et l'inbox a
+    // déjà été prouvée par le code, donc ça n'ouvre rien de plus qu'un mot de passe oublié.
+    // Échec ignoré VOLONTAIREMENT : `same_password` (422) veut juste dire que c'est déjà le bon,
+    // et aucune autre erreur ne justifie de bloquer une entrée légitime.
+    const pwd = takeSignupPassword();
+    if (pwd) await updatePassword(pwd).catch(() => {});
+    setBusy(false);
     router.replace('/(tabs)/explore');
   };
 

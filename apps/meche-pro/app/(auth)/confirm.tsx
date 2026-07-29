@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { useAuth } from '@meche/api-client';
+import { takeSignupPassword, useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, MWordmark, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 
 // Onboarding · Vérification email par code (OTP). Same flow as B2C: the signup email carries a
@@ -17,7 +17,7 @@ export default function EmailConfirm() {
   const router = useRouter();
   const t = useT();
   const lang = useLang();
-  const { verifyEmailOtp, resendConfirmation } = useAuth();
+  const { verifyEmailOtp, resendConfirmation, updatePassword } = useAuth();
   const { email } = useLocalSearchParams<{ email?: string }>();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,11 +33,16 @@ export default function EmailConfirm() {
     if (code.length < 6 || busy || !email) return;
     setBusy(true);
     const { error } = await verifyEmailOtp(email, code.trim());
-    setBusy(false);
     if (error) {
+      setBusy(false);
       Alert.alert('Oups', lang === 'fr' ? 'Code invalide ou expiré. Réessaie.' : 'Invalid or expired code. Try again.');
       return;
     }
+    // Same as B2C: a repeat signup keeps the FIRST password server-side, so the one just typed has
+    // to be re-applied here. `same_password` (422) is the expected no-op, never surfaced.
+    const pwd = takeSignupPassword();
+    if (pwd) await updatePassword(pwd).catch(() => {});
+    setBusy(false);
     router.replace('/(tabs)/studio');
   };
 

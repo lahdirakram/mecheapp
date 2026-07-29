@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@meche/api-client';
+import { rememberSignupPassword, useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 import { LegalConsent } from '../../components/LegalConsent';
 import { SocialBusyOverlay, SocialButtons, useSocialAuth } from '../../components/SocialAuth';
@@ -37,8 +37,13 @@ export default function SignupEmail() {
       return;
     }
     // Local Supabase auto-confirms → session exists; otherwise show the confirm screen.
+    // The confirm screen re-applies this password once the code opens a session, because a repeat
+    // signup keeps the FIRST password server-side (see rememberSignupPassword).
     if (data.session) router.replace('/(tabs)/studio');
-    else router.push({ pathname: '/(auth)/confirm', params: { email: email.trim() } });
+    else {
+      rememberSignupPassword(pwd);
+      router.push({ pathname: '/(auth)/confirm', params: { email: email.trim() } });
+    }
   };
 
   return (

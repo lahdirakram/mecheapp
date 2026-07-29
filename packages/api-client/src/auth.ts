@@ -3,6 +3,27 @@ import { useSupabase } from './provider';
 
 export type Role = 'b2c' | 'pro';
 
+/** Mot de passe saisi à l'inscription, gardé en mémoire le temps de la vérification du code.
+ *
+ *  Pourquoi : quelqu'un dont le compte est resté non confirmé refait l'inscription pour recevoir un
+ *  nouveau code. Supabase ne remplace PAS le mot de passe dans ce cas, c'est le tout premier saisi
+ *  qui reste actif (vérifié sur staging). Sans cette reprise, la personne entre bien dans l'app via
+ *  le code, puis ne peut plus jamais se reconnecter avec le mot de passe qu'elle vient de choisir.
+ *
+ *  En mémoire volatile et lu une seule fois, JAMAIS en paramètre de route : les params d'expo-router
+ *  finissent dans l'URL et dans l'état de navigation sérialisé. */
+let pendingSignupPassword: string | null = null;
+
+export function rememberSignupPassword(password: string) {
+  pendingSignupPassword = password;
+}
+
+export function takeSignupPassword() {
+  const password = pendingSignupPassword;
+  pendingSignupPassword = null;
+  return password;
+}
+
 /** Auth actions bound to the app's Supabase client. Social providers use ID-token sign-in. */
 export function useAuth() {
   const client = useSupabase();

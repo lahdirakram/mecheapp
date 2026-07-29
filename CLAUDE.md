@@ -54,6 +54,22 @@ wrong belief survives across sessions.
 - **`app.json` `version` is the OTA compatibility key** (`runtimeVersion.policy = "appVersion"`). If it
   drifts from the installed binary, updates silently never arrive. Both lanes are on `1.0.1`; keep them
   aligned, or switch to `policy: "fingerprint"` at a store release (both lanes at once).
+- **La longueur du code OTP email vit dans le dashboard, pas dans le repo — et elle est figée à 6
+  côté app.** Les 4 écrans de saisie (`confirm` + `reset`, meche et meche-pro) coupent à 6 chiffres
+  et auto-vérifient dès le 6e ; `supabase/config.toml` (`otp_length = 6`) ne vaut QUE pour le
+  Supabase local. Chaque projet cloud a son propre réglage (Auth → Email OTP length), versionné
+  nulle part. **Les deux projets doivent rester sur 6** ; ne pas rendre l'app tolérante à une
+  longueur variable, ça détruit l'auto-vérification (on ne sait plus quand la saisie est finie, il
+  faut temporiser). Panne prod du 2026-07-29 : projet passé à 8, code tronqué à 6, `verifyOtp`
+  répond "invalide", et TOUS les nouveaux comptes restent en attente de vérification pendant que
+  Resend affiche "delivered". **Le check** quand une inscription bloque avec un email pourtant
+  livré : compter les chiffres du code reçu AVANT de suspecter le code applicatif. Même panne
+  possible, plus silencieuse, sur le mot de passe oublié (`type: 'recovery'`).
+  **Corollaire vérifié** : refaire l'inscription avec la même adresse (le geste naturel quand on
+  n'a pas reçu son code, et le seul possible puisque `signin` n'offre aucun renvoi) renvoie bien un
+  code, mais NE remplace PAS le mot de passe, le tout premier reste actif. `confirm.tsx` repose
+  donc celui qui vient d'être saisi juste après `verifyOtp`, et avale le 422 `same_password` qui
+  signifie seulement "c'était déjà le bon". Ne pas "nettoyer" ce catch.
 - **Staging SQL without the service key**: `npx supabase@latest db query --linked "<sql>"` runs
   arbitrary SQL on the linked project via the Management API (CLI keychain auth). This is the test
   lever for staging (confirm a test user's email, grant test credits) — no secrets on disk needed.
