@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePendingLocked, useSession } from '@meche/api-client';
 import { MIcon, MPAL, MText, TopBar, useLang, useT, useToast } from '@meche/ui';
 import { supabase } from '../../lib/supabase';
 import { useTryStore } from '../../lib/tryStore';
@@ -26,6 +27,8 @@ export default function AIPropose() {
   const lang = useLang();
   const toast = useToast();
   const exitTry = useExitTry();
+  const session = useSession();
+  const { data: waiting } = usePendingLocked(session?.user.id);
   const { selfieBase64, mimeType, setBrief } = useTryStore();
   const [loading, setLoading] = useState(true);
   const [sug, setSug] = useState<Suggestion | null>(null);
@@ -37,6 +40,12 @@ export default function AIPropose() {
   // rather than letting them collect suggestions they can't act on. Mirrors generating.tsx's handoff:
   // recharge lives at the ROOT, so leave the nested try stack first, then push it a tick later.
   const goRecharge = () => {
+    // A locked result still waiting IS the offer: return to it (its paywall sits next to the
+    // blurred image) instead of a bare "plus de crédits" screen the user never earned.
+    if (waiting) {
+      router.replace({ pathname: '/try/result', params: { generationId: waiting.generationId, lookId: waiting.lookId, name: waiting.name } });
+      return;
+    }
     // Explain the block in one short line (the toast lives at the root, so it survives leaving the
     // try flow below): a suggestion exists to be tried on the photo, and that try costs a credit.
     toast(lang === 'fr' ? 'Recharge pour que Mèche te propose une coupe à essayer.' : 'Recharge so Mèche can suggest a look to try.');

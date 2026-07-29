@@ -64,6 +64,42 @@ l'identité de `auth.uid()` :
   plafonne à 10 appareils, et **réattribue** un token déjà enregistré ailleurs (un token identifie un
   APPAREIL, pas un compte).
 
+### Premier essai verrouillé (0026) — bucket `vault` + `unlock_generation`
+
+Une génération payée par le pool FREE (crédit de bienvenue) alors que le pool PAID est à zéro est
+livrée en **aperçu flouté 160px** ; l'image nette attend dans le bucket **`vault`**, qui n'a **aucune
+policy storage** : pas de policy = refus RLS pour toute opération client (lire, signer, supprimer).
+Seul `service_role` y touche — même barrière que le schéma `private` ci-dessous. Le device ne reçoit
+donc jamais les octets nets avant l'achat (le cache local-first les persisterait sinon).
+
+**Le flou est appliqué SUR LE SERVEUR** (`_shared/teaser.ts` : réduction 160px, box blur 3 passes
+rayon 5, JPEG q50, ~2,5 Ko), et le client n'applique **aucun** `blurRadius`. C'est délibéré : un flou
+côté client est un effet d'affichage, donc quiconque lit le cache images de l'app récupère le fichier
+qui est dessous. Livrer une vignette nette et la flouter à l'écran ne protège rien. Le flou est aussi
+destructif là où la réduction ne l'est pas : un agrandissement IA remonte partiellement un downscale,
+il ne reconstruit pas une moyenne de voisinage. Invariant : **ne jamais livrer une image nette au
+client en comptant sur le rendu pour la masquer** — ce qui est sur l'appareil est ce qui est visible.
+
+Invariants à ne pas casser :
+- **Le débit du déblocage garde `reason='generation'`** (`external_id='unlock:<genId>'`). La replay
+  free/paid de `generate` ne comprend que `purchase`/`generation` ; une nouvelle reason gonflerait
+  silencieusement le solde qu'elle calcule. L'index unique sur `external_id` (0007) rend le
+  double-débit impossible, y compris sous deux appels concurrents (vérifié sur staging).
+- **Débit AVANT reveal.** Le chemin net est prédictible (`<uid>/<genId>-out.<ext>`) ; la RPC
+  `unlock_generation` (advisory lock partagé avec `reserve_generation_credit`) committe le débit,
+  PUIS la fonction `unlock` déplace vault→generated, avec compensation (delete du débit + re-lock)
+  si le déplacement échoue. Copier avant de débiter permettrait de voler l'image en pollant l'URL.
+- **Une ligne `locked=true` ne porte jamais un `result_path` net** : le fail-open du teaser (pipeline
+  image en panne → livraison nette) remet `locked=false` dans le même update.
+- `unlock {discard:true}` efface l'objet vault quand un look verrouillé est supprimé (le client n'a
+  aucun accès au bucket), et `delete-account` couvre le bucket `vault` dans sa boucle d'effacement.
+- Kill switch : la ligne `app_config.locked_first_try` (0027, table world-readable en SELECT,
+  écriture service_role seulement) pilote `generate` ET la présentation client (affichage des
+  crédits achetés seuls, caption "d'abord l'aperçu"), pour que l'expérience bascule d'un bloc :
+  `update app_config set value='0' where key='locked_first_try';`. Valeurs : `0` off, `1` respecte
+  le flag client `supportsLocked`, `force` verrouille tout. L'env `LOCKED_FIRST_TRY` sur `generate`,
+  s'il est posé, écrase la table (levier d'urgence) ; en temps normal il reste absent.
+
 ### Le schéma `private` (0023)
 
 `supabase/config.toml` ne publie que `public` et `graphql_public`, donc `private` est **inatteignable
@@ -142,3 +178,10 @@ set local role authenticated;
 - **`delete-account` ne vide pas le bucket `portfolio`**, qui est public. Sans effet tant que le côté
   Pro n'a pas d'utilisateur (0 en prod), à corriger avant son lancement — une ligne dans la boucle
   des buckets.
+- **Une suppression de compte faite HORS `delete-account`** (dashboard, API admin, SQL) laisse les
+  fichiers en place : Supabase interdit désormais de supprimer dans `storage.objects` en SQL, donc
+  rien ne les emporte. Ils sont inatteignables (les policies sont indexées sur l'uid du dossier, qui
+  n'existe plus) mais **inatteignable n'est pas effacé**, et la politique publiée promet l'effacement.
+  Filet de rattrapage : `scripts/purge-orphan-media.ts` (dry-run par défaut, `--commit` pour agir),
+  qui supprime tout dossier dont l'uid n'est plus dans `auth.users`. À lancer après toute suppression
+  faite en direct. Vérifié sur staging : 38 fichiers récupérés, dont 4 images nettes dans le `vault`.

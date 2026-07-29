@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Keyboard, PanResponder, Platform, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, PanResponder, Platform, Pressable, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCredits, useDeleteLook, useGeneration, useSaveLook, useSession, useToggleLove } from '@meche/api-client';
 import { FONTS, MIcon, MPAL, MText, MPortrait, TopBar, useLang, useT, useToast } from '@meche/ui';
+import { UnlockSheet } from '../../components/UnlockSheet';
+import { logEvent } from '../../lib/analytics';
 import { useTryStore } from '../../lib/tryStore';
 import { useExitTry } from '../../lib/useExitTry';
 import { cacheKeyFor } from '../../lib/img';
@@ -37,6 +39,12 @@ export default function Result() {
   // (generation done, refine done, re-open from "Mes mèches") arrives here with this id.
   const generationId = params.generationId;
   const { data: gen } = useGeneration(generationId);
+  // Locked first try: the server delivered a low-res teaser, the clear image waits server-side until
+  // a pack purchase unlocks it (1 credit). While locked the screen has ONE job — reveal the result —
+  // so the paywall renders in place (UnlockSheet) and refine/share/secondary actions step aside.
+  const locked = !!gen?.locked;
+  // The row decides the whole layout, so nothing below it may render before it arrives.
+  const settling = !!generationId && !gen;
   const [pos, setPos] = useState(0.55);
   const [saved, setSaved] = useState(params.loved === '1');
   const [w, setW] = useState(0);
@@ -48,6 +56,15 @@ export default function Result() {
   useEffect(() => {
     if (params.loved === '1') setSaved(true);
   }, [params.loved]);
+
+  // Funnel: how many users actually SEE a locked result (vs generate then bail before it loads).
+  useEffect(() => {
+    if (locked) void logEvent('result_locked_viewed', {});
+  }, [locked]);
+
+  // The reveal lands as a change on the generation row (locked → false, new result_path), so the
+  // screen re-renders itself; all this has to do is celebrate.
+  const onUnlocked = () => toast(t('locked_unlocked_toast'), { icon: 'sparkle' });
 
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => setKb(e.endCoordinates?.height ?? 0));
@@ -184,13 +201,15 @@ export default function Result() {
             <Pressable hitSlop={6} onPress={onSave} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: saved ? MPAL.ink : 'rgba(0,0,0,0.05)' }}>
               <MIcon name="heart" size={18} color={saved ? '#fff' : MPAL.ink} fill={saved ? '#fff' : 'none'} />
             </Pressable>
-            <Pressable
-              hitSlop={6}
-              onPress={() => router.push({ pathname: '/share', params: { name: title, generationId: generationId ?? '', after: afterUri ?? '' } })}
-              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}
-            >
-              <MIcon name="share" size={18} color={MPAL.ink} />
-            </Pressable>
+            {!locked ? (
+              <Pressable
+                hitSlop={6}
+                onPress={() => router.push({ pathname: '/share', params: { name: title, generationId: generationId ?? '', after: afterUri ?? '' } })}
+                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}
+              >
+                <MIcon name="share" size={18} color={MPAL.ink} />
+              </Pressable>
+            ) : null}
             {savedLookId || generationId ? (
               <Pressable hitSlop={6} onPress={onDelete} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
                 <MIcon name="trash" size={18} color={MPAL.ink} />
@@ -208,7 +227,7 @@ export default function Result() {
           {title}
         </MText>
         <MText size={13} color={MPAL.mute} style={{ marginTop: 4 }}>
-          {lang === 'fr' ? 'Tu peux glisser pour comparer' : 'Drag to compare'}
+          {settling ? ' ' : locked ? t('locked_sub') : lang === 'fr' ? 'Tu peux glisser pour comparer' : 'Drag to compare'}
         </MText>
       </View>
 
@@ -216,10 +235,22 @@ export default function Result() {
       <View style={{ flex: 1, paddingHorizontal: 18, paddingTop: 14 }}>
         <View
           ref={containerRef}
-          {...responder.panHandlers}
+          // Locked: the slider is pointless on a blurred preview and its greedy responder would
+          // steal the sheet's taps — show the after full-bleed instead.
+          {...(locked || settling ? {} : responder.panHandlers)}
           onLayout={measure}
-          style={{ flex: 1, borderRadius: 24, overflow: 'hidden' }}
+          style={{ flex: 1, borderRadius: 24, overflow: 'hidden', backgroundColor: MPAL.paper }}
         >
+          {/* Until the generation row lands we do NOT know whether this result is locked, so render
+              nothing but a loader. Rendering the comparison optimistically meant the slider chrome
+              and the placeholder portraits flashed for about a second before the blurred preview
+              replaced them: a wrong screen, then a layout jump. A neutral wait beats both. */}
+          {settling ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator color={MPAL.sable} />
+            </View>
+          ) : (
+          <>
           {/* before (full) — real selfie if available */}
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {beforeUri ? (
@@ -228,11 +259,21 @@ export default function Result() {
               <MPortrait hair="medium" mood="warm" label={t('before').toUpperCase()} />
             )}
           </View>
-          {/* after (clipped to pos) — real generated result if present */}
-          <View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: w * pos, overflow: 'hidden' }}>
+          {/* after (clipped to pos; full-bleed while locked) — real generated result if present.
+              While locked this file IS the blurred preview: the server blurs it before delivery, so
+              there is no sharp version on the device to reveal. No client blurRadius on purpose —
+              what you see is exactly what exists here, rather than a display effect over a sharp
+              image that anyone reading the cache could strip. */}
+          <View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: locked ? w : w * pos, overflow: 'hidden' }}>
             <View style={{ width: w, height: '100%' }}>
               {afterUri ? (
                 <Image source={{ uri: afterUri, cacheKey: cacheKeyFor(afterUri) }} style={{ width: w, height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
+              ) : locked ? (
+                // Downloading the blurred preview: a loader, never the placeholder portrait — that
+                // illustration reads as "here is your result" for the second it is on screen.
+                <View style={{ width: w, height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator color={MPAL.sable} />
+                </View>
               ) : (
                 <MPortrait hair="bob" mood="warm" tint={MPAL.ink} label={t('after').toUpperCase()} />
               )}
@@ -240,28 +281,47 @@ export default function Result() {
           </View>
 
           {/* badges */}
-          <View style={{ position: 'absolute', top: 14, left: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.95)' }}>
-            <MText variant="bodyBold" size={10} color={MPAL.ink} style={{ letterSpacing: 1 }}>
-              {t('after').toUpperCase()}
-            </MText>
-          </View>
-          <View style={{ position: 'absolute', top: 14, right: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.6)' }}>
-            <MText variant="bodyBold" size={10} color="#fff" style={{ letterSpacing: 1 }}>
-              {t('before').toUpperCase()}
-            </MText>
-          </View>
+          {!locked ? (
+            <>
+              <View style={{ position: 'absolute', top: 14, left: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.95)' }}>
+                <MText variant="bodyBold" size={10} color={MPAL.ink} style={{ letterSpacing: 1 }}>
+                  {t('after').toUpperCase()}
+                </MText>
+              </View>
+              <View style={{ position: 'absolute', top: 14, right: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                <MText variant="bodyBold" size={10} color="#fff" style={{ letterSpacing: 1 }}>
+                  {t('before').toUpperCase()}
+                </MText>
+              </View>
 
-          {/* divider + handle — handle sits near the bottom so it never covers the face */}
-          <View style={{ position: 'absolute', top: 0, bottom: 0, left: w * pos - 1, width: 2, backgroundColor: '#fff' }} />
-          <View style={{ position: 'absolute', bottom: 20, left: w * pos - 24, width: 48, height: 48, borderRadius: 24, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } }}>
-            <MIcon name="chevronLeft" size={14} color={MPAL.ink} />
-            <MIcon name="chevronRight" size={14} color={MPAL.ink} />
-          </View>
+              {/* divider + handle — handle sits near the bottom so it never covers the face */}
+              <View style={{ position: 'absolute', top: 0, bottom: 0, left: w * pos - 1, width: 2, backgroundColor: '#fff' }} />
+              <View style={{ position: 'absolute', bottom: 20, left: w * pos - 24, width: 48, height: 48, borderRadius: 24, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } }}>
+                <MIcon name="chevronLeft" size={14} color={MPAL.ink} />
+                <MIcon name="chevronRight" size={14} color={MPAL.ink} />
+              </View>
+            </>
+          ) : (
+            /* locked: just the badge. The teaser proves the look exists, and the paywall lives in
+               the sheet below — piling a CTA on top of the image too would say it twice. */
+            <View style={{ position: 'absolute', top: 14, left: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.95)' }}>
+              <MText variant="mono" size={10} color={MPAL.ink} style={{ letterSpacing: 1 }}>
+                {t('locked_badge')}
+              </MText>
+            </View>
+          )}
+          </>
+          )}
         </View>
       </View>
 
-      {/* refine — tweak this look in one line, re-running on the original photo + this result */}
-      {generationId && afterUri ? (
+      {/* Locked: the paywall in place, right under the blurred result the user is deciding about.
+          No navigation, so the thing being bought never leaves the screen. */}
+      {locked && generationId ? <UnlockSheet generationId={generationId} onUnlocked={onUnlocked} /> : null}
+
+      {/* refine — tweak this look in one line, re-running on the original photo + this result.
+          Hidden while locked: refining would edit the 160px teaser (the server refuses it anyway). */}
+      {generationId && afterUri && !locked ? (
         <View style={{ paddingHorizontal: 18, paddingTop: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: MPAL.paper, borderWidth: 1, borderColor: MPAL.border, borderRadius: 999, paddingLeft: 16, paddingRight: 6, paddingVertical: 6 }}>
             <MIcon name="sparkle" size={16} color={MPAL.sable} />
@@ -290,7 +350,11 @@ export default function Result() {
         </View>
       ) : null}
 
-      {/* actions */}
+      {/* actions — hidden while locked (the screen has one job then, and "Réserver" a cut you
+          haven't seen yet makes no sense) and while settling, so they don't flash either. */}
+      {locked || settling ? (
+        <View style={{ height: insets.bottom + 14 }} />
+      ) : (
       <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 14, paddingBottom: insets.bottom + 16 }}>
         {/* "Voir d'autres" → Mes mèches. exitTry pops the whole try modal off the root stack (regardless
             of refine depth) then selects the wardrobe, where this just-saved look lives. */}
@@ -318,6 +382,7 @@ export default function Result() {
           </View>
         </View>
       </View>
+      )}
     </View>
   );
 }

@@ -30,6 +30,65 @@ export function useCredits(userId: string | undefined) {
   });
 }
 
+// World-readable app flags (app_config, 0027). One row currently matters: `locked_first_try` —
+// when on ('1' | 'force') the client presents the locked-first-try experience (purchased-credits
+// display, preview-first caption); when off it reverts to the classic credit display. Same value
+// drives `generate` server-side, so flipping the row switches the WHOLE experience at once.
+export function useAppFlags() {
+  const sb = useSupabase();
+  return useQuery({
+    queryKey: ['appconfig'],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await sb.from('app_config').select('key, value');
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const row of (data ?? []) as { key: string; value: string }[]) map[row.key] = row.value;
+      return map;
+    },
+  });
+}
+
+// Is the locked-first-try experience on? `ready` is false until the flag is known: screens whose
+// COPY depends on it must render neither version meanwhile. Guessing a default is wrong in both
+// directions — assume on and a paying customer sees their credits replaced by an onboarding card
+// for a moment, assume off and a new user is briefly promised a credit that buys them a blurred
+// preview. A short neutral state beats a wrong one, and the value is cached for the session.
+export function useLockedFirstTry(): { on: boolean; ready: boolean } {
+  const { data, isPending } = useAppFlags();
+  const v = data?.locked_first_try;
+  return { on: v === '1' || v === 'force', ready: !isPending };
+}
+
+// Split the balance into free vs PURCHASED pools by replaying the user's own ledger (RLS
+// credit_tx_select_own allows the read), with the SAME rules as `generate` server-side: charges hit
+// the free pool first, replayed in order. The UI shows only `paid` as "credits": under the locked
+// first-try model nothing is presented as offered, so the welcome credit never appears as a credit.
+export function useCreditSummary(userId: string | undefined) {
+  const sb = useSupabase();
+  return useQuery({
+    queryKey: ['credits', 'summary', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('credit_transactions')
+        .select('delta, reason')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      let free = 0;
+      let paid = 0;
+      for (const tx of (data ?? []) as { delta: number; reason: string }[]) {
+        if (tx.reason === 'purchase') paid += tx.delta;
+        else if (tx.reason === 'generation') {
+          if (free > 0) free -= 1;
+          else paid -= 1;
+        } else if (tx.delta > 0) free += tx.delta;
+      }
+      return { free: Math.max(0, free), paid: Math.max(0, paid), total: free + paid };
+    },
+  });
+}
+
 export function useFeed() {
   const sb = useSupabase();
   return useQuery({
@@ -76,7 +135,10 @@ export function useWardrobe(userId: string | undefined) {
     queryKey: ['looks', userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await sb.from('looks').select('*, generation:generations(status)').eq('user_id', userId!).order('created_at', { ascending: false });
+      // thumb_path: grids render a 420px JPEG (~18 KB) instead of the full result (~200 KB to 2 MB
+      // on older rows). Null on generations made before thumbnails existed, and on feed-saved looks,
+      // so callers fall back to image_url.
+      const { data, error } = await sb.from('looks').select('*, generation:generations(status, locked, thumb_path)').eq('user_id', userId!).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -115,7 +177,67 @@ export function useGeneration(id: string | undefined) {
         selfiePath: (data.selfie_path as string | null) ?? null,
         resultPath: (data.result_path as string | null) ?? null,
         match: (data.match as number | null) ?? null,
+        status: (data.status as string | null) ?? null,
+        // Locked first try (0026): result_path is a low-res teaser until `unlock` charges a credit.
+        locked: !!data.locked,
       };
+    },
+  });
+}
+
+// The user's waiting locked result, if any (newest first). Drives the whole pre-purchase funnel:
+// the profile card, and every out-of-credits gate, which route BACK to this result instead of a
+// bare paywall — a waiting result is a far better argument than an empty balance. `!inner` makes
+// the embedded filters a real join, so a user with no locked result gets an empty list.
+export function usePendingLocked(userId: string | undefined) {
+  const sb = useSupabase();
+  return useQuery({
+    queryKey: ['pendinglocked', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('looks')
+        .select('id, name, generation_id, generation:generations!inner(id, status, locked)')
+        .eq('generation.locked', true)
+        .eq('generation.status', 'done')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const row = (data ?? [])[0] as { id: string; name: string; generation_id: string } | undefined;
+      return row ? { lookId: row.id, name: row.name, generationId: row.generation_id } : null;
+    },
+  });
+}
+
+// Reveal a locked first-try result: the `unlock` edge function charges 1 credit atomically then
+// moves the clear image out of the vault (new result_path → the local-image cache picks it up as a
+// fresh entry, no invalidation dance). Failures rethrow with the server's error code as the message
+// ('no_credits' in particular) so callers can route to recharge instead of a generic toast.
+export function useUnlockGeneration() {
+  const sb = useSupabase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ generationId }: { generationId: string }) => {
+      const { data, error } = await sb.functions.invoke('unlock', { body: { generationId } });
+      if (error) {
+        let code = 'unlock_failed';
+        try {
+          // supabase-js exposes the raw Response as context or response depending on version.
+          const resp = (error as { context?: Response; response?: Response }).context ?? (error as { response?: Response }).response;
+          const body = resp && typeof resp.json === 'function' ? ((await resp.json()) as { error?: string }) : null;
+          if (body?.error) code = body.error;
+        } catch {
+          /* keep the generic code */
+        }
+        throw new Error(code);
+      }
+      return data as { ok?: boolean; resultPath?: string | null; alreadyUnlocked?: boolean };
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['generation', vars.generationId] });
+      qc.invalidateQueries({ queryKey: ['looks'] });
+      qc.invalidateQueries({ queryKey: ['credits'] });
+      qc.invalidateQueries({ queryKey: ['pendinglocked'] });
     },
   });
 }
@@ -214,9 +336,14 @@ export function useDeleteLook() {
         if (error) throw error;
       }
       if (generationId) {
-        const { data: g } = await sb.from('generations').select('selfie_path, result_path').eq('id', generationId).maybeSingle();
+        const { data: g } = await sb.from('generations').select('selfie_path, result_path, locked').eq('id', generationId).maybeSingle();
         const selfiePath = (g as { selfie_path?: string | null } | null)?.selfie_path;
         const resultPath = (g as { result_path?: string | null } | null)?.result_path;
+        const locked = !!(g as { locked?: boolean } | null)?.locked;
+        // A locked essai also has its CLEAR image waiting in the vault bucket, which the client
+        // cannot touch (no storage policy). Best-effort server-side discard so the deletion the UI
+        // promises covers the clear face image too; no charge, idempotent.
+        if (locked) void sb.functions.invoke('unlock', { body: { generationId, discard: true } }).catch(() => {});
         await Promise.all([
           selfiePath ? sb.storage.from('selfies').remove([selfiePath]) : Promise.resolve(),
           resultPath ? sb.storage.from('generated').remove([resultPath]) : Promise.resolve(),

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQueryClient } from '@tanstack/react-query';
-import { useCreditPacks, useSession, useSupabase } from '@meche/api-client';
+import { useCreditPacks } from '@meche/api-client';
 import { MIcon, MPAL, MText, useLang, useT, useToast } from '@meche/ui';
 import { logEvent } from '../lib/analytics';
-import { getStorePrices, purchaseProduct, purchasesAvailable, type StorePrice } from '../lib/purchases';
+import { getStorePrices, type StorePrice } from '../lib/purchases';
+import { useBuyPack } from '../lib/useBuyPack';
 
 type Pack = { id: string; credits: number; price: string; unit: string; badge: string | null; product_id: string };
 
@@ -29,13 +29,12 @@ export default function Recharge() {
   const t = useT();
   const lang = useLang();
   const toast = useToast();
-  const session = useSession();
-  const sb = useSupabase();
-  const qc = useQueryClient();
-  const [busy, setBusy] = useState(false);
+  const { buy: buyPack, busy } = useBuyPack();
   // May arrive from a refine that ran out of credits (carries the source generation id `g`): on close
   // we return to that result so the user can retry the refine, instead of landing on the home tab.
-  const { low, g, name: lookName, lookId } = useLocalSearchParams<{ low?: string; g?: string; name?: string; lookId?: string }>();
+  // `locked=1` = coming from a LOCKED first-try result: value-framed banner instead of "no credits",
+  // and a successful purchase auto-unlocks that generation (1 credit) before closing back to it.
+  const { low, g, name: lookName, lookId, locked } = useLocalSearchParams<{ low?: string; g?: string; name?: string; lookId?: string; locked?: string }>();
   // Reached via push (profile) OR from the generating screen on a no-credits block. There may be no
   // history, so close to a safe screen instead of an unhandled GO_BACK.
   const close = () => {
@@ -46,6 +45,7 @@ export default function Recharge() {
     router.canGoBack() ? router.back() : router.replace('/(tabs)/explore');
   };
   const lowBalance = low === '1';
+  const fromLocked = locked === '1';
   const { data } = useCreditPacks();
   const packs = (data ?? []) as Pack[];
   const [sel, setSel] = useState('star');
@@ -56,7 +56,7 @@ export default function Recharge() {
     void getStorePrices().then(setPrices);
   }, []);
   useEffect(() => {
-    void logEvent('paywall_viewed', { low_balance: lowBalance ? 1 : 0 });
+    void logEvent('paywall_viewed', { low_balance: lowBalance ? 1 : 0, source: locked === '1' ? 'locked_result' : lowBalance ? 'no_credits' : 'direct' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -68,50 +68,34 @@ export default function Recharge() {
     ? `${t('pay_get')} ${selPack.credits} ${t('credits')} · ${selLive ? selLive.priceString : selPack.price}`
     : t('pay_cta');
 
-  // Open the store sheet for the selected pack. The store confirms payment, then RevenueCat's
-  // webhook grants the credits server-side — so we poll the balance until it lands.
+  // Purchase + webhook-grant polling + (when this screen was opened for a waiting locked result)
+  // the reveal, all in useBuyPack — the same implementation the in-place unlock sheet uses, so the
+  // two paths can't drift on the part that touches money.
   const buy = async () => {
-    if (busy) return;
     const pack = packs.find((p) => p.id === sel);
     if (!pack) return;
-    if (!purchasesAvailable()) {
+    const r = await buyPack({ productId: pack.product_id, unlockGenerationId: fromLocked && g ? g : undefined });
+    if (r.status === 'unavailable') {
       toast(lang === 'fr' ? 'Le paiement arrive bientôt.' : 'Payments are coming soon.', { icon: 'sparkle' });
       return;
     }
-    setBusy(true);
-    try {
-      const before = ((await sb.rpc('my_credit_balance')).data as number) ?? 0;
-      const r = await purchaseProduct(pack.product_id);
-      if ('cancelled' in r) return;
-      if ('error' in r) {
-        toast(lang === 'fr' ? 'Paiement impossible. Réessaie.' : 'Purchase failed. Try again.');
-        return;
-      }
-      // Wait for the webhook to credit the account (usually a couple of seconds).
-      let credited = false;
-      for (let i = 0; i < 12; i++) {
-        await new Promise((res) => setTimeout(res, 1200));
-        const now = ((await sb.rpc('my_credit_balance')).data as number) ?? before;
-        if (now > before) {
-          credited = true;
-          break;
-        }
-      }
-      qc.invalidateQueries({ queryKey: ['credits'] });
-      toast(
-        credited
-          ? lang === 'fr'
-            ? 'Crédits ajoutés. Bon essayage !'
-            : 'Credits added. Have fun!'
-          : lang === 'fr'
-            ? 'Paiement reçu, tes crédits arrivent.'
-            : 'Payment received, your credits are on the way.',
-        { icon: 'sparkle' },
-      );
-      close();
-    } finally {
-      setBusy(false);
+    if (r.status === 'error') {
+      toast(lang === 'fr' ? 'Paiement impossible. Réessaie.' : 'Purchase failed. Try again.');
+      return;
     }
+    if (r.status !== 'ok') return;
+    if (r.unlocked) void logEvent('result_unlocked', { source: 'recharge' });
+    toast(
+      r.credited
+        ? lang === 'fr'
+          ? 'Crédits ajoutés. Bon essayage !'
+          : 'Credits added. Have fun!'
+        : lang === 'fr'
+          ? 'Paiement reçu, tes crédits arrivent.'
+          : 'Payment received, your credits are on the way.',
+      { icon: 'sparkle' },
+    );
+    close();
   };
 
   return (
@@ -123,7 +107,21 @@ export default function Recharge() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-        {lowBalance ? (
+        {fromLocked ? (
+          // Locked-result entry: sell the reveal, not the shortage — the user never "ran out",
+          // their very first result is simply waiting for them.
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 12, backgroundColor: MPAL.ink, marginBottom: 18 }}>
+            <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${MPAL.sable}33`, alignItems: 'center', justifyContent: 'center' }}>
+              <MIcon name="sparkle" size={15} color={MPAL.sable} />
+            </View>
+            <MText size={12} color="#fff" style={{ flex: 1, lineHeight: 17 }}>
+              <MText variant="bodyBold" size={12} color="#fff">
+                {t('locked_paywall_title')}.{' '}
+              </MText>
+              {t('locked_paywall_sub')}
+            </MText>
+          </View>
+        ) : lowBalance ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 12, backgroundColor: MPAL.ink, marginBottom: 18 }}>
             <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${MPAL.sable}33`, alignItems: 'center', justifyContent: 'center' }}>
               <MIcon name="zap" size={15} color={MPAL.sable} fill={MPAL.sable} stroke={0} />

@@ -3,7 +3,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCredits, useSession } from '@meche/api-client';
+import { useCredits, useCreditSummary, useLockedFirstTry, usePendingLocked, useSession } from '@meche/api-client';
 import { FONTS, MIcon, MPAL, MText, PrimaryButton, pOnDark, useLang, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 import { useExitTry } from '../../lib/useExitTry';
@@ -22,6 +22,15 @@ export default function Idea() {
   const toast = useToast();
   const session = useSession();
   const { data: credits } = useCredits(session?.user.id);
+  // Display only — the 0-credit gates below keep using the TOTAL balance (a fresh account must pass
+  // with just its welcome credit). Before the first purchase the credit vocabulary doesn't exist:
+  // we describe what happens ("your try shows as a preview first") instead of counting something
+  // the user never bought. A waiting locked result also redirects the gates below to it.
+  const { on: lockedFirstTry, ready: flagReady } = useLockedFirstTry();
+  const { data: creditSummary } = useCreditSummary(session?.user.id);
+  const { data: waiting } = usePendingLocked(session?.user.id);
+  const previewFirst = lockedFirstTry && (creditSummary?.paid ?? 0) === 0;
+  const shownCredits = lockedFirstTry ? (creditSummary?.paid ?? 0) : (credits ?? 0);
   const setBrief = useTryStore((s) => s.setBrief);
   const exitTry = useExitTry();
 
@@ -87,7 +96,9 @@ export default function Idea() {
       {/* generate + alternatives */}
       <LinearGradient colors={['rgba(252,248,244,0)', MPAL.bg]} style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: insets.bottom + 14, gap: 12 }}>
         <PrimaryButton
-          label={t('generate')}
+          // "Essai" = the generation, "aperçu" = what it delivers while locked. Keeping the two
+          // words for two things is what stops the flow reading as ambiguous.
+          label={previewFirst ? (lang === 'fr' ? 'Lancer l’essai' : 'Start the try') : t('generate')}
           tone="caramel"
           icon="sparkle"
           disabled={!canGenerate}
@@ -97,9 +108,17 @@ export default function Idea() {
           }}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: -4 }}>
-          <MIcon name="coin" size={11} color={MPAL.mute} />
+          <MIcon name={previewFirst ? 'sparkle' : 'coin'} size={11} color={MPAL.mute} />
           <MText size={11} color={MPAL.mute}>
-            {lang === 'fr' ? `Utilise 1 crédit · ${credits ?? 0} restants` : `Uses 1 credit · ${credits ?? 0} left`}
+            {!flagReady
+              ? ' '
+              : previewFirst
+                ? lang === 'fr'
+                  ? 'Ton essai apparaît d’abord en aperçu.'
+                  : 'Your try appears as a preview first.'
+                : lang === 'fr'
+                  ? `Utilise 1 crédit · ${shownCredits} restants`
+                  : `Uses 1 credit · ${shownCredits} left`}
           </MText>
         </View>
 
@@ -116,6 +135,13 @@ export default function Idea() {
         <Pressable
           onPress={() => {
             if ((credits ?? 0) <= 0) {
+              // A waiting locked result is a better answer than a paywall: send them back to it,
+              // where the reveal (and the pack that buys it) is in context. Only a user with
+              // nothing waiting sees the bare recharge screen.
+              if (waiting) {
+                router.push({ pathname: '/try/result', params: { generationId: waiting.generationId, lookId: waiting.lookId, name: waiting.name } });
+                return;
+              }
               toast(lang === 'fr' ? 'Recharge pour que Mèche te propose une coupe à essayer.' : 'Recharge so Mèche can suggest a look to try.');
               router.push('/recharge?low=1');
               return;

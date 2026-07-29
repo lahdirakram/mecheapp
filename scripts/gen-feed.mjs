@@ -14,6 +14,11 @@
 //   public `feed` bucket  ->  insert a draft feed_items row (with the full
 //   recipe in gen_meta so it is reproducible).
 //
+// Gemini returns PNG; this script re-encodes to JPEG before upload (~11x lighter
+// at the same resolution, no visible difference on a photo). Nothing extra to run.
+// `scripts/reencode-feed.ts` stays around as a catch-up tool for images uploaded
+// before this, and as the way to delete the leftover PNGs once verified.
+//
 // SAFETY: dry-run by DEFAULT (no Gemini calls, no cost, no writes) — it prints
 // the prompts it would send so you can eyeball them. Add --commit to actually
 // generate. Batch is hard-capped (MAX_BATCH) and the Gemini call retries at most
@@ -33,6 +38,7 @@
 // (hqhnvjjbohzktoapsytj). The script writes to whichever SUPABASE_URL is set.
 // ─────────────────────────────────────────────────────────────────────────────
 import { fileURLToPath } from 'node:url';
+import { Image } from 'imagescript';
 
 const MAX_BATCH = 100;             // hard ceiling on images per run
 const COST_PER_IMAGE_EUR = 0.04;   // matches GEN_COST_PER_LOOK_EUR
@@ -231,6 +237,14 @@ async function sbUpload(path, bytes, contentType) {
 }
 const publicUrl = (path) => `${SUPABASE_URL}/storage/v1/object/public/feed/${path}`;
 
+// Quality 82: the value measured against the stored originals. Same encoder as the edge functions
+// (supabase/functions/_shared/images.ts), so the feed and the generated results stay consistent.
+const FEED_JPEG_QUALITY = 82;
+async function toJpeg(bytes) {
+  const img = await Image.decode(bytes);
+  return Buffer.from(await img.encodeJPEG(FEED_JPEG_QUALITY));
+}
+
 // ── Gemini text-to-image (same REST shape as functions/_shared/tryon.ts) ──────
 async function generateImage(prompt, aspectRatio) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -353,9 +367,14 @@ async function main() {
     const label = `#${String(idx + 1).padStart(2, '0')} [${p.style.slug}]`;
     try {
       const img = await generateImage(p.prompt, RATIO);
-      const ext = img.mime.includes('png') ? 'png' : 'jpg';
-      const path = `studio/${crypto.randomUUID()}.${ext}`;
-      await sbUpload(path, Buffer.from(img.data, 'base64'), img.mime);
+      // Store as JPEG, never as the PNG the model returns. The feed is the most-read asset in the
+      // app (every new user scrolls it, while a generated look is only ever read by its author), so
+      // its format is the single biggest egress line: measured on these exact images, ~11x lighter
+      // at identical resolution with no visible difference, because PNG is a format for flat colour
+      // and text rather than photographs.
+      const jpeg = await toJpeg(Buffer.from(img.data, 'base64'));
+      const path = `studio/${crypto.randomUUID()}.jpg`;
+      await sbUpload(path, jpeg, 'image/jpeg');
       await sbInsert('feed_items', {
         kind: 'studio',
         status: 'draft',

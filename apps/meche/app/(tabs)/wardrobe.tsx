@@ -13,7 +13,7 @@ import { useLocalImages } from '../../lib/localImages';
 // B2C · Mes mèches (17) — kept looks, sort tabs (Récents/Préférés/Pour cet été), staggered
 // grid + a "surprise cut" prompt. Ported from MScreenWardrobe. Falls back to demo looks until
 // the user has saved their own.
-type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; loved: boolean; tag: string | null; image_url?: string | null; generation_id?: string | null; generation?: { status?: string } | null };
+type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; loved: boolean; tag: string | null; image_url?: string | null; generation_id?: string | null; generation?: { status?: string; locked?: boolean; thumb_path?: string | null } | null };
 
 export default function Wardrobe() {
   const insets = useSafeAreaInsets();
@@ -60,9 +60,13 @@ export default function Wardrobe() {
   };
 
   const base = (data ?? []) as Look[]; // real saved looks only — no demo fallback
+  // This is a GRID of ~180px cards, so it pulls the 420px thumbnail, not the full result: ~18 KB a
+  // card instead of up to 2 MB. Falls back to image_url for feed-saved looks (external URLs) and for
+  // generations made before thumbnails existed.
+  const gridPath = (l: Look) => l.generation?.thumb_path ?? l.image_url;
   // Generated images are private storage paths → resolve to a durable local file (downloaded once,
   // then served from disk with zero egress); feed photos are external URLs and pass through untouched.
-  const { data: local = {}, pending: imgPending } = useLocalImages('generated', useMemo(() => base.map((l) => l.image_url), [base]));
+  const { data: local = {}, pending: imgPending } = useLocalImages('generated', useMemo(() => base.map(gridPath), [base]));
   const srcOf = (u?: string | null) => (!u ? undefined : /^https?:\/\//.test(u) ? u : local[u]);
   // A storage image that hasn't landed on disk yet → show a loader (not the "no image" illustration).
   const imgLoading = (u?: string | null) => !!u && !/^https?:\/\//.test(u) && imgPending.has(u);
@@ -104,7 +108,10 @@ export default function Wardrobe() {
             // shows a retry card (credit was refunded). Otherwise it's a normal saved look.
             const pending = w.generation?.status === 'pending';
             const failed = w.generation?.status === 'failed';
-            const uri = srcOf(w.image_url);
+            // Locked first try: the stored image is a low-res teaser — blur it and badge it, the
+            // result screen (tap-through) carries the unlock CTA.
+            const cardLocked = !!w.generation?.locked && !pending && !failed;
+            const uri = srcOf(gridPath(w));
             return (
             <Pressable
               key={w.id}
@@ -138,8 +145,10 @@ export default function Wardrobe() {
                 // cacheKey = stable path (token stripped) so the rotating signed URL still hits one cache
                 // entry, shared with the result screen. No recyclingKey: this is a ScrollView (no view
                 // recycling), and on Android recyclingKey + a changing uri blanked thumbnails.
+                // A locked look's stored image is already blurred server-side, so it needs no
+                // blurRadius here: the badge below is what marks it as locked.
                 <Image source={{ uri, cacheKey: cacheKeyFor(uri) }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" />
-              ) : imgLoading(w.image_url) ? (
+              ) : imgLoading(gridPath(w)) ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator color={MPAL.sable} />
                 </View>
@@ -149,6 +158,14 @@ export default function Wardrobe() {
               {w.loved && !pending ? (
                 <View style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
                   <MIcon name="heart" size={14} color={MPAL.sable} fill={MPAL.sable} stroke={0} />
+                </View>
+              ) : null}
+              {cardLocked ? (
+                <View style={{ position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.92)' }}>
+                  <MIcon name="sparkle" size={10} color={MPAL.ink} />
+                  <MText variant="mono" size={8} color={MPAL.ink} style={{ letterSpacing: 1 }}>
+                    {t('locked_badge')}
+                  </MText>
                 </View>
               ) : null}
               <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 24, paddingHorizontal: 10, paddingBottom: 10, backgroundColor: 'rgba(0,0,0,0.35)' }}>

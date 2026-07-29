@@ -25,10 +25,11 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE);
 
-    // Storage first — deleting the auth user does NOT remove their files. Both buckets store objects
+    // Storage first — deleting the auth user does NOT remove their files. All buckets store objects
     // under a folder named after the uid (e.g. `<uid>/<genId>-out.png`). Paginate so a heavy user
-    // doesn't leave files behind past the first page.
-    for (const bucket of ['selfies', 'generated']) {
+    // doesn't leave files behind past the first page. `vault` holds still-locked clear results
+    // (0026) — client-inaccessible, but it is their face, so it must be erased too.
+    for (const bucket of ['selfies', 'generated', 'vault']) {
       const PAGE = 100;
       // Always list from offset 0: each page is deleted before the next list, so the just-deleted
       // files are gone and offset 0 returns the remaining ones. (Incrementing offset would skip a

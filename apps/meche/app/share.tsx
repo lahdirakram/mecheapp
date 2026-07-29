@@ -83,6 +83,13 @@ export default function Share() {
   // Deterministic: the shared card is the generation identified by the params (signed URLs), with the
   // `after` param as a fallback when it's already a full URL.
   const { data: gen } = useGeneration(params.generationId);
+
+  // A locked first-try result is a low-res teaser: nothing worth sharing, and the entry points are
+  // hidden while locked — this is a belt-and-braces guard against a stale deep link.
+  useEffect(() => {
+    if (gen?.locked) router.back();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gen?.locked]);
   // Prefer the durable local copy (downloaded once); fall back to the signed URL only on a cache miss.
   const beforeLocal = useLocalImage('selfies', gen?.selfiePath);
   const afterLocal = useLocalImage('generated', gen?.resultPath);

@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { useQueryClient } from '@tanstack/react-query';
+import { usePendingLocked, useSession } from '@meche/api-client';
 import { MPAL, MText, MPortrait, useLang, useT, useToast } from '@meche/ui';
 import { logEvent } from '../../lib/analytics';
 import { supabase } from '../../lib/supabase';
@@ -28,6 +29,8 @@ export default function Generating() {
   const lang = useLang();
   const toast = useToast();
   const qc = useQueryClient();
+  const session = useSession();
+  const { data: waiting } = usePendingLocked(session?.user.id);
   const { selfieBase64, mimeType, brief, refineFrom, result, setRefine } = useTryStore();
   const [pct, setPct] = useState(0);
   const doneRef = useRef(false);
@@ -46,6 +49,13 @@ export default function Generating() {
   // push recharge (deferred a tick so the navigation settles before the push).
   const goRecharge = (low?: boolean) => {
     const src = refineRef.current;
+    // Out of credits with a locked result still waiting: that result IS the offer. Send them back
+    // to it (the paywall lives there, in context, next to the blurred image) rather than to a bare
+    // "plus de crédits" screen, which is also just wrong for someone who never bought anything.
+    if (low && waiting && !src) {
+      router.replace({ pathname: '/try/result', params: { generationId: waiting.generationId, lookId: waiting.lookId, name: waiting.name } });
+      return;
+    }
     // Pop the try modal off the root stack first so recharge sits over the TABS (closing it then returns
     // home, or to the result on a refine via the `g` param below). See useExitTry for why dismissAll/
     // navigate didn't work from inside the nested try stack.
@@ -127,7 +137,9 @@ export default function Generating() {
         // credit, records a PENDING look, and returns immediately. The pre-flight errors below are
         // the only synchronous ones; the AI itself finishes in the background. On a refine pass the
         // server reloads the original selfie + previous result, so no selfie is sent from here.
-        const body = refine ? { refineFrom: refine, brief, name } : { selfieBase64, mimeType, brief, name };
+        // supportsLocked: this JS can render a locked (teaser) first try — the server only ever
+        // delivers one when the client declares it, so old bundles keep clear delivery.
+        const body = refine ? { refineFrom: refine, brief, name, supportsLocked: true } : { selfieBase64, mimeType, brief, name, supportsLocked: true };
         const { data, error } = await supabase.functions.invoke('generate', { body });
         if (cancelled) return;
         if (error) {
@@ -192,6 +204,12 @@ export default function Generating() {
             // Done → the result screen loads the before/after from this generation id (signed there).
             completedRef.current = { id: genId, lookId, name };
             doneRef.current = true;
+            // A locked result may now be waiting: the profile card and the out-of-credits gates all
+            // read that from ['pendinglocked'], and the tabs stay mounted behind this modal, so
+            // without this their copy keeps saying "start your first try" after one just finished.
+            qc.invalidateQueries({ queryKey: ['pendinglocked'] });
+            qc.invalidateQueries({ queryKey: ['credits'] });
+            qc.invalidateQueries({ queryKey: ['looks'] });
             void logEvent('try_on_completed', { refine: refineRef.current ? 1 : 0 });
             return;
           }

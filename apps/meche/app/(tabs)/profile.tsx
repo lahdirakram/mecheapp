@@ -1,9 +1,10 @@
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useEffect, useMemo, useState } from 'react';
-import { useAuth, useBookings, useCredits, useCreditPacks, useProfile, useSession, useWardrobe } from '@meche/api-client';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth, useBookings, useCreditPacks, useCreditSummary, useLockedFirstTry, usePendingLocked, useProfile, useSession, useWardrobe } from '@meche/api-client';
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, useT, useToast } from '@meche/ui';
 import { getPushEnabled } from '../../lib/notifPref';
@@ -12,7 +13,7 @@ import { openLegal } from '../../lib/legal';
 import { cacheKeyFor } from '../../lib/img';
 import { useLocalImages } from '../../lib/localImages';
 
-type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; image_url?: string | null; generation_id?: string | null };
+type Look = { id: string; name: string; hair: HairShape; mood: PortraitMood; image_url?: string | null; generation_id?: string | null; generation?: { status?: string; locked?: boolean; thumb_path?: string | null } | null };
 
 // B2C · Profil & crédits (20) — identity, AI-credit balance (no subscription), recent tries,
 // settings. Ported from MScreenProfile. Recharge + sign-out + language kept functional.
@@ -34,7 +35,26 @@ export default function Profile() {
     if (session) void setPushPreference(v);
   };
   const { data: profile } = useProfile(session?.user.id);
-  const { data: credits } = useCredits(session?.user.id);
+  // Locked first try ON → the credit vocabulary only exists AFTER the first purchase (see the card
+  // below); until then the card tells the user where they are in the journey. Flag OFF → classic
+  // credit card with the full balance, switched by the same app_config row that drives the server.
+  const { on: lockedFirstTry, ready: flagReady } = useLockedFirstTry();
+  const { data: creditSummary } = useCreditSummary(session?.user.id);
+  const { data: waiting } = usePendingLocked(session?.user.id);
+  // Tabs stay mounted while the try flow runs in a modal above them, so this screen's queries are
+  // never remounted and would keep serving what they read BEFORE the try. Refresh on every focus:
+  // the card states (first try / try waiting / credits) are exactly the things that change while
+  // the user is away from this tab. Invalidating 'credits' also covers the free/paid summary,
+  // whose key is prefixed with it.
+  const qc = useQueryClient();
+  useFocusEffect(
+    useCallback(() => {
+      qc.invalidateQueries({ queryKey: ['pendinglocked'] });
+      qc.invalidateQueries({ queryKey: ['credits'] });
+    }, [qc]),
+  );
+  const credits = lockedFirstTry ? creditSummary?.paid : creditSummary?.total;
+  const preFirstPurchase = lockedFirstTry && (creditSummary?.paid ?? 0) === 0;
   const { data: looksData } = useWardrobe(session?.user.id);
   const { data: bookings } = useBookings();
   // Cheapest pack drives the "from" price so it tracks the real ladder (packs come ordered by credits asc).
@@ -49,7 +69,9 @@ export default function Profile() {
   const recent = ((looksData as Look[] | undefined) ?? []).filter((w) => w.generation_id).slice(0, 4);
   // Generated images are private paths → resolve to a durable local file (downloaded once, then served
   // from disk with zero egress); feed photos are external URLs (pass through).
-  const { data: local = {}, pending: imgPending } = useLocalImages('generated', useMemo(() => recent.map((w) => w.image_url), [recent]));
+  // 100px-wide strip → the 420px thumbnail, never the full result (see wardrobe for the rationale).
+  const gridPath = (l: Look) => l.generation?.thumb_path ?? l.image_url;
+  const { data: local = {}, pending: imgPending } = useLocalImages('generated', useMemo(() => recent.map(gridPath), [recent]));
   const srcOf = (u?: string | null) => (!u ? undefined : /^https?:\/\//.test(u) ? u : local[u]);
   // A storage image still downloading → loader, not the "no image" illustration.
   const imgLoading = (u?: string | null) => !!u && !/^https?:\/\//.test(u) && imgPending.has(u);
@@ -158,34 +180,77 @@ export default function Profile() {
           ) : null}
         </View>
 
-        {/* credits card */}
+        {/* The card carries the ONE thing that matters right now. Before the first purchase that is
+            the journey (your try is waiting / start your first try), never a credit count — a "0"
+            next to a working app reads as broken, and a "1" promised a clear result the welcome
+            credit doesn't buy. Credits appear once they exist as bought credits. */}
         <View style={{ padding: 18, borderRadius: 18, backgroundColor: MPAL.ink, overflow: 'hidden', marginBottom: 14 }}>
           <View style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: 90, backgroundColor: `${MPAL.sable}40` }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <MIcon name="coin" size={16} color={MPAL.sable} />
-            <MText variant="mono" size={10} color={MPAL.sable} style={{ letterSpacing: 1.8 }}>
-              {lang === 'fr' ? 'CRÉDITS IA' : 'AI CREDITS'}
-            </MText>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-            <MText variant="serif" size={56} color="#fff" style={{ lineHeight: 56 }}>
-              {credits ?? 0}
-            </MText>
-            <MText size={14} color="rgba(255,255,255,0.6)">
-              {t('credits_left')}
-            </MText>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 }}>
-            <Pressable onPress={() => router.push('/recharge')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, backgroundColor: MPAL.sable }}>
-              <MIcon name="zap" size={14} color={MPAL.sableInk} fill={MPAL.sableInk} stroke={0} />
-              <MText variant="bodySemibold" size={13} color={MPAL.sableInk}>
-                {t('recharge')}
+          {!flagReady ? (
+            // Which card this is depends on a server flag. Hold the space rather than guess: the
+            // wrong guess either hides a paying customer's credits or promises a new user one.
+            <View style={{ height: 116, alignItems: 'flex-start', justifyContent: 'center' }}>
+              <ActivityIndicator color={MPAL.sable} />
+            </View>
+          ) : preFirstPurchase ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <MIcon name="sparkle" size={16} color={MPAL.sable} />
+                <MText variant="mono" size={10} color={MPAL.sable} style={{ letterSpacing: 1.8 }}>
+                  {waiting ? t('profile_waiting_title') : t('profile_first_title')}
+                </MText>
+              </View>
+              <MText size={14} color="rgba(255,255,255,0.85)" style={{ lineHeight: 20 }}>
+                {waiting ? t('profile_waiting_sub') : t('profile_first_sub')}
               </MText>
-            </Pressable>
-            <MText size={11} color="rgba(255,255,255,0.55)" style={{ flex: 1, lineHeight: 15 }}>
-              {fromPrice ? (lang === 'fr' ? `À partir de ${fromPrice} · sans abonnement` : `From ${fromPrice} · no subscription`) : lang === 'fr' ? 'Sans abonnement' : 'No subscription'}
-            </MText>
-          </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                <Pressable
+                  onPress={() =>
+                    waiting
+                      ? router.push({ pathname: '/try/result', params: { generationId: waiting.generationId, lookId: waiting.lookId, name: waiting.name } })
+                      : router.push('/try')
+                  }
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, backgroundColor: MPAL.sable }}
+                >
+                  <MIcon name="sparkle" size={14} color={MPAL.sableInk} />
+                  <MText variant="bodySemibold" size={13} color={MPAL.sableInk}>
+                    {waiting ? t('locked_cta_buy') : t('profile_first_cta')}
+                  </MText>
+                </Pressable>
+                <MText size={11} color="rgba(255,255,255,0.55)" style={{ flex: 1, lineHeight: 15 }}>
+                  {fromPrice ? (lang === 'fr' ? `À partir de ${fromPrice} · sans abonnement` : `From ${fromPrice} · no subscription`) : lang === 'fr' ? 'Sans abonnement' : 'No subscription'}
+                </MText>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <MIcon name="coin" size={16} color={MPAL.sable} />
+                <MText variant="mono" size={10} color={MPAL.sable} style={{ letterSpacing: 1.8 }}>
+                  {lang === 'fr' ? 'CRÉDITS IA' : 'AI CREDITS'}
+                </MText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                <MText variant="serif" size={56} color="#fff" style={{ lineHeight: 56 }}>
+                  {credits ?? 0}
+                </MText>
+                <MText size={14} color="rgba(255,255,255,0.6)">
+                  {t('credits_left')}
+                </MText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                <Pressable onPress={() => router.push('/recharge')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, backgroundColor: MPAL.sable }}>
+                  <MIcon name="zap" size={14} color={MPAL.sableInk} fill={MPAL.sableInk} stroke={0} />
+                  <MText variant="bodySemibold" size={13} color={MPAL.sableInk}>
+                    {t('recharge')}
+                  </MText>
+                </Pressable>
+                <MText size={11} color="rgba(255,255,255,0.55)" style={{ flex: 1, lineHeight: 15 }}>
+                  {fromPrice ? (lang === 'fr' ? `À partir de ${fromPrice} · sans abonnement` : `From ${fromPrice} · no subscription`) : lang === 'fr' ? 'Sans abonnement' : 'No subscription'}
+                </MText>
+              </View>
+            </>
+          )}
         </View>
 
         {/* recent tries — only when the user has looks */}
@@ -213,16 +278,25 @@ export default function Profile() {
               style={{ width: 100, borderRadius: 14, overflow: 'hidden', backgroundColor: MPAL.paper, borderWidth: 1, borderColor: MPAL.border }}
             >
               <View style={{ aspectRatio: 3 / 4 }}>
-                {srcOf(w.image_url) ? (
+                {srcOf(gridPath(w)) ? (
                   // Stable cacheKey (token stripped); no recyclingKey (horizontal ScrollView, no recycling).
-                  <Image source={{ uri: srcOf(w.image_url), cacheKey: cacheKeyFor(srcOf(w.image_url)) }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" />
-                ) : imgLoading(w.image_url) ? (
+                  // A locked try's stored image is already the blurred preview (blurred server-side),
+                  // so no blurRadius here; the badge is what marks it as locked.
+                  <Image source={{ uri: srcOf(gridPath(w)), cacheKey: cacheKeyFor(srcOf(gridPath(w))) }} style={{ flex: 1 }} contentFit="cover" transition={0} cachePolicy="memory-disk" />
+                ) : imgLoading(gridPath(w)) ? (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <ActivityIndicator color={MPAL.sable} />
                   </View>
                 ) : (
                   <MPortrait hair={w.hair} mood={w.mood} tint={i % 3 === 0 ? MPAL.ink : undefined} />
                 )}
+                {w.generation?.locked ? (
+                  <View style={{ position: 'absolute', top: 6, left: 6, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.92)' }}>
+                    <MText variant="mono" size={7} color={MPAL.ink} style={{ letterSpacing: 0.8 }}>
+                      {t('locked_badge')}
+                    </MText>
+                  </View>
+                ) : null}
               </View>
               <MText variant="bodySemibold" size={10} numberOfLines={1} style={{ padding: 8 }}>
                 {w.name}

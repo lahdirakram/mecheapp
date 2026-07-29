@@ -10,6 +10,7 @@ import { decodeBase64, encodeBase64 } from 'https://deno.land/std@0.224.0/encodi
 import { cors } from '../_shared/cors.ts';
 import { buildPrompt, buildRefinePrompt, generateWithGemini, mockResult, normalizeRefinement, type Brief } from '../_shared/tryon.ts';
 import { parseImageInput } from '../_shared/validate.ts';
+import { encodeJpeg, makeTeaser, FULL_QUALITY, SELFIE_EDGE, SELFIE_QUALITY, THUMB_EDGE, THUMB_QUALITY } from '../_shared/images.ts';
 
 // Supabase Edge Runtime: keeps the worker alive to finish `promise` after the response is sent.
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
     const user = userData.user;
     if (!user) return json({ error: 'unauthorized' }, 401);
 
-    const { selfieBase64, mimeType = 'image/jpeg', brief = {}, name, refineFrom, clientName } = (await req.json()) as {
+    const { selfieBase64, mimeType = 'image/jpeg', brief = {}, name, refineFrom, clientName, supportsLocked } = (await req.json()) as {
       selfieBase64?: string;
       mimeType?: string;
       brief?: Brief;
@@ -82,6 +83,9 @@ Deno.serve(async (req) => {
       refineFrom?: string;
       /** Pro app: optional client first name, stored on the look for the per-client history. */
       clientName?: string;
+      /** Client can render a locked (teaser) result. Old JS omits it and keeps clear delivery until
+       *  LOCKED_FIRST_TRY=force (a forged request omitting it is only worth one clear first try). */
+      supportsLocked?: boolean;
     };
 
     // Untrusted free-text: the UI caps these (idea prompt 240, refine 120), but a direct API call can't
@@ -149,11 +153,13 @@ Deno.serve(async (req) => {
       // Refine pass — the source images live in storage; reload them instead of trusting the client.
       const { data: prev } = await admin
         .from('generations')
-        .select('selfie_path, result_path, brief, user_id, status')
+        .select('selfie_path, result_path, brief, user_id, status, locked')
         .eq('id', refineFrom)
         .maybeSingle();
       if (!prev || prev.user_id !== user.id) return json({ error: 'not_found' }, 404);
       if (prev.status !== 'done' || !prev.selfie_path || !prev.result_path) return json({ error: 'not_refinable' }, 400);
+      // A locked result's result_path is the low-res teaser; refining it would edit 160px garbage.
+      if (prev.locked) return json({ error: 'not_refinable' }, 400);
       // Owning the ROW is not owning the PATH. The two downloads below use the ADMIN client, which
       // bypasses storage RLS, so a path pointing outside the caller's own folder would hand back
       // somebody else's photo. 0021 removed the client's write access to `generations`, but this
@@ -243,6 +249,21 @@ Deno.serve(async (req) => {
     // every other free look.
     const isPaidLook = (isPro && subActive) || paid > 0;
 
+    // Locked first try: a look drawn from the FREE pool while the user holds no purchased credits is
+    // delivered as a low-res teaser; the clear image waits in the vault bucket until `unlock` charges
+    // 1 credit for it (see 0026). Anyone holding a purchased credit always gets clear delivery.
+    // Modes: unset/'0' = off (kill switch), '1' = respect the client capability flag (OTA
+    // transition), 'force' = lock every eligible generation (closes the forged-request hole).
+    // The switch normally lives in app_config (0027) so the CLIENT reads the same value and swaps
+    // its presentation in lockstep; the env var, when set, overrides it (emergency lever).
+    let lockedMode = Deno.env.get('LOCKED_FIRST_TRY') ?? '';
+    if (!lockedMode && !isPro) {
+      const { data: cfg } = await admin.from('app_config').select('value').eq('key', 'locked_first_try').maybeSingle();
+      lockedMode = (cfg?.value as string | undefined) ?? '';
+    }
+    const lockResult =
+      !isPro && paid <= 0 && lockedMode !== '' && lockedMode !== '0' && (lockedMode === 'force' || supportsLocked === true);
+
     // Cost safety guards — only for UNCOMPENSATED looks (free-trial + ad-reward credits), applied
     // BEFORE we reserve the credit / kick off the paid Gemini call so a blocked request costs
     // nothing. Paid looks skip ALL of this: every call is covered by money the user spent.
@@ -290,12 +311,22 @@ Deno.serve(async (req) => {
 
     const selfiePath = `${user.id}/${genId}-in.jpg`;
     // Store the selfie now so the before/after is available even while the result is still pending.
-    const { error: upErr } = await admin.storage.from('selfies').upload(selfiePath, decodeBase64(selfie), { contentType: mt, upsert: true });
+    // Phone cameras hand us ~500 KB even at reduced quality, and this copy exists only to be shown
+    // as the "before" on a phone screen, so it is stored at display size (~120 KB). NOTE: this is
+    // the STORED copy only — `modelB64` keeps the full-resolution bytes, because degrading what
+    // Gemini sees would degrade the product itself. Fail-open: keep the original on any error.
+    let selfieBytes = decodeBase64(selfie);
+    try {
+      selfieBytes = await encodeJpeg(selfieBytes, { maxEdge: SELFIE_EDGE, quality: SELFIE_QUALITY });
+    } catch (e) {
+      console.warn('selfie downscale failed, storing as captured:', String(e instanceof Error ? e.message : e));
+    }
+    const { error: upErr } = await admin.storage.from('selfies').upload(selfiePath, selfieBytes, { contentType: 'image/jpeg', upsert: true });
     if (upErr) throw upErr;
 
     // Pending generation + its wardrobe look. image_url / result_path stay null until the AI
     // finishes; the wardrobe shows a "generating" placeholder meanwhile (driven by status).
-    const { error: genErr } = await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief: genBrief, status: 'pending' });
+    const { error: genErr } = await admin.from('generations').insert({ id: genId, user_id: user.id, selfie_path: selfiePath, brief: genBrief, status: 'pending', locked: lockResult });
     if (genErr) throw genErr;
     const lookName = (safeName && safeName.trim()) || (genBrief.lookName || genBrief.prompt || '').slice(0, 40) || 'Ma mèche';
     const safeClient = typeof clientName === 'string' && clientName.trim() ? clientName.trim().slice(0, 40) : null;
@@ -329,13 +360,56 @@ Deno.serve(async (req) => {
           } else {
             result = mockResult(modelB64, modelMime);
           }
-          const outExt = result.mimeType.includes('png') ? 'png' : 'jpg';
-          const resultPath = `${user.id}/${genId}-out.${outExt}`;
-          const { error: outErr } = await admin.storage.from('generated').upload(resultPath, decodeBase64(result.base64), { contentType: result.mimeType, upsert: true });
-          if (outErr) throw outErr; // failed upload → fall to catch (mark failed + refund), no orphan "done"
+          // Everything is stored as JPEG, never as the PNG the model returns: same picture, about a
+          // tenth of the bytes, and egress is the bill that scales with users. The thumbnail exists
+          // so grids never pull the full image into a 180px box.
+          const raw = decodeBase64(result.base64);
+          const full = await encodeJpeg(raw, { quality: FULL_QUALITY });
+          const thumb = await encodeJpeg(raw, { maxEdge: THUMB_EDGE, quality: THUMB_QUALITY });
           const match = Math.round(88 + Math.random() * 9);
-          await admin.from('generations').update({ status: 'done', result_path: resultPath, match }).eq('id', genId);
-          await admin.from('looks').update({ image_url: resultPath }).eq('id', look.id);
+          let delivered = false;
+          if (lockResult) {
+            // Locked delivery: the clear image goes to the client-inaccessible `vault` bucket and only
+            // a ~160px teaser reaches `generated`. FAIL-OPEN: if any teaser step breaks, fall through
+            // to the clear path below (with locked flipped off) — a revenue experiment must never break
+            // the product, and the Gemini cost is already spent. A vault object left behind by a partial
+            // failure is inert (unreadable by the client, erased by delete-account).
+            try {
+              const clearPath = `${user.id}/${genId}-out.jpg`;
+              const clearThumbPath = `${user.id}/${genId}-thumb.jpg`;
+              const teaserPath = `${user.id}/${genId}-teaser.jpg`;
+              // Both clear renditions wait in the vault. Storing the thumbnail there too (rather
+              // than making it at unlock time) is what lets `unlock` reveal with two server-side
+              // moves and never pull a byte through the function.
+              const { error: vaultErr } = await admin.storage.from('vault').upload(clearPath, full, { contentType: 'image/jpeg', upsert: true });
+              if (vaultErr) throw vaultErr;
+              const { error: vaultThumbErr } = await admin.storage.from('vault').upload(clearThumbPath, thumb, { contentType: 'image/jpeg', upsert: true });
+              if (vaultThumbErr) throw vaultThumbErr;
+              const teaser = await makeTeaser(raw);
+              const { error: teaserErr } = await admin.storage.from('generated').upload(teaserPath, teaser, { contentType: 'image/jpeg', upsert: true });
+              if (teaserErr) throw teaserErr;
+              // While locked, the teaser is ALSO the grid thumbnail: it is already tiny, and a sharp
+              // thumbnail in a client-readable bucket would hand over what the blur is hiding.
+              await admin.from('generations').update({ status: 'done', result_path: teaserPath, thumb_path: teaserPath, vault_path: clearPath, match }).eq('id', genId);
+              await admin.from('looks').update({ image_url: teaserPath }).eq('id', look.id);
+              delivered = true;
+            } catch (e) {
+              console.warn('teaser pipeline failed, delivering clear:', String(e instanceof Error ? e.message : e));
+            }
+          }
+          if (!delivered) {
+            const resultPath = `${user.id}/${genId}-out.jpg`;
+            const thumbPath = `${user.id}/${genId}-thumb.jpg`;
+            const { error: outErr } = await admin.storage.from('generated').upload(resultPath, full, { contentType: 'image/jpeg', upsert: true });
+            if (outErr) throw outErr; // failed upload → fall to catch (mark failed + refund), no orphan "done"
+            // The thumbnail is an optimisation, not the product: if it fails, serve the full image in
+            // grids (what happened before) rather than failing a generation the user already paid for.
+            const { error: thumbErr } = await admin.storage.from('generated').upload(thumbPath, thumb, { contentType: 'image/jpeg', upsert: true });
+            if (thumbErr) console.warn('thumbnail upload failed, grids fall back to the full image:', thumbErr.message);
+            // locked:false covers the teaser fail-open — a locked row must never carry a clear result_path.
+            await admin.from('generations').update({ status: 'done', result_path: resultPath, thumb_path: thumbErr ? null : thumbPath, match, locked: false }).eq('id', genId);
+            await admin.from('looks').update({ image_url: resultPath }).eq('id', look.id);
+          }
           await notifyUser(admin, user.id, 'done', lookName, genId, look.id);
         } catch (e) {
           const msg = String(e instanceof Error ? e.message : e);

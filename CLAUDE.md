@@ -54,6 +54,40 @@ wrong belief survives across sessions.
 - **`app.json` `version` is the OTA compatibility key** (`runtimeVersion.policy = "appVersion"`). If it
   drifts from the installed binary, updates silently never arrive. Both lanes are on `1.0.1`; keep them
   aligned, or switch to `policy: "fingerprint"` at a store release (both lanes at once).
+- **Staging SQL without the service key**: `npx supabase@latest db query --linked "<sql>"` runs
+  arbitrary SQL on the linked project via the Management API (CLI keychain auth). This is the test
+  lever for staging (confirm a test user's email, grant test credits) — no secrets on disk needed.
+  Verified: full API-level e2e is possible with anon key + a user JWT + this.
+- **Locked first try (0026)**: the welcome-credit generation is delivered as a 160px preview blurred
+  SERVER-side (never a sharp image masked by a client `blurRadius`, which anyone reading the image
+  cache can strip), clear image in the client-inaccessible `vault` bucket until `unlock` charges 1
+  credit. Invariants (debit
+  reason MUST stay `'generation'`, debit-before-reveal, fail-open) in `docs/security-model.md` —
+  read it before touching `generate`, `unlock` or migration 0026. The switch is the
+  `app_config.locked_first_try` row (0027): it drives `generate` AND the whole client experience,
+  so one SQL update flips everything (`0` off, `1` respect client flag, `force` always). The
+  `LOCKED_FIRST_TRY` env var, when set, overrides the row (emergency only; keep it unset).
+- **UX rule behind the locked first try: the credit vocabulary does not exist before the first
+  purchase.** No counter, no "1 crédit", no "recharge" for someone who never bought. Pre-purchase
+  the app says what happens ("ton essai apparaît d'abord en aperçu"), the paywall renders IN PLACE
+  under the blurred result (`components/UnlockSheet.tsx`, packs sold as "ton résultat net + N
+  essais" with the reveal's credit already deducted), and every out-of-credits gate routes to the
+  waiting result (`usePendingLocked`) instead of the recharge screen. Post-purchase, the classic
+  credit UI returns unchanged. Breaking this split is what made the first attempt feel bolted on.
+
+- **Egress is the bill that scales, so nothing is stored as PNG.** Gemini returns PNG; `generate`
+  re-encodes everything through `functions/_shared/images.ts` before writing (measured on real
+  images: 11x lighter at identical resolution, invisible on a photo). Three renditions per result:
+  full JPEG (~160 KB), a 420px thumbnail (~23 KB) that GRIDS must use instead of the full image
+  (`generations.thumb_path`, 0028), and the blurred preview for locked tries (~2 KB). The stored
+  selfie is downscaled to 1080px — but never `modelB64`, degrading the model input would degrade
+  the product. Feed images are the most-read asset (every new user scrolls them, while a generated
+  look is only ever read by its author), so `gen-feed.mjs` encodes to JPEG itself before upload —
+  nothing extra to run after a batch. `scripts/reencode-feed.ts` remains as the catch-up tool for
+  anything uploaded earlier and to delete the leftover PNGs; `scripts/purge-orphan-media.ts` erases
+  media whose account is gone. Both are Deno, dry-run by default, and read the service key from
+  `.env.gen-feed` (staging) or `backoffice/.env.local` (prod) via `set -a; source …; set +a`.
+  Done on both lanes: feed 122 MB → 11 MB (staging), 82 MB → 7.5 MB (prod).
 
 ## Environments (full detail: ENVIRONMENTS.md)
 Three lanes; **the build profile decides the backend**:
