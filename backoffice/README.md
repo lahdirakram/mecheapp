@@ -84,11 +84,46 @@ et le TLS est automatiquement désactivé pour ce Postgres qui n'en fait pas.
 deux apps Expo (qui épinglent `react@19.2.3` / `react-native@0.85.3`) et risquerait de casser Metro.
 Le backoffice a donc son propre `node_modules` et son propre lockfile npm, comme `legal/`.
 
-## Lecture seule
+## Curation du feed (`/feed`)
+
+Le seul écran qui écrit. `scripts/gen-feed.mjs` insère ses portraits en `status = 'draft'` et
+`feed_for_user` ne renvoie que les `published` (0014_feed_catalog.sql) : **rien de généré
+n'atteint l'app tant qu'on ne l'a pas validé ici**. Trois onglets, À valider / Publiés / Refusés,
+plus un filtre par style pour relire une famille de coupes d'un coup.
+
+Chaque carte montre ce qui sert à trancher à l'œil : l'image (cliquable, elle s'ouvre en grand),
+le style du catalogue, et qui a été tiré au sort par le générateur (genre, âge, origine, texture).
+Le cadrage et la lumière sont des phrases entières dans `gen_meta`, ils restent repliés dans
+« prompt » pour ne pas noyer la carte.
+
+**Refuser archive, ça ne supprime pas.** `gen-feed.mjs` relit tous les `feed_items` avec un
+`catalog_id`, tous statuts confondus, pour ne pas retirer deux fois le même combo : effacer un
+refus le ferait regénérer, et une génération est payante. Un refus reste donc en base comme
+mémoire de ce qui a déjà été tenté. Tout est réversible dans les deux sens.
+
+Le bouton de lot ne porte **que les ids affichés à l'écran**, jamais un `where status='draft'`
+global : ce qu'on publie est ce qu'on vient de regarder. Changer d'onglet, de style ou de page
+change donc ce que le bouton couvre, et il annonce son décompte.
+
+Aucun JS côté client : un bouton = un submit de formulaire, comme le reste du backoffice.
+
+## Lecture seule, sauf ça
 
 `src/lib/db.ts` exécute chaque requête dans une transaction `begin read only`. C'est le garde-fou
 central : il tient quel que soit le mode de pooling, contrairement à un réglage de session qui
-serait perdu en pooling transactionnel. Aucune écriture n'est possible, même par erreur.
+serait perdu en pooling transactionnel. **Aucune requête SQL du backoffice ne peut écrire.**
+
+L'unique exception est la curation ci-dessus, isolée dans `src/lib/curation.ts`, et elle passe
+volontairement **par PostgREST et non par le pool Postgres** : le `begin read only` reste ainsi
+littéralement vrai, au lieu de devenir « read only sauf si ». La surface d'écriture est réduite
+trois fois — un client `service_role` dont le type `Database` ne déclare **que** `feed_items`
+(donc `from('autre_table')` ne compile pas, `src/lib/admin.ts`), une seule colonne écrite
+(`status`), et des ids revalidés comme UUID avant le `in()`. Si une deuxième écriture devient un
+jour nécessaire, elle passe par là et pas ailleurs.
+
+Toujours vrai en revanche : il n'y a **aucune authentification**. Le bandeau du haut dit sur quel
+projet on est branché, et il est rouge en prod, parce qu'un clic « Publier » sur la prod est
+visible par tous les utilisateurs dans la seconde.
 
 Les photos passent par `/api/img` (`src/app/api/img/route.ts`), qui streame les octets depuis les
 buckets privés `selfies` / `generated` avec la clé `service_role`. Aucune URL signée ne sort du

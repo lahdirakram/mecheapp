@@ -29,9 +29,10 @@ wrong belief survives across sessions.
 - `packages/core` — theme/palette, fonts, i18n, shared types.
 - `supabase/` — `migrations/` (schema, the source of truth — never hand-edit schema in a dashboard),
   `functions/` (`generate`, `suggest`, `iap-webhook`, `delete-account`), `seed.sql`.
-- `backoffice/` — **local admin dashboard**, read-only. `./backoffice/start.sh`. Deliberately OUTSIDE
-  the pnpm workspace (`.npmrc` forces `node-linker=hoisted`; a web app under `apps/` would share the
-  flat tree with the Expo apps). Own `node_modules`, own npm lockfile. Detail: `backoffice/README.md`.
+- `backoffice/` — **local admin dashboard**, read-only *except* the feed curation screen (`/feed`,
+  publish/refuse the AI drafts). `./backoffice/start.sh`. Deliberately OUTSIDE the pnpm workspace
+  (`.npmrc` forces `node-linker=hoisted`; a web app under `apps/` would share the flat tree with the
+  Expo apps). Own `node_modules`, own npm lockfile. Detail: `backoffice/README.md`.
 - `legal/` — marketing + legal pages (zero-dep Node server, Railway). Also outside the workspace.
 
 ## Working rules
@@ -48,6 +49,13 @@ wrong belief survives across sessions.
 - **Client write access to the DB is deliberately minimal.** Read `docs/security-model.md` before
   touching any policy, grant, or `functions/generate`. The rule: never let the client write a value
   the server later reads back with `service_role`.
+- **The backoffice has exactly ONE write path**: `backoffice/src/lib/curation.ts`, which sets
+  `feed_items.status` through PostgREST (never the Postgres pool, so `lib/db.ts`'s `begin read only`
+  stays literally true). Its `service_role` client is typed with a `Database` that declares only
+  `feed_items`, so a write to any other table doesn't compile. A second write goes through that file
+  or not at all. The curation screen is `/feed`: `gen-feed.mjs` drafts are invisible to the app until
+  published there. **Refusing archives, it doesn't delete** — gen-feed de-duplicates combos across
+  ALL statuses, so erasing a refusal makes it regenerate, and that's a paid Gemini call.
 - **Deploy order when a migration and an OTA go together**: OTA first, then migration. New JS calling
   a missing RPC is a window YOU close in minutes; a migration that breaks old clients lasts until
   every user updates. Then push the migration immediately — don't leave the gap open.

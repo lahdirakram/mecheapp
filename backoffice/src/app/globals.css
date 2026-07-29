@@ -372,6 +372,142 @@ input[type='search']:focus {
   pointer-events: none;
 }
 
+/* Compteur collé au libellé d'un bouton (visuels en attente de validation). */
+.pill {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--sable);
+  color: #fff;
+  font: 600 10.5px/1.4 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn--ok {
+  border-color: rgba(31, 138, 91, 0.35);
+  background: rgba(31, 138, 91, 0.1);
+  color: var(--salon);
+  font-weight: 600;
+}
+.btn--ok:hover {
+  background: rgba(31, 138, 91, 0.18);
+}
+.btn--no {
+  border-color: rgba(200, 65, 43, 0.3);
+  color: var(--warn);
+}
+.btn--no:hover {
+  background: rgba(200, 65, 43, 0.1);
+}
+
+/* ---------- curation du feed ---------- */
+
+.seg--wrap {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.flash {
+  margin: 0;
+  align-self: center;
+  font: 500 12px/1 var(--sans);
+  color: var(--salon);
+  background: rgba(31, 138, 91, 0.1);
+  border: 1px solid rgba(31, 138, 91, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 8px 11px;
+}
+
+.bulk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: 14px;
+}
+
+.fcard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+}
+.fcard__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: var(--subtle);
+}
+.fcard__none {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  aspect-ratio: 3 / 4;
+  color: var(--mute);
+  font-size: 12px;
+  background: var(--subtle);
+}
+.fcard__body {
+  padding: 10px 11px;
+  flex: 1;
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+}
+.fcard__title {
+  font: 400 15px/1.25 var(--serif);
+}
+.fcard__meta {
+  color: var(--mute);
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+.fcard__axes {
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--ink2);
+}
+.fcard__prompt {
+  margin-top: 7px;
+  font-size: 11px;
+}
+.fcard__prompt summary {
+  cursor: pointer;
+  color: var(--mute);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.fcard__prompt p {
+  margin: 6px 0 0;
+  color: var(--ink2);
+  line-height: 1.45;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.fcard__acts {
+  display: flex;
+  gap: 7px;
+  padding: 9px 11px;
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+}
+.fcard__acts .btn {
+  flex: 1;
+  text-align: center;
+}
+
 /* ---------- badges ---------- */
 
 .badge {

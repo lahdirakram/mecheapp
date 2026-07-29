@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Fatal } from '@/components/Fatal';
 import { FilterBar } from '@/components/FilterBar';
 import { MetricCard } from '@/components/MetricCard';
@@ -6,6 +7,7 @@ import { SearchBox } from '@/components/SearchBox';
 import { UsersTable } from '@/components/UsersTable';
 import { fmtEurCents, fmtInt, fmtPct } from '@/lib/format';
 import { flatten, readInt } from '@/lib/qs';
+import { feedCounts, type StatusCounts } from '@/queries/feed';
 import { parseScope, PERIOD_LABEL } from '@/queries/filters';
 import { getMetrics, type Metrics } from '@/queries/metrics';
 import { isSortKey, listUsers, type SortKey, type UserRow } from '@/queries/users';
@@ -30,14 +32,18 @@ export default async function Dashboard({
   // ne serait vérifié.
   let m: Metrics;
   let rows: UserRow[];
+  let counts: StatusCounts;
   try {
-    [m, rows] = await Promise.all([
+    [m, rows, counts] = await Promise.all([
       getMetrics(scope),
       listUsers(scope, { q, sort, dir, page, size }),
+      feedCounts(),
     ]);
   } catch (error) {
     return <Fatal error={error} />;
   }
+  // Le nombre de visuels en attente doit se voir depuis l'accueil, sinon la file grossit sans bruit.
+  const drafts = counts.draft;
 
   const total = rows[0]?.total_count ?? 0;
   const periode = PERIOD_LABEL[scope.period];
@@ -66,6 +72,10 @@ export default async function Dashboard({
             )}
           </p>
         </div>
+        <Link className="btn" href="/feed">
+          Feed · curation
+          {drafts > 0 && <span className="pill">{fmtInt(drafts)}</span>}
+        </Link>
       </div>
 
       <FilterBar scope={scope} params={params} />
