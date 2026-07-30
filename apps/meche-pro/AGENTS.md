@@ -17,6 +17,12 @@ Demandes/chat (V2) and agenda (V3) are deliberately NOT in this app yet.
 - **Auth**: email + Apple + Google (`role: 'pro'` at signup — the DB trigger skips the B2C free
   credit). The per-bundle-id iOS OAuth clients now exist, one per profile in `eas.json`; the
   Google plugin is still added conditionally by `app.config.js` on `GOOGLE_IOS_REVERSED_CLIENT_ID`.
+- **OTA**: `./scripts/ota-pro-staging.sh "msg"` then `./scripts/ota-pro-prod.sh "msg"` (the plain
+  `ota-staging.sh` / `ota-prod.sh` ship the B2C app, NOT this one). `runtimeVersion.policy` is
+  `appVersion` and `app.json` `version` is `1.0.0`, so a prod OTA lands on TestFlight build
+  **1.0.0 (4)** — the binary attached to the pending App Store Version 1.0. **The Pro production
+  channel is therefore what an Apple reviewer runs**, even though the app is not on sale: a screen
+  that crashes there is a rejection, so validate on the staging build first.
 - **Store launch state**: `docs/meche-pro-launch.md` (what is really done in App Store Connect,
   RevenueCat and Play, and what each remaining step is blocked by). Copy for the App Store listing
   is written and waiting in `store/listing.md`.

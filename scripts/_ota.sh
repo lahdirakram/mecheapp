@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
 # Internal helper — push a JS-only OTA update for a given eas.json build PROFILE to its OTA BRANCH.
-# Usage: _ota.sh <profile> <branch> [message]
+# Usage: _ota.sh <app> <profile> <branch> [message]      (app = a directory under apps/)
 #
 # Why this exists: `eas update` does NOT read eas.json's `env`, so the EXPO_PUBLIC_* keys must be
 # exported by hand. Doing it from a script (sourced straight out of eas.json) means the bundle's
 # backend ALWAYS matches the channel — no manual key juggling, no risk of shipping prod keys to the
 # staging channel (or vice-versa).
+#
+# The app is a parameter because meche and meche-pro are two SEPARATE EAS projects with their own
+# eas.json and their own channels. This script used to hardcode apps/meche, so the Pro app had no
+# scripted lane and every Pro OTA was a hand-typed `eas update` with hand-exported keys — the exact
+# failure mode the paragraph above exists to prevent.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT/apps/meche"
 
-PROFILE="$1"
-BRANCH="$2"
-MSG="${3:-$BRANCH OTA}"
+APP="$1"
+PROFILE="$2"
+BRANCH="$3"
+MSG="${4:-$BRANCH OTA}"
+
+[ -f "$ROOT/apps/$APP/eas.json" ] || { echo "no such app: apps/$APP (missing eas.json)" >&2; exit 1; }
+cd "$ROOT/apps/$APP"
 
 # Node 22 required (Node 18 crashes Metro/EAS — see memory build-needs-node-22).
 export NVM_DIR="$HOME/.nvm"
@@ -35,5 +43,5 @@ eval "$(PROFILE="$PROFILE" node -e '
   }
 ')"
 
-echo "→ OTA: profile=$PROFILE  branch=$BRANCH  backend=$EXPO_PUBLIC_SUPABASE_URL"
+echo "→ OTA: app=$APP  profile=$PROFILE  branch=$BRANCH  backend=$EXPO_PUBLIC_SUPABASE_URL"
 npx eas-cli@20.3.0 update --branch "$BRANCH" --message "$MSG" --environment production --non-interactive

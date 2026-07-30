@@ -4,4 +4,4 @@
 # Requires the production env in eas.json to be filled (no REPLACE_ME placeholders).
 # Usage: ./scripts/ota-prod.sh "what changed"
 set -euo pipefail
-exec "$(dirname "$0")/_ota.sh" production production "${1:-prod OTA}"
+exec "$(dirname "$0")/_ota.sh" meche production production "${1:-prod OTA}"

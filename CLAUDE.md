@@ -40,6 +40,12 @@ wrong belief survives across sessions.
   Node 18 crashes Metro.
 - **The user ships JS changes by OTA, not local Metro.** Use `./scripts/ota-staging.sh "msg"` then
   `./scripts/ota-prod.sh "msg"`. Don't start `expo start` unless asked.
+- **One OTA lane per app, and they are NOT interchangeable.** `meche` and `meche-pro` are two
+  separate EAS projects; `_ota.sh` takes the app as its first argument (`ota-staging.sh` /
+  `ota-prod.sh` = B2C, `ota-pro-staging.sh` / `ota-pro-prod.sh` = Pro). Until 2026-07-30 `_ota.sh`
+  hardcoded `apps/meche`, so "run the OTA script" on a Pro change silently shipped the B2C app and
+  none of the Pro work. **The check** before believing an OTA carried your change: the script's
+  `→ OTA: app=…` line, and `Runtime version` in the output (B2C is on 1.0.1, Pro on 1.0.0).
 - **Never `git commit`/`push` until the user explicitly says so.** Branch off `main` if needed.
 - **No em dash in user-facing copy** (FR/EN strings). Use a period or comma.
 - **Cap paid AI calls** — retries/fan-out on the Gemini image model must stay tightly bounded (budget).
@@ -149,9 +155,12 @@ a Play-distributed build (internal track), not a sideloaded APK.
 ```bash
 # typecheck
 cd apps/meche && npx tsc --noEmit
-# OTA (JS-only changes)
+# OTA (JS-only changes) — B2C (apps/meche)
 ./scripts/ota-staging.sh "msg"      # → staging
 ./scripts/ota-prod.sh "msg"         # → prod
+# OTA — Pro (apps/meche-pro), separate EAS project, separate channels
+./scripts/ota-pro-staging.sh "msg"  # → staging
+./scripts/ota-pro-prod.sh "msg"     # → prod (= the TestFlight build under App Store review)
 # native build / store
 cd apps/meche && eas build --profile preview --platform all       # on-device staging
 cd apps/meche && eas build --profile production --platform all     # stores
