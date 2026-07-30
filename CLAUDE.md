@@ -95,8 +95,18 @@ wrong belief survives across sessions.
   remplacement (ex. 0030) rend la fenêtre inoffensive — les deux signatures coexistent, l'ancienne
   fonction déployée continue de tourner pendant le déploiement.
 - **`app.json` `version` is the OTA compatibility key** (`runtimeVersion.policy = "appVersion"`). If it
-  drifts from the installed binary, updates silently never arrive. Both lanes are on `1.0.1`; keep them
-  aligned, or switch to `policy: "fingerprint"` at a store release (both lanes at once).
+  drifts from the installed binary, updates silently never arrive. B2C `1.0.2`, Pro `1.0.1` (les deux
+  bumpés en même temps que l'ajout d'`expo-image-manipulator`, voir ci-dessous) ; ou passer à
+  `policy: "fingerprint"` à une sortie store (les deux lanes d'un coup).
+- **Ajouter un module NATIF oblige à bumper `version`, sinon le prochain OTA fait crasher tout le
+  parc.** Avec `policy: "appVersion"`, un OTA garde la même runtimeVersion et atterrit donc sur les
+  binaires DÉJÀ installés, qui n'ont pas le code natif. Un `import` de ce module échoue au
+  chargement du module, AVANT tout `try/catch` : aucun repli applicatif ne peut rattraper ça, l'écran
+  crashe. Le bump est la seule protection, et il agit comme une barrière : les anciens binaires ne
+  reçoivent plus ce JS et attendent la mise à jour store. **Le check** avant d'ajouter une dépendance :
+  a-t-elle un dossier `ios/`/`android/` ou un `expo-module.config.json` ? Si oui, c'est natif, donc
+  build store obligatoire et bump de `version`. Vaut particulièrement pour Pro, dont le canal
+  `production` est ce que fait tourner un reviewer Apple : un crash là = un refus.
 - **La longueur du code OTP email vit dans le dashboard, pas dans le repo — et elle est figée à 6
   côté app.** Les 4 écrans de saisie (`confirm` + `reset`, meche et meche-pro) coupent à 6 chiffres
   et auto-vérifient dès le 6e ; `supabase/config.toml` (`otp_length = 6`) ne vaut QUE pour le

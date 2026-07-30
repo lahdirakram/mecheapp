@@ -9,6 +9,7 @@ import Svg, { Defs, Ellipse, Mask, Rect } from 'react-native-svg';
 import { MIcon, MPAL, MText, MPortrait, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 import { useExitTry } from '../../lib/useExitTry';
+import { shrinkSelfie } from '../../lib/selfie';
 
 // B2C · Selfie (02) — live camera viewfinder with a dashed caramel oval guide. Uses the real
 // device camera (expo-camera); falls back to the MPortrait placeholder when permission is
@@ -85,13 +86,27 @@ export default function Selfie() {
     return m ? { base64: m[2], mime: m[1] } : { base64: raw, mime: fallbackMime };
   };
 
+  // Ramène la photo à 1024px de côté long (lib/selfie.ts). FAIL-OPEN : si la réduction échoue, on
+  // part avec l'original plutôt que de bloquer quelqu'un devant son selfie. C'est exactement pour ça
+  // que `base64: true` reste demandé ci-dessous malgré le coût : il sert de repli, et c'est aussi le
+  // seul chemin qui marche sur le web, où `uri` peut être un blob.
+  const shrinkOrKeep = async (uri: string | undefined, base64: string, mime: string, w?: number, h?: number) => {
+    if (!uri) return { base64, mime };
+    try {
+      return await shrinkSelfie(uri, w, h);
+    } catch {
+      return { base64, mime };
+    }
+  };
+
   const capture = async () => {
     if (busy || !granted || !cameraRef.current) return;
     setBusy(true);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.6, base64: true });
       if (photo?.base64) {
-        const { base64, mime } = splitDataUri(photo.base64, 'image/jpeg');
+        const raw = splitDataUri(photo.base64, 'image/jpeg');
+        const { base64, mime } = await shrinkOrKeep(photo.uri, raw.base64, raw.mime, photo.width, photo.height);
         setShot({ uri: photo.uri ?? `data:${mime};base64,${base64}`, base64, mime });
       } else {
         toast('Capture impossible, réessaie.');
@@ -112,7 +127,10 @@ export default function Selfie() {
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
       if (res.canceled || !res.assets?.[0]?.base64) return;
       const asset = res.assets[0];
-      const { base64, mime } = splitDataUri(asset.base64 as string, asset.mimeType ?? 'image/jpeg');
+      // La galerie est le pire cas : un import peut être un 48 Mpx ou un export ProRAW, là où le
+      // capteur plafonne. Même réduction, même repli.
+      const raw = splitDataUri(asset.base64 as string, asset.mimeType ?? 'image/jpeg');
+      const { base64, mime } = await shrinkOrKeep(asset.uri, raw.base64, raw.mime, asset.width, asset.height);
       setShot({ uri: asset.uri, base64, mime });
     } catch {
       toast('Import impossible.');
