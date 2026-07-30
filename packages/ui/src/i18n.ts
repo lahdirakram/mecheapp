@@ -35,25 +35,53 @@ export const useLangStore = create<LangState>()(
       // Only the choice is worth storing. The actions are rebuilt on every boot, and persisting
       // them would write functions that come back as null.
       partialize: (s) => ({ lang: s.lang }),
+      // The ONLY signal zustand gives on a failed read: the success path fires onFinishHydration
+      // instead. Log it, since otherwise a user stuck on the default has nothing to report.
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) console.warn('[i18n] lang hydration failed, keeping default', error);
+      },
     },
   ),
 );
 
 /**
+ * Never let the language gate hold the app for longer than this. See useLangHydrated: the wait MUST
+ * be bounded, because some ways of failing never report themselves.
+ */
+const HYDRATION_TIMEOUT_MS = 1500;
+
+/**
  * Whether the stored language has been read back yet. AsyncStorage is async, so the very first
  * render always has the `'fr'` default: without this gate an EN user watches the UI paint French
  * and then flip. <AppProviders> holds the render on it, the same way it already holds on fonts.
+ *
+ * The wait is bounded, and that is not a nicety. zustand's `hydrate()` fires
+ * `onFinishHydration` and flips `hasHydrated()` only on its SUCCESS path: when the storage read
+ * rejects (corrupt stored JSON, an AsyncStorage failure) it calls `onRehydrateStorage(undefined,
+ * error)` and nothing else, so `hasHydrated()` stays false for the lifetime of the process.
+ * Verified by reading zustand's compiled `.catch` branch, not assumed. Gating render on an event
+ * that can never arrive means a permanently blank launch, unrecoverable short of reinstalling, so
+ * the timeout is the thing that makes this gate safe to ship at all.
+ *
+ * Falling through the timeout costs nothing worse than the `'fr'` default, i.e. exactly the
+ * behaviour that shipped for months before this store was persisted at all.
  */
 export function useLangHydrated(): boolean {
   const [hydrated, setHydrated] = useState(() => useLangStore.persist.hasHydrated());
 
   useEffect(() => {
-    const unsub = useLangStore.persist.onFinishHydration(() => setHydrated(true));
+    if (hydrated) return;
+    const done = () => setHydrated(true);
+    const unsub = useLangStore.persist.onFinishHydration(done);
     // Hydration can finish between the initial useState and this effect subscribing, which would
     // leave the app gated forever on an event that already fired. Re-check, don't assume.
-    if (useLangStore.persist.hasHydrated()) setHydrated(true);
-    return unsub;
-  }, []);
+    if (useLangStore.persist.hasHydrated()) done();
+    const timer = setTimeout(done, HYDRATION_TIMEOUT_MS);
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
+  }, [hydrated]);
 
   return hydrated;
 }
