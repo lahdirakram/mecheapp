@@ -7,12 +7,12 @@ import { useProStatus, useSession } from '@meche/api-client';
 import { MIcon, MPAL, MText, PWordmark, PrimaryButton, useLang, useToast } from '@meche/ui';
 import { openLegal } from '../lib/legal';
 import { getStorePrices, purchaseProduct, purchasesAvailable, restorePurchases } from '../lib/purchases';
+import { MONTHLY_QUOTA } from '../lib/quota';
 import { PRO_PRODUCT_ID, openManageSubscription } from '../lib/subscription';
 
 // The store price is the source of truth when available (tax/localised); the fallback matches the
 // configured product. PRO_PRODUCT_ID lives in lib/subscription.ts.
 const FALLBACK_PRICE = '29,99 €';
-const QUOTA = 100;
 
 // Abonnement Mèche Pro — one plan, dark like the design's paywall. Grant happens server-side
 // (RevenueCat webhook → subscriptions); this screen only opens the store sheet then refreshes.
@@ -94,8 +94,8 @@ export default function Paywall() {
 
   const perks =
     lang === 'fr'
-      ? [`${QUOTA} essais au fauteuil par mois`, 'Retouches illimitées dans le quota', 'Réalisations publiées sur ta fiche', 'Visible dans l’app Mèche (bientôt)']
-      : [`${QUOTA} in-chair try-ons per month`, 'Refines included in the quota', 'Published looks on your page', 'Visible in the Mèche app (soon)'];
+      ? [`${MONTHLY_QUOTA} essais au fauteuil par mois`, 'Retouches illimitées dans le quota', 'Réalisations publiées sur ta fiche', 'Visible dans l’app Mèche (bientôt)']
+      : [`${MONTHLY_QUOTA} in-chair try-ons per month`, 'Refines included in the quota', 'Published looks on your page', 'Visible in the Mèche app (soon)'];
 
   return (
     <View style={{ flex: 1, backgroundColor: MPAL.ink, paddingTop: insets.top + 10 }}>

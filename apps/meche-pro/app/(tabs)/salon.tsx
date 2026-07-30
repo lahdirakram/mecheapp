@@ -8,11 +8,8 @@ import { useAuth, useMySalon, usePortfolio, useProStatus, useSession } from '@me
 import { MIcon, MPAL, MText, PrimaryButton, useLang, useLangStore, useSheet, useToast, type MIconName } from '@meche/ui';
 import { supabase } from '../../lib/supabase';
 import { openLegal } from '../../lib/legal';
+import { FREE_TRIALS, MONTHLY_QUOTA } from '../../lib/quota';
 import { PRO_PRODUCT_ID, openManageSubscription } from '../../lib/subscription';
-
-// Mirrors the server's quota env (display only).
-const MONTHLY_QUOTA = 100;
-const FREE_TRIALS = 3;
 
 // How many réalisations the shelf shows before "Tout voir" takes over.
 const SHELF_MAX = 8;

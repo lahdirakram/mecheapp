@@ -6,12 +6,8 @@ import { useMySalon, usePortfolio, useProStatus, useSession, useSignedUrls, useW
 import { MIcon, MPAL, MText, PrimaryButton, useLang } from '@meche/ui';
 import { cacheKeyFor } from '../../lib/img';
 import { useLocalImages } from '../../lib/localImages';
+import { FREE_TRIALS, MONTHLY_QUOTA } from '../../lib/quota';
 import { useTryStore } from '../../lib/tryStore';
-
-// The subscription's monthly quota / the lifetime free discovery try-ons. Display only — the
-// server enforces both in /generate (PRO_MONTHLY_QUOTA / PRO_FREE_TRIALS env vars).
-const MONTHLY_QUOTA = 100;
-const FREE_TRIALS = 3;
 
 const DAYS_FR = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
