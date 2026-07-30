@@ -2,7 +2,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useMySalon, useProStatus, useSession } from '@meche/api-client';
-import { MIcon, MPAL, MText, PrimaryButton, TopBar, useLang, useSheet, useToast, type MIconName } from '@meche/ui';
+import { MIcon, MPAL, MText, PrimaryButton, TopBar, useLang, useLangStore, useSheet, useToast, type MIconName } from '@meche/ui';
 import { openLegal } from '../../lib/legal';
 
 // Mirrors the server's quota env (display only).
@@ -15,6 +15,7 @@ export default function Salon() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const lang = useLang();
+  const toggleLang = useLangStore((s) => s.toggle);
   const toast = useToast();
   const sheet = useSheet();
   const session = useSession();
@@ -156,6 +157,13 @@ export default function Salon() {
         </View>
 
         <View style={{ borderRadius: 18, borderWidth: 1, borderColor: MPAL.border, overflow: 'hidden' }}>
+          <Row
+            icon="compass"
+            label={lang === 'fr' ? 'Langue' : 'Language'}
+            detail={lang.toUpperCase()}
+            onPress={toggleLang}
+          />
+          <Divider />
           <Row
             icon="lock"
             label={lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms'}

@@ -1,0 +1,61 @@
+{
+  "size": { "w": 1284, "h": 2778 },
+  "slides": [
+    {
+      "raw": "1.PNG",
+      "theme": "dark",
+      "kicker": "MÈCHE PRO · THE STUDIO",
+      "headline": "Show her the result {before} you cut.",
+      "subhead": "Her photo, her idea, the result on her in 20 seconds."
+    },
+    {
+      "raw": "2.PNG",
+      "theme": "light",
+      "kicker": "BEFORE / AFTER",
+      "headline": "She sees the {before} and the {after}, in one swipe.",
+      "subhead": "A real render on her own photo, before the first snip."
+    },
+    {
+      "raw": "3.PNG",
+      "theme": "light",
+      "kicker": "STEP 2 · HER IDEA",
+      "headline": "She describes it, {Mèche} imagines it.",
+      "subhead": "Wolf cut, blurry bob, pixie cut... or a suggestion in one tap."
+    },
+    {
+      "raw": "4.PNG",
+      "theme": "dark",
+      "kicker": "AI GENERATION",
+      "headline": "The result in about {20 seconds}.",
+      "subhead": "True to her face, ready to show her right away."
+    },
+    {
+      "raw": "5.PNG",
+      "theme": "light",
+      "kicker": "YOUR TRY-ONS",
+      "headline": "Find every client {in an instant}.",
+      "subhead": "Search by first name, full history."
+    },
+    {
+      "raw": "6.PNG",
+      "theme": "light",
+      "kicker": "YOUR PROOF",
+      "headline": "Real {work}, never an AI render.",
+      "subhead": "Publish your best cuts on your page."
+    },
+    {
+      "raw": "7.PNG",
+      "theme": "light",
+      "kicker": "YOUR SALON PAGE",
+      "headline": "Salon, services, {hours}.",
+      "subhead": "A pro page, ready in minutes."
+    },
+    {
+      "raw": "8.PNG",
+      "theme": "dark",
+      "kicker": "NO COMMITMENT",
+      "headline": "{100} try-ons a month. {€29.99}.",
+      "subhead": "Cancel anytime, refines included in the quota."
+    }
+  ]
+}

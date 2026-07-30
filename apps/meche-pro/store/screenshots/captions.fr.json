@@ -1,0 +1,61 @@
+{
+  "size": { "w": 1284, "h": 2778 },
+  "slides": [
+    {
+      "raw": "1.PNG",
+      "theme": "dark",
+      "kicker": "MÈCHE PRO · LE STUDIO",
+      "headline": "Montre-lui le résultat {avant} de couper.",
+      "subhead": "Sa photo, son idée, le rendu sur elle en 20 secondes."
+    },
+    {
+      "raw": "2.PNG",
+      "theme": "light",
+      "kicker": "AVANT / APRÈS",
+      "headline": "Elle voit l'{avant} et l'{après}, en un geste.",
+      "subhead": "Un vrai rendu sur sa photo, avant le premier coup de ciseaux."
+    },
+    {
+      "raw": "3.PNG",
+      "theme": "light",
+      "kicker": "ÉTAPE 2 · SON IDÉE",
+      "headline": "Elle décrit, {Mèche} imagine.",
+      "subhead": "Wolf cut, carré flou, pixie... ou une suggestion en un tap."
+    },
+    {
+      "raw": "4.PNG",
+      "theme": "dark",
+      "kicker": "GÉNÉRATION IA",
+      "headline": "Le rendu en {20 secondes} environ.",
+      "subhead": "Fidèle à son visage, prêt à lui montrer tout de suite."
+    },
+    {
+      "raw": "5.PNG",
+      "theme": "light",
+      "kicker": "TES ESSAIS",
+      "headline": "Retrouve chaque cliente {en un instant}.",
+      "subhead": "Recherche par prénom, historique complet."
+    },
+    {
+      "raw": "6.PNG",
+      "theme": "light",
+      "kicker": "TA PREUVE",
+      "headline": "De vraies {réalisations}, jamais de rendu IA.",
+      "subhead": "Publie tes plus belles coupes sur ta fiche."
+    },
+    {
+      "raw": "7.PNG",
+      "theme": "light",
+      "kicker": "TA FICHE SALON",
+      "headline": "Salon, services, {horaires}.",
+      "subhead": "Une fiche pro, prête en quelques minutes."
+    },
+    {
+      "raw": "8.PNG",
+      "theme": "dark",
+      "kicker": "SANS ENGAGEMENT",
+      "headline": "{100} essais par mois. {29,99 €}.",
+      "subhead": "Résiliable à tout moment, retouches incluses dans le quota."
+    }
+  ]
+}

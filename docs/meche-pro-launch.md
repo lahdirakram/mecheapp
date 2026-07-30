@@ -70,10 +70,22 @@
   configuration, ne pas chercher à la corriger.
 
 ## Pièges relevés
-- **Statut de commerçant DSA : l'app est déclarée « non-commerçant »** dans Informations sur l'app,
-  alors qu'elle vend un abonnement à 29,99 €/mois. Le statut « trader » conditionne la distribution
-  dans l'UE et demande une vérification d'adresse et de TVA : c'est une déclaration légale, à faire
-  par le propriétaire du compte, pas un champ de métadonnée. **À régler avant la soumission.**
+- **Statut de commerçant DSA : déclaré « non-commerçant », et pas seulement sur Mèche Pro —
+  MIS EN PAUSE le 29/07, décision utilisateur, à reprendre plus tard.**
+  Vérifié le 29/07 : **Mèche B2C (6777728552), déjà en prod et vendant des crédits payants, a
+  exactement la même déclaration.** La case est **par app** (« Ce développeur s'est identifié comme
+  non-commerçant **pour cette app** »), pas globale au compte développeur : le compte a bien une
+  ligne « DSA Active » depuis le 8 juin, mais elle ne suffit pas, chaque app doit repasser par son
+  propre « Commencer » (Informations sur l'app → Réglementations et autorisations de l'App Store).
+  **Vérifié : ce formulaire ne demande PAS de numéro de TVA** (aucun champ TVA/SIREN sur l'écran
+  « Validation des coordonnées », juste adresse, téléphone, e-mail) — un auto-entrepreneur en
+  franchise en base peut donc le remplir sans en avoir. Le blocage réel : ces coordonnées sont
+  **affichées publiquement** dans l'App Store de certains pays UE, et l'utilisateur ne veut pas y
+  mettre son numéro personnel. Solution retenue : obtenir un numéro professionnel/virtuel (ex.
+  iGoFlex ~5€/mois, Flexip, Keyyo) avant de reprendre ce point, e-mail déjà réglé
+  (`support@mecheapp.com`). **Rien n'a été soumis**, le formulaire vu était vide, aucune donnée
+  personnelle n'est partie vers Apple au-delà de ce qui y était déjà (nom/adresse de compte,
+  actifs depuis juin, antérieurs à cette session).
 - Restent aussi à faire côté Apple, non couverts ici : classifications par âge, questionnaire App
   Privacy, droits relatifs au contenu.
 - **L'offering RevenueCat du Pro a pour identifiant littéral `current`** (nom d'affichage « Mèche Pro
@@ -83,13 +95,52 @@
 - **La landing `mecheapp.com` annonce encore « Mèche Pro · Bientôt »** alors qu'elle sert d'URL
   marketing dans la fiche. À corriger avant soumission, sinon la page publique contredit la fiche.
 
+## ✅ Terminé (suite, 29-30/07)
+- **Android soumis** : AAB versionCode 3 poussé via `eas submit` sur la piste Tests internes.
+  Abonnement `meche_pro_monthly` créé dans Play Console, **29,99 € en France** (prix net saisi à
+  24,99 € puis converti TTC par Play, pour matcher exactement le prix Apple — Play calcule les prix
+  régionaux hors taxe par défaut, contrairement à Apple qui prend un prix TTC direct : à refaire
+  pareil si le prix change un jour). Importé dans RevenueCat côté Play Store, attaché à
+  l'entitlement `meche_pro_monthly` (même nom des deux côtés).
+- **Fiche Play Store (texte)** : nom, descriptions courte/longue, catégorie « Professionnel »
+  (équivalent Play du « Économie et entreprise » d'Apple), coordonnées de contact (e-mail, site).
+  Ne manquent que les visuels (icône, captures, bannière 1024×500) : upload manuel navigateur, même
+  blocage que pour les captures Apple.
+- **Toutes les déclarations de conformité Play faites** : règles de confidentialité, informations
+  de connexion (compte démo prod réutilisé), annonces (aucune), classification du contenu IARC
+  (catégorie « tous les autres types », contenu généré par IA signalé honnêtement), cible (18 ans et
+  plus), sécurité des données (voir détail ci-dessous), applis gouvernementales (non), fonctionnalités
+  financières (aucune), santé (aucune).
+- **Sécurité des données Play** : nom + e-mail + téléphone (salon, optionnel) + photos (collectées
+  **et partagées**, car envoyées à Gemini pour la génération, un vrai tiers au sens de ce formulaire)
+  + chiffrement en transit confirmé. Lien de suppression : `mecheapp.com/fr/delete-account`.
+  **Point non traité, mineur** : le push token (`devices.expo_push_token`) aurait dû être coché en
+  « ID de l'appareil ou autres ID » à l'étape Types de données ; la case cliquée ne s'est pas
+  enregistrée avant validation et je ne l'ai pas repris. À corriger un jour en repassant par
+  Sécurité des données → Types de données.
+- **Test fermé** : un canal « Tests fermés - Alpha » existait déjà (177 pays, une liste de diffusion
+  « Testeurs fermés » avec **16 utilisateurs**, au-dessus des 12 exigés par Google) mais sans build
+  attaché, donc rien n'avait jamais réellement roulé. Le build versionCode 3 y a été ajouté et
+  enregistré. **Il reste à cliquer « Envoyer pour examen »** sur ce canal pour que le compte à rebours
+  de 14 jours démarre réellement : tant que ce n'est pas fait, aucun jour ne s'écoule.
+- **Identifiant publicitaire (Play)** : déclaré « Oui, utilisé », motif **Analyse** uniquement — en
+  anticipation de l'ajout de GA4/Firebase Analytics (même schéma que B2C, voir mémoire
+  `conversion-tracking`). Pas de case « Publicité ou marketing » ni « Fonctionnement de l'appli » :
+  pas de SDK ads, pas de fonctionnalité coeur qui dépend de l'ad ID.
+
+## ✅ Terminé (suite, 30/07)
+- **iOS build `production` réussi** : `ddec3726` (appBuildVersion 4), lancé en interactif par
+  l'utilisateur, `eas build --profile production --platform ios`. Précédent essai `762312ea`
+  (06/07) avait ERROR, `1bef4ac9` (06/07, build 3) avait FINISHED mais jamais poussé vers TestFlight.
+- **« Informations utiles à la vérification » remplies** dans App Store Connect (app iOS Version 1.0) :
+  identifiants de connexion (`apple-review@mecheapp.com` / mot de passe du compte de démo prod),
+  coordonnées de contact reviewer (champ privé, jamais publié — à ne pas confondre avec la fiche DSA
+  publique), et remarques expliquant le compte démo (salon prérempli, 3 essais gratuits intacts,
+  abonnement `meche_pro_monthly`).
+
 ## Ordre de bataille (mis à jour)
-1. ~~Build `production` iOS + Android.~~ Preview vérifié sur device des deux côtés ; build
-   `production` Android (AAB) lancé en tâche de fond le 29/07 au soir pour `eas submit`.
-2. Android : `eas submit` pousse l'AAB dans Tests internes → créer l'abonnement `meche_pro_monthly`
-   (29,99 €) dans Play Console (débloqué dès l'upload) → l'importer dans RevenueCat (app « Mèche Pro
-   (Play Store) », aujourd'hui à zéro produit) → **passer en Tests fermés et y ajouter 12 testeurs**,
-   c'est ce qui démarre réellement le compte à rebours de 14 jours.
-3. iOS : build `production` → upload TestFlight → captures d'écran (`store/listing.md` 9a) →
-   renseigner le compte de démo dans « Informations utiles à la vérification » → régler le statut
-   de commerçant DSA → soumettre **app et abonnement ensemble**.
+1. Android : uploader icône + captures + bannière sur la fiche Play Store → envoyer le canal
+   « Tests fermés - Alpha » pour examen (démarre les 14 jours) → une fois approuvé et le délai passé,
+   demander l'accès production.
+2. iOS : build `production` (fait, `ddec3726`) → uploader ce build sur TestFlight/la version →
+   (en pause) régler le statut de commerçant DSA → soumettre **app et abonnement ensemble**.
