@@ -82,9 +82,18 @@ client en comptant sur le rendu pour la masquer** — ce qui est sur l'appareil 
 
 Invariants à ne pas casser :
 - **Le débit du déblocage garde `reason='generation'`** (`external_id='unlock:<genId>'`). La replay
-  free/paid de `generate` ne comprend que `purchase`/`generation` ; une nouvelle reason gonflerait
-  silencieusement le solde qu'elle calcule. L'index unique sur `external_id` (0007) rend le
-  double-débit impossible, y compris sous deux appels concurrents (vérifié sur staging).
+  free/paid de `generate` ne comprend que `purchase`/`generation`/`admin_grant` ; une nouvelle
+  reason gonflerait silencieusement le solde qu'elle calcule. L'index unique sur `external_id`
+  (0007) rend le double-débit impossible, y compris sous deux appels concurrents (vérifié sur
+  staging).
+- **Un crédit accordé par le backoffice (`admin_grant`, 0029) compte du côté PAYÉ**, donc il lève le
+  verrou comme un achat — c'est le but : un geste commercial doit donner un vrai essai, pas un
+  aperçu flouté. Les deux replays (serveur `generate`, client `useCreditSummary`) doivent connaître
+  la reason **ensemble** ; l'une sans l'autre donne un solde affiché que le serveur refuse, ou un
+  écran « avant achat » sur un compte que le serveur considère payant. L'écriture n'est pas un
+  insert : la RPC `admin_grant_credits` (service_role seulement) porte les bornes, le refus de
+  solde négatif, l'advisory lock partagé avec `reserve_generation_credit` / `unlock_generation`, et
+  l'idempotence par `external_id='admin:<ref>'`.
 - **Débit AVANT reveal.** Le chemin net est prédictible (`<uid>/<genId>-out.<ext>`) ; la RPC
   `unlock_generation` (advisory lock partagé avec `reserve_generation_credit`) committe le débit,
   PUIS la fonction `unlock` déplace vault→generated, avec compensation (delete du débit + re-lock)

@@ -55,13 +55,23 @@ wrong belief survives across sessions.
 - **Client write access to the DB is deliberately minimal.** Read `docs/security-model.md` before
   touching any policy, grant, or `functions/generate`. The rule: never let the client write a value
   the server later reads back with `service_role`.
-- **The backoffice has exactly ONE write path**: `backoffice/src/lib/curation.ts`, which sets
-  `feed_items.status` through PostgREST (never the Postgres pool, so `lib/db.ts`'s `begin read only`
-  stays literally true). Its `service_role` client is typed with a `Database` that declares only
-  `feed_items`, so a write to any other table doesn't compile. A second write goes through that file
-  or not at all. The curation screen is `/feed`: `gen-feed.mjs` drafts are invisible to the app until
+- **The backoffice writes from ONE file, `backoffice/src/lib/writes.ts`**, always through PostgREST
+  (never the Postgres pool, so `lib/db.ts`'s `begin read only` stays literally true). Exactly two
+  writes: `feed_items.status` (curation) and the `admin_grant_credits` RPC (credits). Its
+  `service_role` client is typed with a `Database` declaring only `feed_items` and that one
+  function, so a write to any other table doesn't compile — `credit_transactions` is deliberately
+  absent, the ledger is only ever touched via the RPC. A third write goes through that file or not
+  at all. The curation screen is `/feed`: `gen-feed.mjs` drafts are invisible to the app until
   published there. **Refusing archives, it doesn't delete** — gen-feed de-duplicates combos across
   ALL statuses, so erasing a refusal makes it regenerate, and that's a paid Gemini call.
+- **An admin-granted credit is a PURCHASED credit, and that is a three-file invariant** (0029). The
+  reason is `admin_grant`, and it counts on the *paid* side of the free/paid ledger replay in BOTH
+  `functions/generate` (decides `locked`) and `packages/api-client/src/queries.ts` (decides the
+  pre/post-purchase experience). Teach one and not the other and the app promises credits the
+  server won't honour, or the reverse. Why not just reuse `'purchase'`: the backoffice reads
+  revenue, payers and average basket straight off `reason='purchase'` × catalogue price, and
+  `claim_pro_role()` (0020) uses "has a purchase" as its fresh-account test — a free grant would
+  have invented revenue out of nothing.
 - **Deploy order when a migration and an OTA go together**: OTA first, then migration. New JS calling
   a missing RPC is a window YOU close in minutes; a migration that breaks old clients lasts until
   every user updates. Then push the migration immediately — don't leave the gap open.

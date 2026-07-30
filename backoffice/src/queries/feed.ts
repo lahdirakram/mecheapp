@@ -7,7 +7,7 @@ import { query } from '@/lib/db';
  * `gen-feed.mjs` insère ses portraits en `status = 'draft'` (0014_feed_catalog.sql) et
  * `feed_for_user` ne renvoie que les `published` : rien de généré n'atteint l'app tant qu'un
  * humain n'a pas validé. Ces requêtes sont l'écran de relecture ; l'écriture est dans
- * `lib/curation.ts`, seul endroit du backoffice qui écrit.
+ * `lib/writes.ts`, seul endroit du backoffice qui écrit.
  */
 
 export const FEED_STATUSES = ['draft', 'published', 'archived'] as const;

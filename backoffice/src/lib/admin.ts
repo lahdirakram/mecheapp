@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { getEnv } from './env';
 
 /**
- * Client `service_role` partagé (Storage + la seule écriture du backoffice, la curation du feed).
+ * Client `service_role` partagé (Storage + les écritures du backoffice : curation du feed, crédits
+ * accordés à la main).
  *
  * Il ne sert JAMAIS à lire une table : tout le SQL de lecture passe par `lib/db.ts`, qui garantit
  * le `begin read only`. Passer par PostgREST plutôt que par le pool Postgres pour l'écriture n'est
@@ -15,6 +16,10 @@ import { getEnv } from './env';
  * Schéma volontairement minuscule : il ne déclare QUE ce que le backoffice a le droit d'écrire.
  * Ce n'est pas de la cosmétique de types — `from('autre_table')` ne compile pas, donc la surface
  * d'écriture est vérifiée à la compilation et pas seulement par la revue.
+ *
+ * `credit_transactions` n'est volontairement PAS listée : les crédits accordés passent par la RPC
+ * `admin_grant_credits` (0029), qui porte les garde-fous en base. Un insert direct dans le ledger
+ * ne compile donc pas, même depuis `lib/writes.ts`.
  */
 type BackofficeDb = {
   public: {
@@ -27,7 +32,12 @@ type BackofficeDb = {
       };
     };
     Views: Record<never, never>;
-    Functions: Record<never, never>;
+    Functions: {
+      admin_grant_credits: {
+        Args: { p_user: string; p_delta: number; p_note: string; p_ref: string };
+        Returns: { error?: string; tx_id?: string; balance?: number; replay?: boolean };
+      };
+    };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
   };

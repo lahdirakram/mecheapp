@@ -64,6 +64,8 @@ export function useLockedFirstTry(): { on: boolean; ready: boolean } {
 // credit_tx_select_own allows the read), with the SAME rules as `generate` server-side: charges hit
 // the free pool first, replayed in order. The UI shows only `paid` as "credits": under the locked
 // first-try model nothing is presented as offered, so the welcome credit never appears as a credit.
+// A backoffice grant (reason 'admin_grant', 0029) lands on the PAID side on both sides of the wire:
+// it is a real credit, so it must also flip this account out of the pre-purchase experience.
 export function useCreditSummary(userId: string | undefined) {
   const sb = useSupabase();
   return useQuery({
@@ -78,7 +80,7 @@ export function useCreditSummary(userId: string | undefined) {
       let free = 0;
       let paid = 0;
       for (const tx of (data ?? []) as { delta: number; reason: string }[]) {
-        if (tx.reason === 'purchase') paid += tx.delta;
+        if (tx.reason === 'purchase' || tx.reason === 'admin_grant') paid += tx.delta;
         else if (tx.reason === 'generation') {
           if (free > 0) free -= 1;
           else paid -= 1;

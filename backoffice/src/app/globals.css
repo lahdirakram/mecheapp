@@ -419,6 +419,12 @@ input[type='search']:focus {
   padding: 8px 11px;
 }
 
+.flash--err {
+  color: var(--warn);
+  background: rgba(200, 65, 43, 0.09);
+  border-color: rgba(200, 65, 43, 0.3);
+}
+
 .bulk {
   display: flex;
   align-items: center;
@@ -610,6 +616,48 @@ dl.kv dd {
   font: 400 17px/1.2 var(--serif);
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Crédits accordés à la main : le formulaire tient sur une ligne, et passe en colonne dès que le
+   panneau est étroit (la fiche user est en deux colonnes jusqu'à 900px). */
+.grant {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.grant__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.grant__field--grow {
+  flex: 1 1 150px;
+}
+.grant input[type='number'],
+.grant input[type='text'] {
+  font: 400 13px/1 var(--sans);
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  width: 100%;
+}
+.grant input:focus {
+  outline: 2px solid var(--sable);
+  outline-offset: -1px;
+}
+.grant__num {
+  width: 84px;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--mute);
 }
 
 /* ---------- activite ---------- */

@@ -195,7 +195,7 @@ export default async function Dashboard({
           <MetricCard
             label="Crédits achetés"
             value={fmtInt(m.credits_bought)}
-            hint={`${fmtInt(m.credits_free)} offerts en plus`}
+            hint={`${fmtInt(m.credits_free)} offerts · ${fmtInt(m.credits_granted)} accordés à la main`}
           />
           <MetricCard
             label="Crédits en circulation"

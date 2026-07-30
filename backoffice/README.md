@@ -86,7 +86,8 @@ Le backoffice a donc son propre `node_modules` et son propre lockfile npm, comme
 
 ## Curation du feed (`/feed`)
 
-Le seul écran qui écrit. `scripts/gen-feed.mjs` insère ses portraits en `status = 'draft'` et
+Un des deux écrans qui écrivent (l'autre est le panneau crédits d'une fiche utilisateur, plus
+bas). `scripts/gen-feed.mjs` insère ses portraits en `status = 'draft'` et
 `feed_for_user` ne renvoie que les `published` (0014_feed_catalog.sql) : **rien de généré
 n'atteint l'app tant qu'on ne l'a pas validé ici**. Trois onglets, À valider / Publiés / Refusés,
 plus un filtre par style pour relire une famille de coupes d'un coup.
@@ -113,13 +114,27 @@ Aucun JS côté client : un bouton = un submit de formulaire, comme le reste du 
 central : il tient quel que soit le mode de pooling, contrairement à un réglage de session qui
 serait perdu en pooling transactionnel. **Aucune requête SQL du backoffice ne peut écrire.**
 
-L'unique exception est la curation ci-dessus, isolée dans `src/lib/curation.ts`, et elle passe
+Les exceptions sont **deux**, toutes deux isolées dans `src/lib/writes.ts`, et elles passent
 volontairement **par PostgREST et non par le pool Postgres** : le `begin read only` reste ainsi
-littéralement vrai, au lieu de devenir « read only sauf si ». La surface d'écriture est réduite
-trois fois — un client `service_role` dont le type `Database` ne déclare **que** `feed_items`
-(donc `from('autre_table')` ne compile pas, `src/lib/admin.ts`), une seule colonne écrite
-(`status`), et des ids revalidés comme UUID avant le `in()`. Si une deuxième écriture devient un
-jour nécessaire, elle passe par là et pas ailleurs.
+littéralement vrai, au lieu de devenir « read only sauf si ». Une troisième écriture passera par
+ce fichier, ou n'existera pas.
+
+1. **La curation ci-dessus.** Surface réduite trois fois — un client `service_role` dont le type
+   `Database` ne déclare **que** `feed_items` (donc `from('autre_table')` ne compile pas,
+   `src/lib/admin.ts`), une seule colonne écrite (`status`), et des ids revalidés comme UUID avant
+   le `in()`.
+2. **Les crédits accordés à la main** (fiche utilisateur, panneau « Accorder des crédits »).
+   `credit_transactions` n'est délibérément **pas** déclarée dans ce type `Database` : l'écriture
+   passe par la RPC `admin_grant_credits` (migration 0029), donc un insert direct dans le ledger ne
+   compile pas non plus. Les garde-fous vivent en base, pas dans l'écran : bornes ±1000, solde
+   jamais négatif, verrou consultatif par utilisateur (il sérialise avec un essai en cours), et
+   idempotence par `external_id` (un double envoi du formulaire ne crédite pas deux fois).
+
+Ces crédits-là sont de **vrais** crédits : leur raison `admin_grant` compte dans le pool *payé*
+côté serveur comme côté app, donc l'essai sort net même quand le premier essai verrouillé est
+actif, et l'app repasse en mode « après achat ». Ils n'entrent jamais dans le CA — c'est
+exactement pourquoi ils ont une raison à eux plutôt que de réutiliser `'purchase'`, dont dépendent
+le CA, les payeurs et `claim_pro_role()`. Les cartes les comptent à part (« accordés à la main »).
 
 Toujours vrai en revanche : il n'y a **aucune authentification**. Le bandeau du haut dit sur quel
 projet on est branché, et il est rouge en prod, parce qu'un clic « Publier » sur la prod est

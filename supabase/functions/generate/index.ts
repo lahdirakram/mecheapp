@@ -225,10 +225,14 @@ Deno.serve(async (req) => {
     // Walk the history keeping two running balances. Generations are charged to the FREE pool first
     // so purchased credits stay in reserve as long as possible. Replaying in order (rather than
     // summing) means a later ad-reward can't retroactively reclassify an older paid look.
+    // `admin_grant` (0029) counts as PAID: a credit granted from the backoffice is meant to be a real
+    // one, so it must lift the lock below exactly like a purchase. Keep this in lockstep with the
+    // same replay in packages/api-client/src/queries.ts (useCreditSummary), which drives what the
+    // client shows — the two disagreeing means promising credits the server won't honour.
     let free = 0; // free_trial + ad rewards + promos
-    let paid = 0; // purchased packs
+    let paid = 0; // purchased packs + admin grants
     for (const tx of txList) {
-      if (tx.reason === 'purchase') paid += tx.delta;
+      if (tx.reason === 'purchase' || tx.reason === 'admin_grant') paid += tx.delta;
       else if (tx.reason === 'generation') {
         if (free > 0) free -= 1;
         else paid -= 1;

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { setFeedStatus } from '@/lib/curation';
+import { setFeedStatus } from '@/lib/writes';
 
 /**
  * Action de curation, appelée par les formulaires de la page feed (aucun JS côté client : un

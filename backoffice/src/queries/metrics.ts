@@ -30,6 +30,8 @@ export type Metrics = {
   credits_bought: number;
   credits_used: number;
   credits_free: number;
+  /** Accordés à la main depuis une fiche utilisateur (reason 'admin_grant', 0029). */
+  credits_granted: number;
   /** Solde en circulation : un état, donc toujours calculé sur toute l'histoire. */
   credits_left: number;
   orders: number;
@@ -50,8 +52,12 @@ export type Metrics = {
  * Notes de comptage :
  * - « crédits consommés » est déjà NET : un essai qui échoue voit sa ligne de réservation SUPPRIMÉE
  *   (generate/index.ts:329,343), pas compensée par un +1.
- * - « crédits offerts » = tout delta positif dont la raison n'est pas 'purchase' : 'free_trial'
+ * - « crédits offerts » = tout delta positif hors 'purchase' ET hors 'admin_grant' : 'free_trial'
  *   (1 à l'inscription, 0001_init.sql:238) et toute future récompense pub / promo.
+ * - « crédits accordés » (admin_grant, 0029) sont comptés à part : ils sont offerts au sens de
+ *   l'argent, mais ils comptent comme achetés au sens du produit (ils sortent l'essai du premier
+ *   essai verrouillé). Les mélanger aux 'free_trial' cacherait cet écart. Ils n'entrent JAMAIS
+ *   dans le CA : c'est tout l'intérêt de leur raison dédiée.
  */
 const SQL = `
 with
@@ -89,7 +95,8 @@ c as (
   select
     (coalesce(sum(delta) filter (where reason = 'purchase'), 0))::int                     as credits_bought,
     (coalesce(-sum(delta) filter (where delta < 0), 0))::int                              as credits_used,
-    (coalesce(sum(delta) filter (where delta > 0 and reason <> 'purchase'), 0))::int       as credits_free,
+    (coalesce(sum(delta) filter (where delta > 0 and reason not in ('purchase', 'admin_grant')), 0))::int as credits_free,
+    (coalesce(sum(delta) filter (where reason = 'admin_grant'), 0))::int                  as credits_granted,
     (count(*) filter (where reason = 'purchase'))::int                                    as orders,
     (count(distinct user_id) filter (where reason = 'purchase'))::int                     as payers,
     (coalesce(sum(${priceCentsSql()}) filter (where reason = 'purchase'), 0))::int         as revenue_cents

@@ -20,8 +20,9 @@ export function EnvBanner() {
   return (
     <div className={`banner ${isProd ? 'banner--prod' : 'banner--staging'}`}>
       <b>Mèche · backoffice · {label}</b>
-      {/* Écriture unique : le statut d'un feed_item (lib/curation.ts). Tout le reste est lu. */}
-      <span>lecture seule, sauf curation du feed · {ref}</span>
+      {/* Deux écritures, et deux seulement : le statut d'un feed_item et un crédit accordé à la
+          main, toutes deux dans lib/writes.ts. Tout le reste est lu. */}
+      <span>lecture seule, sauf curation du feed et crédits · {ref}</span>
     </div>
   );
 }

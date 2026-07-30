@@ -94,6 +94,8 @@ export type LedgerRow = {
   reason: string;
   pack_id: string | null;
   external_id: string | null;
+  /** Motif d'un crédit accordé à la main (0029) ; null partout ailleurs. */
+  note: string | null;
   amount_cents: number;
   created_at: string;
 };
@@ -104,7 +106,7 @@ export type LedgerRow = {
  */
 export function listLedger(userId: string, limit = 100) {
   return query<LedgerRow>(
-    `select id, delta, reason, pack_id, external_id,
+    `select id, delta, reason, pack_id, external_id, note,
             (case when reason = 'purchase' then ${priceCentsSql()} else 0 end)::int as amount_cents,
             created_at
      from credit_transactions

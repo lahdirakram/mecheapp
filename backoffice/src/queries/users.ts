@@ -151,6 +151,9 @@ export type UserDetail = {
   balance: number;
   credits_bought: number;
   credits_free: number;
+  /** Accordés à la main depuis cet écran (reason 'admin_grant', 0029) : comptés à part des
+   *  'free_trial', parce qu'ils valent des crédits achetés côté app. */
+  credits_granted: number;
   credits_used: number;
   revenue_cents: number;
   orders: number;
@@ -181,7 +184,8 @@ export async function getUser(id: string): Promise<UserDetail | null> {
       u.raw_app_meta_data ->> 'provider'  as provider,
       (select coalesce(sum(delta), 0) from credit_transactions where user_id = pr.id)::int                                        as balance,
       (select coalesce(sum(delta), 0) from credit_transactions where user_id = pr.id and reason = 'purchase')::int                 as credits_bought,
-      (select coalesce(sum(delta), 0) from credit_transactions where user_id = pr.id and delta > 0 and reason <> 'purchase')::int  as credits_free,
+      (select coalesce(sum(delta), 0) from credit_transactions where user_id = pr.id and delta > 0 and reason not in ('purchase', 'admin_grant'))::int as credits_free,
+      (select coalesce(sum(delta), 0) from credit_transactions where user_id = pr.id and reason = 'admin_grant')::int             as credits_granted,
       (select coalesce(-sum(delta), 0) from credit_transactions where user_id = pr.id and delta < 0)::int                          as credits_used,
       (select coalesce(sum(${priceCentsSql()}), 0) from credit_transactions where user_id = pr.id and reason = 'purchase')::int    as revenue_cents,
       (select count(*) from credit_transactions where user_id = pr.id and reason = 'purchase')::int                                as orders,
