@@ -121,9 +121,12 @@ wrong belief survives across sessions.
   (`default`, les crédits B2C). Le produit Pro vit dans une autre offering, dont l'identifiant est
   lui aussi littéralement `current` (et **non renommable**, champ figé côté RevenueCat), donc le
   chercher dans `offerings.current` échoue toujours. **Chercher dans `offerings.all`** (helper
-  `allPackages` dans `apps/meche-pro/lib/purchases.ts`). Un package mappe **un produit par app**,
-  donc une offering partagée n'expose à chaque app que ce qui la concerne. Panne prod du
-  2026-07-30 : `docs/meche-pro-launch.md` (chercher « offering »).
+  `allPackages`, présent à l'identique dans les DEUX `lib/purchases.ts`, meche et meche-pro). Un
+  package mappe **un produit par app**, donc une offering partagée n'expose à chaque app que ce qui
+  la concerne. Panne prod du 2026-07-30 : `docs/meche-pro-launch.md` (chercher « offering »).
+  Le B2C n'était pas cassé, il marchait **par chance** : ses packs vivent dans l'offering qui porte
+  le statut. C'était donc une bombe à retardement, désamorcée depuis (même helper). Si les deux
+  copies divergent un jour, c'est le signe qu'il faut sortir ce helper dans `packages/`.
 - **Un toast est invisible depuis un écran `presentation: 'modal'` sur iOS** (overlay rendu à la
   racine, le modal natif est un autre contrôleur de vue et passe devant). Depuis un modal, utiliser
   `Alert.alert`. Vaut aussi pour `useSheet`, déjà noté dans `packages/ui/src/feedback.tsx`.

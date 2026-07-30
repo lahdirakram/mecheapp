@@ -109,9 +109,16 @@
   select one product per app ») : le package Pro affiche « No product » pour `meche (App Store)` et
   `meche (Play Store)`, donc l'app B2C ne le voit simplement pas. Consolider serait donc
   techniquement viable. Ça n'a pas été fait, non par risque technique mais parce que le correctif
-  code suffit et ne touche pas le chemin d'achat B2C, qui est en prod avec de vrais payeurs.
+  code suffit.
   **La leçon** : un `offerings.current` dans du code partagé entre deux apps qui vendent des
   produits différents est un bug en attente. Chercher par identifiant de produit dans `all`.
+  **Le même helper a été porté dans `apps/meche/lib/purchases.ts` (B2C) le 30/07.** Le B2C n'était
+  pas cassé : ses packs vivent dans l'offering qui porte le statut `current`, donc il marchait par
+  chance, pas par construction. Il suffisait de basculer le statut sur une autre offering, ou d'y
+  déplacer un pack, pour casser en prod le chemin d'achat de l'app qui a de vrais payeurs. Vérifié
+  au passage : les deux écrans qui consomment `getStorePrices` (`recharge.tsx`, `UnlockSheet.tsx`)
+  lisent la map par `product_id` et ne l'itèrent jamais, donc élargir la recherche à toutes les
+  offerings ne peut pas leur faire afficher un pack étranger.
 - **Le produit Play n'était pas rattaché au package de l'offering Pro** (découvert le 30/07 en
   ouvrant l'écran d'édition). `meche_pro_monthly:monthly` existait bien dans le catalogue et était
   attaché à l'**entitlement**, mais le package `$rc_monthly` avait « No product » pour

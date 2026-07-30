@@ -62,6 +62,25 @@ export async function clearPurchaseUser(): Promise<void> {
   }
 }
 
+/**
+ * Every package across EVERY offering, not just `offerings.current`.
+ *
+ * `current` is a STATUS that exactly one offering carries. Here it is `default` (these credit packs)
+ * that carries it, while the Pro subscription lives in a *different* offering whose literal
+ * identifier happens to also be `current`. Reading `offerings.current` therefore works for B2C only
+ * by luck of which offering holds the status today: flip that status in the dashboard, or move a
+ * credit pack to another offering, and every purchase here dies with `product_not_found` (exactly
+ * how the Pro app broke in prod on 30/07). Searching every offering is what lets one RevenueCat
+ * project serve both apps without depending on a dashboard setting.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function allPackages(offerings: any): any[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const groups: any[] = Object.values(offerings?.all ?? {});
+  if (offerings?.current && !groups.includes(offerings.current)) groups.push(offerings.current);
+  return groups.flatMap((g) => g?.availablePackages ?? []);
+}
+
 export type StorePrice = { priceString: string; price: number; currencyCode: string };
 
 /**
@@ -74,10 +93,8 @@ export async function getStorePrices(): Promise<Record<string, StorePrice>> {
   try {
     const Purchases = await rc();
     const offerings = await Purchases.getOfferings();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const packages: any[] = offerings.current?.availablePackages ?? [];
     const out: Record<string, StorePrice> = {};
-    for (const pkg of packages) {
+    for (const pkg of allPackages(offerings)) {
       const prod = pkg.product;
       if (prod?.identifier) {
         out[prod.identifier] = { priceString: prod.priceString, price: prod.price, currencyCode: prod.currencyCode };
@@ -97,10 +114,11 @@ export async function purchaseProduct(productId: string): Promise<PurchaseResult
   try {
     const Purchases = await rc();
     const offerings = await Purchases.getOfferings();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const packages: any[] = offerings.current?.availablePackages ?? [];
-    const pkg = packages.find((p) => p.product?.identifier === productId);
-    if (!pkg) return { error: 'product_not_found' };
+    const pkg = allPackages(offerings).find((p) => p.product?.identifier === productId);
+    if (!pkg) {
+      console.warn('[purchases] no package for', productId, 'in', Object.keys(offerings?.all ?? {}));
+      return { error: 'product_not_found' };
+    }
     await Purchases.purchasePackage(pkg);
     return { ok: true };
   } catch (e) {
