@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useMySalon, useProStatus, useSession } from '@meche/api-client';
 import { MIcon, MPAL, MText, PrimaryButton, TopBar, useLang, useLangStore, useSheet, useToast, type MIconName } from '@meche/ui';
 import { openLegal } from '../../lib/legal';
+import { PRO_PRODUCT_ID, openManageSubscription } from '../../lib/subscription';
 
 // Mirrors the server's quota env (display only).
 const MONTHLY_QUOTA = 100;
@@ -157,6 +158,20 @@ export default function Salon() {
         </View>
 
         <View style={{ borderRadius: 18, borderWidth: 1, borderColor: MPAL.border, overflow: 'hidden' }}>
+          {/* Only for a subscriber: the store screen is where a subscription is changed or
+              cancelled (no app can do it itself), and it is what someone looking to cancel opens
+              the settings to find. Hidden otherwise so it never reads as an upsell. */}
+          {subActive ? (
+            <>
+              <Row
+                icon="crown"
+                label={lang === 'fr' ? 'Gérer mon abonnement' : 'Manage my subscription'}
+                detail={lang === 'fr' ? 'Modifier, résilier' : 'Change, cancel'}
+                onPress={() => openManageSubscription(PRO_PRODUCT_ID)}
+              />
+              <Divider />
+            </>
+          ) : null}
           <Row
             icon="compass"
             label={lang === 'fr' ? 'Langue' : 'Language'}

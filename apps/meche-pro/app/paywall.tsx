@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,10 +7,10 @@ import { useProStatus, useSession } from '@meche/api-client';
 import { MIcon, MPAL, MText, PWordmark, PrimaryButton, useLang, useToast } from '@meche/ui';
 import { openLegal } from '../lib/legal';
 import { getStorePrices, purchaseProduct, purchasesAvailable, restorePurchases } from '../lib/purchases';
+import { PRO_PRODUCT_ID, openManageSubscription } from '../lib/subscription';
 
-// The single V1 plan. The store price is the source of truth when available (tax/localised);
-// the fallback matches the configured product.
-export const PRO_PRODUCT_ID = 'meche_pro_monthly';
+// The store price is the source of truth when available (tax/localised); the fallback matches the
+// configured product. PRO_PRODUCT_ID lives in lib/subscription.ts.
 const FALLBACK_PRICE = '29,99 €';
 const QUOTA = 100;
 
@@ -41,22 +41,33 @@ export default function Paywall() {
   const subActive = status?.sub_active ?? false;
   const periodEnd = status?.period_end ? new Date(status.period_end) : null;
 
+  // This screen is a NATIVE modal (presentation: 'modal' in _layout), so the root-level toast
+  // renders behind it on iOS and the user sees nothing. Same constraint the action sheet already
+  // documents in packages/ui/src/feedback.tsx: from a native modal, use Alert.
+  const notify = (message: string) => Alert.alert(message);
+
   const subscribe = async () => {
     if (busy) return;
     if (!purchasesAvailable()) {
-      toast(lang === 'fr' ? "L'abonnement passe par l'app installée depuis le store." : 'Subscribing requires the store-installed app.');
+      notify(lang === 'fr' ? "L'abonnement passe par l'app installée depuis le store." : 'Subscribing requires the store-installed app.');
       return;
     }
     setBusy(true);
     const res = await purchaseProduct(PRO_PRODUCT_ID);
     setBusy(false);
     if ('ok' in res) {
-      // The webhook writes the subscription row; refresh until the UI sees it.
+      // The webhook writes the subscription row; refresh until the UI sees it. This one stays a
+      // toast: router.back() dismisses the modal, so the root overlay is visible again.
       qc.invalidateQueries({ queryKey: ['prostatus'] });
       toast(lang === 'fr' ? 'Bienvenue dans Mèche Pro.' : 'Welcome to Mèche Pro.', { icon: 'sparkle' });
       router.back();
     } else if ('error' in res) {
-      toast(lang === 'fr' ? 'Achat impossible, réessaie.' : 'Purchase failed, try again.');
+      notify(lang === 'fr' ? 'Achat impossible, réessaie.' : 'Purchase failed, try again.');
+    } else {
+      // 'cancelled' — RevenueCat also reports this when StoreKit fails to present the sheet at
+      // all (no sandbox account signed in, product not yet available), not only on an explicit
+      // user cancel, so it is worth telling the user rather than staying silent.
+      notify(lang === 'fr' ? 'Achat annulé.' : 'Purchase cancelled.');
     }
   };
 
@@ -65,7 +76,7 @@ export default function Paywall() {
   const restore = async () => {
     if (busy || restoring) return;
     if (!purchasesAvailable()) {
-      toast(lang === 'fr' ? "La restauration passe par l'app installée depuis le store." : 'Restoring requires the store-installed app.');
+      notify(lang === 'fr' ? "La restauration passe par l'app installée depuis le store." : 'Restoring requires the store-installed app.');
       return;
     }
     setRestoring(true);
@@ -74,10 +85,10 @@ export default function Paywall() {
     if ('ok' in res) {
       // Same refresh path as subscribe: the row is written server-side, the UI just re-reads it.
       qc.invalidateQueries({ queryKey: ['prostatus'] });
-      if (res.restored) toast(lang === 'fr' ? 'Abonnement restauré.' : 'Subscription restored.', { icon: 'sparkle' });
-      else toast(lang === 'fr' ? 'Aucun achat à restaurer.' : 'No purchases to restore.');
+      if (res.restored) notify(lang === 'fr' ? 'Abonnement restauré.' : 'Subscription restored.');
+      else notify(lang === 'fr' ? 'Aucun achat à restaurer.' : 'No purchases to restore.');
     } else {
-      toast(lang === 'fr' ? 'Restauration impossible, réessaie.' : 'Restore failed, try again.');
+      notify(lang === 'fr' ? 'Restauration impossible, réessaie.' : 'Restore failed, try again.');
     }
   };
 
@@ -145,8 +156,15 @@ export default function Paywall() {
                 ? `${lang === 'fr' ? 'Renouvellement le' : 'Renews on'} ${periodEnd.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US')}`
                 : ''}
             </MText>
-            <MText size={12} color="rgba(255,255,255,0.6)">
-              {lang === 'fr' ? "Gestion et résiliation dans les réglages App Store / Google Play." : 'Manage or cancel from App Store / Google Play settings.'}
+            {/* Actionable, not just informative: no app can cancel a store subscription itself, so
+                a working link out to the store is the only real "cancel" we can offer. */}
+            <MText
+              size={12}
+              color={MPAL.sable}
+              style={{ textDecorationLine: 'underline' }}
+              onPress={() => openManageSubscription(PRO_PRODUCT_ID)}
+            >
+              {lang === 'fr' ? 'Gérer ou résilier mon abonnement' : 'Manage or cancel my subscription'}
             </MText>
           </View>
         ) : (

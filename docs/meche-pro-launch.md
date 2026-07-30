@@ -90,8 +90,42 @@
   Privacy, droits relatifs au contenu.
 - **L'offering RevenueCat du Pro a pour identifiant littéral `current`** (nom d'affichage « Mèche Pro
   - Le Studio »), alors que `current` est aussi le nom du *statut* d'une offering, et que c'est
-  `default` qui porte ce statut. Sans conséquence tant que le code achète par identifiant de produit
-  (`purchaseProduct(PRO_PRODUCT_ID)`), mais ne pas s'y fier pour un futur `getOfferings()`.
+  `default` (les packs de crédits B2C) qui porte ce statut.
+  **CE PIÈGE A CASSÉ L'ACHAT PRO EN PROD (30/07), et ce doc affirmait le contraire.** La version
+  précédente disait « sans conséquence tant que le code achète par identifiant de produit
+  (`purchaseProduct(PRO_PRODUCT_ID)`) » : c'était une **déduction, pas une vérification**, et elle
+  était fausse. `purchaseProduct` lit `offerings.current`, donc le SDK renvoyait l'offering au
+  *statut* current (`default` = crédits B2C), y cherchait `meche_pro_monthly`, ne le trouvait
+  jamais, et renvoyait `product_not_found`. Symptôme : « Achat impossible, réessaie. »
+  Correctif appliqué **dans le code** : `lib/purchases.ts` cherche désormais le produit dans
+  **toutes** les offerings (`offerings.all`, helper `allPackages`), pour `purchaseProduct` comme
+  pour `getStorePrices`. Avantage : ça ne dépend plus d'un réglage de dashboard.
+  **L'identifiant `current` de cette offering est DÉFINITIF** : le champ est grisé dans RevenueCat
+  (« Used to access the offering via the SDK, cannot be changed later »). Ne pas perdre de temps à
+  vouloir le renommer, ce n'est pas possible. Il faut vivre avec la collision de noms.
+  **Correction d'une analyse fausse faite le 30/07** : on a d'abord cru que consolider le produit
+  Pro dans `default` casserait le B2C, au motif que StoreKit ne peut pas résoudre un produit d'un
+  autre bundle. **C'est faux.** Un package RevenueCat mappe **un produit par app** (« You can only
+  select one product per app ») : le package Pro affiche « No product » pour `meche (App Store)` et
+  `meche (Play Store)`, donc l'app B2C ne le voit simplement pas. Consolider serait donc
+  techniquement viable. Ça n'a pas été fait, non par risque technique mais parce que le correctif
+  code suffit et ne touche pas le chemin d'achat B2C, qui est en prod avec de vrais payeurs.
+  **La leçon** : un `offerings.current` dans du code partagé entre deux apps qui vendent des
+  produits différents est un bug en attente. Chercher par identifiant de produit dans `all`.
+- **Le produit Play n'était pas rattaché au package de l'offering Pro** (découvert le 30/07 en
+  ouvrant l'écran d'édition). `meche_pro_monthly:monthly` existait bien dans le catalogue et était
+  attaché à l'**entitlement**, mais le package `$rc_monthly` avait « No product » pour
+  `Mèche Pro (Play Store)` : l'achat Android aurait échoué en `product_not_found` exactement comme
+  iOS, correctif code ou pas. Rattaché depuis. **Le check** quand un achat échoue sur une seule
+  plateforme : ouvrir l'offering en **édition**, la vue lecture seule ne montre que les produits
+  déjà rattachés, donc un trou y est invisible.
+- **Un toast déclenché depuis un écran en `presentation: 'modal'` est invisible sur iOS.** Le
+  `FeedbackProvider` rend son overlay à la racine de l'arbre, or un modal natif iOS est un autre
+  contrôleur de vue : l'overlay passe *derrière*. `packages/ui/src/feedback.tsx` documentait déjà la
+  contrainte pour l'action sheet, pas pour le toast, et le paywall est tombé dedans (le message
+  d'erreur existait, personne ne le voyait). `app/paywall.tsx` utilise donc `Alert.alert` pour tout
+  message affiché *pendant* que le modal est ouvert, et garde le toast pour le seul cas de succès,
+  puisque `router.back()` referme le modal juste après.
 - **La landing `mecheapp.com` annonce encore « Mèche Pro · Bientôt »** alors qu'elle sert d'URL
   marketing dans la fiche. À corriger avant soumission, sinon la page publique contredit la fiche.
 
@@ -132,15 +166,73 @@
 - **iOS build `production` réussi** : `ddec3726` (appBuildVersion 4), lancé en interactif par
   l'utilisateur, `eas build --profile production --platform ios`. Précédent essai `762312ea`
   (06/07) avait ERROR, `1bef4ac9` (06/07, build 3) avait FINISHED mais jamais poussé vers TestFlight.
+- **`eas submit` iOS réussi** (interactif, après avoir fixé `ascAppId: "6788159734"` dans
+  `eas.json` → `submit.production.ios`, sinon `eas submit --non-interactive` échoue en demandant
+  soit ce champ, soit une clé API App Store Connect qui ne peut pas se créer en non-interactif).
+  Traitement Apple terminé (~15 min), build **1.0.0 (4)** visible dans TestFlight, statut
+  « Prêt à soumettre ». **Attaché à la fiche App Store Version 1.0** (section Build) et enregistré.
+- **Tous les blocages « Impossible d'ajouter pour vérification » levés** :
+  - **Droits relatifs au contenu** : Non (pas de contenu tiers).
+  - **Classifications par âge** : questionnaire complet (7 étapes), tout à « Aucun/Non »,
+    résultat **4+** sur 172 pays, exceptions Brésil/Corée/Vietnam automatiques.
+  - **Confidentialité de l'app** (nutrition label) : politique de confidentialité renseignée en
+    FR et EN (`mecheapp.com/{fr,en}/privacy`), 7 types de données déclarés (Nom, e-mail, téléphone,
+    photos, identifiant appareil, achats, interaction produit) chacun avec finalité + lien à
+    l'identité + suivi (tracking = Non partout), **publié**.
+  - **Tarification** : app gratuite (le revenu vient de l'abonnement `meche_pro_monthly`, pas d'un
+    prix de téléchargement).
+  - Documents de chiffrement : non nécessaires (chiffrement standard HTTPS/TLS uniquement).
+  - **Reste seul blocage réel** : le statut commerçant DSA, volontairement en pause (voir plus bas).
 - **« Informations utiles à la vérification » remplies** dans App Store Connect (app iOS Version 1.0) :
   identifiants de connexion (`apple-review@mecheapp.com` / mot de passe du compte de démo prod),
   coordonnées de contact reviewer (champ privé, jamais publié — à ne pas confondre avec la fiche DSA
   publique), et remarques expliquant le compte démo (salon prérempli, 3 essais gratuits intacts,
   abonnement `meche_pro_monthly`).
 
+## ✅ Chaîne IAP prouvée de bout en bout sur PROD (30/07)
+Premier achat sandbox réussi depuis TestFlight, **toute la chaîne vérifiée maillon par maillon** :
+feuille d'achat Apple à 29,99 € → événement RevenueCat `INITIAL_PURCHASE` (`environment: SANDBOX`)
+→ webhook « Supabase iap webhook production » **Sent** → ligne `subscriptions` écrite sur le projet
+prod (`owner_id`, `rc_product_id = meche_pro_monthly`, `status = active`) → l'app affiche
+l'abonnement actif. C'est le vrai jalon : le webhook, l'entitlement et le quota serveur fonctionnent.
+
+- **« Renouvellement demain » en sandbox est NORMAL, ne pas chercher de bug dans le code.** Apple a
+  renvoyé `expiration_at_ms` à **+24 h** pour un produit mensuel (`event_timestamp_ms` 1785412722638
+  → `expiration_at_ms` 1785499118000, soit 23 h 59 min). `functions/iap-webhook` stocke cette valeur
+  **verbatim** (aucun calcul, aucun défaut : voir `index.ts`, `current_period_end`), RevenueCat
+  affiche lui-même « renews in 1 day », et l'app ne fait que lire la ligne. Les trois maillons sont
+  donc fidèles : la durée artificielle vient d'Apple. En prod, le produit est mensuel, un vrai
+  abonné verra +1 mois.
+  **Non expliqué (constaté, pas élucidé)** : les deux comptes sandbox sont réglés sur « Renouvellement
+  mensuel toutes les 5 minutes » (App Store Connect → Utilisateurs et accès → Sandbox → compte), ce
+  qui aurait dû donner +5 min, pas +24 h. Le réglage n'a donc pas été respecté pour cet achat. Sans
+  impact sur la prod, **ne pas en faire un sujet** : aucune durée sandbox n'est représentative.
+  **À exploiter en revanche** : la compression du temps permet de tester le RENOUVELLEMENT (événement
+  `RENEWAL` → `current_period_end` qui avance) sans attendre un mois. C'est le seul moyen de valider
+  ce chemin avant la mise en vente.
+
+- **Résiliation : aucune app ne peut annuler un abonnement, seul le store le fait.** Ni StoreKit ni
+  Play Billing n'exposent d'API d'annulation, donc le seul « résilier » honnête est un lien sortant.
+  `lib/subscription.ts` construit l'URL (`apps.apple.com/account/subscriptions` sur iOS,
+  `play.google.com/store/account/subscriptions` sur Android). **Le package Android est lu à
+  l'exécution** via `Constants.expoConfig?.android?.package`, jamais codé en dur : il diffère entre
+  staging (`com.mechepro.app.staging`) et prod, et un mauvais package ouvre une page cassée — d'où
+  le repli sur l'écran générique quand il est indéterminé. Le lien vit à DEUX endroits, et les deux
+  comptent : une ligne « Gérer mon abonnement » dans les réglages Salon (visible **seulement si
+  abonné**, c'est là qu'on va pour résilier) et un lien cliquable sur le paywall (c'est là que
+  regarde le reviewer Apple). Avant le 30/07 il n'y avait qu'un texte statique non cliquable sur le
+  paywall, invisible pour un abonné qui n'a plus aucune raison d'ouvrir cet écran.
+- **`PRO_PRODUCT_ID` vit dans `lib/subscription.ts`, pas dans la route paywall**, pour qu'un autre
+  écran puisse l'utiliser sans importer un module de route. Même chaîne sur les deux stores : c'est
+  l'id produit App Store ET l'id d'abonnement Play (le suffixe `:monthly` du base plan n'existe que
+  dans l'id composite RevenueCat, jamais dans ce lien).
+
 ## Ordre de bataille (mis à jour)
 1. Android : uploader icône + captures + bannière sur la fiche Play Store → envoyer le canal
    « Tests fermés - Alpha » pour examen (démarre les 14 jours) → une fois approuvé et le délai passé,
    demander l'accès production.
-2. iOS : build `production` (fait, `ddec3726`) → uploader ce build sur TestFlight/la version →
-   (en pause) régler le statut de commerçant DSA → soumettre **app et abonnement ensemble**.
+2. iOS : build `production` (fait, `ddec3726`) → build attaché à la version 1.0 (fait) → tous les
+   questionnaires (âge, contenu, confidentialité, tarification) faits (fait) → (en pause) régler le
+   statut de commerçant DSA → cliquer « Créer une nouvelle soumission » / « Ajouter pour
+   vérification » pour soumettre **app et abonnement ensemble**. C'est le seul clic qui reste côté
+   iOS une fois le DSA réglé.

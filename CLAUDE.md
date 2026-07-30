@@ -116,6 +116,17 @@ wrong belief survives across sessions.
   media whose account is gone. Both are Deno, dry-run by default, and read the service key from
   `.env.gen-feed` (staging) or `backoffice/.env.local` (prod) via `set -a; source …; set +a`.
   Done on both lanes: feed 122 MB → 11 MB (staging), 82 MB → 7.5 MB (prod).
+- **`offerings.current` est un piège dans ce repo : ne jamais chercher un produit dedans.** Un seul
+  projet RevenueCat sert les DEUX apps, et `current` est un *statut* porté par une seule offering
+  (`default`, les crédits B2C). Le produit Pro vit dans une autre offering, dont l'identifiant est
+  lui aussi littéralement `current` (et **non renommable**, champ figé côté RevenueCat), donc le
+  chercher dans `offerings.current` échoue toujours. **Chercher dans `offerings.all`** (helper
+  `allPackages` dans `apps/meche-pro/lib/purchases.ts`). Un package mappe **un produit par app**,
+  donc une offering partagée n'expose à chaque app que ce qui la concerne. Panne prod du
+  2026-07-30 : `docs/meche-pro-launch.md` (chercher « offering »).
+- **Un toast est invisible depuis un écran `presentation: 'modal'` sur iOS** (overlay rendu à la
+  racine, le modal natif est un autre contrôleur de vue et passe devant). Depuis un modal, utiliser
+  `Alert.alert`. Vaut aussi pour `useSheet`, déjà noté dans `packages/ui/src/feedback.tsx`.
 
 ## Environments (full detail: ENVIRONMENTS.md)
 Three lanes; **the build profile decides the backend**:
