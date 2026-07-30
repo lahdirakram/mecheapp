@@ -89,11 +89,11 @@ export function UsersTable({
                     </span>
                   </>
                 )}
-                {u.is_inactive && (
+                {u.is_unconfirmed && (
                   <>
                     {' '}
-                    <span className="badge badge--inactive" title="Aucun essai réussi, toutes périodes confondues">
-                      non activé
+                    <span className="badge badge--pending" title="Inscription non terminée : email jamais confirmé">
+                      non confirmé
                     </span>
                   </>
                 )}

@@ -547,11 +547,6 @@ input[type='search']:focus {
   background: rgba(74, 136, 224, 0.13);
   color: var(--community);
 }
-.badge--inactive {
-  background: transparent;
-  border: 1px dashed var(--border);
-  color: var(--mute);
-}
 .badge--excluded {
   background: repeating-linear-gradient(
     -45deg,

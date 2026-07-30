@@ -163,6 +163,12 @@ backoffice, et le bucket est validé par allowlist.
   `generations` en `status = 'failed'`.
 - **« Ont fait un essai »** compte les utilisateurs distincts dans `generations`, tous statuts
   confondus : une tentative échouée reste une tentative.
+- **« Non activé » et « non confirmé » sont deux choses différentes, et une seule est un badge.**
+  L'activation (aucun essai réussi) est une mesure d'usage : elle vit dans la carte « Comptes non
+  activés » et dans le filtre `Comptes = activés`, pas sur une ligne du tableau. Le badge de la
+  liste ne dit qu'une chose, la même que la fiche : `email_confirmed_at is null`, l'inscription
+  n'est jamais allée au bout (code email jamais validé). Les mélanger marquait « non activé » des
+  comptes parfaitement inscrits qui n'avaient simplement pas encore lancé d'essai.
 - **L'email vient de `auth.users`**, pas de `profiles`. C'est la raison d'être de la connexion
   Postgres directe : `supabase/config.toml` n'expose pas le schéma `auth` à l'API Data, donc
   chercher ou trier par email est impossible via PostgREST.

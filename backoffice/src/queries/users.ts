@@ -20,8 +20,8 @@ export type UserRow = {
   suggs: number;
   /** Compte interne (EXCLUDED_EMAILS) : visible ici, mais hors de tous les chiffres. */
   is_excluded: boolean;
-  /** Aucun essai réussi, toutes périodes confondues. */
-  is_inactive: boolean;
+  /** Inscription jamais terminée : le code email n'a pas été validé. Même règle que la fiche. */
+  is_unconfirmed: boolean;
   total_count: number;
 };
 
@@ -88,7 +88,10 @@ export async function listUsers(scope: Scope, p: ListParams): Promise<UserRow[]>
       (coalesce(sg.suggs, 0))::int             as suggs,
       -- Marqués, pas masqués : ces comptes restent consultables, ils sont juste hors des chiffres.
       coalesce(lower(u.email) = any($1::text[]), false) as is_excluded,
-      (pr.id not in (select user_id from activated))     as is_inactive,
+      -- Inscription en plan : compte auth créé, code email jamais validé. Volontairement PAS
+      -- « aucun essai réussi » (ça, c'est l'activation, elle vit dans les cartes du dashboard).
+      -- Un compte social a son email confirmé par le provider, il n'est donc jamais marqué ici.
+      (u.email is not null and u.email_confirmed_at is null) as is_unconfirmed,
       (count(*) over ())::int                  as total_count
     from profiles pr
     join scope sc on sc.id = pr.id
