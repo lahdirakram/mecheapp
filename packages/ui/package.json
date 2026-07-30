@@ -13,6 +13,7 @@
   },
   "peerDependencies": {
     "@expo-google-fonts/fraunces": "*",
+    "@react-native-async-storage/async-storage": "*",
     "@expo-google-fonts/geist": "*",
     "@expo-google-fonts/geist-mono": "*",
     "@tanstack/react-query": "*",
