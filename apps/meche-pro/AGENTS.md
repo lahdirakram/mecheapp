@@ -28,7 +28,29 @@ Demandes/chat (V2) and agenda (V3) are deliberately NOT in this app yet.
   is written and waiting in `store/listing.md`.
 - **Quota (server-enforced in supabase/functions/generate)**: 3 lifetime free try-ons, then the
   `meche_pro_monthly` subscription (29,99 €) with 100 try-ons/month; refines count. Client display
-  reads `my_pro_status()` rpc. Env overrides: PRO_FREE_TRIALS, PRO_MONTHLY_QUOTA.
+  reads `my_pro_status()` rpc. Env overrides: PRO_FREE_TRIALS, PRO_MONTHLY_QUOTA. The numbers the
+  UI *shows* live in `lib/quota.ts` (one copy, display only, mirrors those env vars) — the app can
+  never enforce a quota, so treat a mismatch as a copy bug, not a security one.
+- **The price is RevenueCat's to state, not the server's, and not ours** (`lib/pricing.ts`,
+  `useProPrice()`). Apple owns the number actually charged: localized per storefront and
+  tax-inclusive, so a server-held or hardcoded price shows a stylist outside the Eurozone a figure
+  they will not be charged (wrong, and an App Store review risk). A backend *cannot* fix this: the
+  storefront is unknown until the purchase, RevenueCat only reports a currency in the webhook,
+  i.e. after the fact. The `29,99 €` / `€29.99` literal in `lib/pricing.ts` is the ONLY copy in the
+  app and is a last-resort fallback (web, Expo Go, no RC key, offerings fetch fails); keep it in
+  sync with the store. `store/listing.md` and `store/screenshots/*.json` are submitted separately
+  and are deliberately not driven from it. The store string is formatted for the buyer's
+  STOREFRONT, not the UI language: `29,99 €` in English is correct on a French account.
+- **Anything read from RevenueCat at mount must go in a SUBSCRIBED cache (React Query), never a
+  module-level one.** `configure()` only runs once the session resolves (`lib/PurchasesSync.tsx`),
+  so the first screen to call `getOfferings()` on a cold start usually loses that race, and
+  `lib/purchases.ts` reports the failure as an empty object rather than an error. With a plain
+  module cache the loser has no way to be re-rendered when a later screen succeeds, so
+  simultaneously-mounted screens (Studio and Salon are tabs, the paywall sits over them) end up
+  showing *different* values at once. Seen on device: paywall `29,99 €`, Studio and Salon
+  `€29.99`. **The check** when two screens disagree about a store value: which one mounted first,
+  not the formatting code. Corollary: a queryFn must THROW on a missing price, or React Query
+  caches the `configure()` race as a success and never retries.
 - **Subscription**: RevenueCat → prod `iap-webhook` upserts `subscriptions` (one row per owner,
   product ids starting with `meche_pro`). No staging IAP, like B2C.
 - **Réalisations = REAL photos only, never AI renders** (product rule). Added from the

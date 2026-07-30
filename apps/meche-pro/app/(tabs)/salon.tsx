@@ -8,6 +8,7 @@ import { useAuth, useMySalon, usePortfolio, useProStatus, useSession } from '@me
 import { MIcon, MPAL, MText, PrimaryButton, useLang, useLangStore, useSheet, useToast, type MIconName } from '@meche/ui';
 import { supabase } from '../../lib/supabase';
 import { openLegal } from '../../lib/legal';
+import { useProPrice } from '../../lib/pricing';
 import { FREE_TRIALS, MONTHLY_QUOTA } from '../../lib/quota';
 import { PRO_PRODUCT_ID, openManageSubscription } from '../../lib/subscription';
 
@@ -34,6 +35,7 @@ export default function Salon() {
   const router = useRouter();
   const lang = useLang();
   const fr = lang === 'fr';
+  const price = useProPrice();
   const toggleLang = useLangStore((s) => s.toggle);
   const toast = useToast();
   const sheet = useSheet();
@@ -177,7 +179,7 @@ export default function Salon() {
                   ? 'Tes essais offerts sont épuisés.'
                   : 'Your free try-ons are used up.'}
             </MText>
-            <PrimaryButton label={fr ? 'Passer à Mèche Pro · 29,99 €/mois' : 'Go Mèche Pro · €29.99/month'} tone="caramel" icon="arrowRight" onPress={() => router.push('/paywall')} />
+            <PrimaryButton label={fr ? `Passer à Mèche Pro · ${price}/mois` : `Go Mèche Pro · ${price}/month`} tone="caramel" icon="arrowRight" onPress={() => router.push('/paywall')} />
           </View>
         ) : null}
 

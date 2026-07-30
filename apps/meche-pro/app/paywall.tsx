@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,13 +6,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useProStatus, useSession } from '@meche/api-client';
 import { MIcon, MPAL, MText, PWordmark, PrimaryButton, useLang, useToast } from '@meche/ui';
 import { openLegal } from '../lib/legal';
-import { getStorePrices, purchaseProduct, purchasesAvailable, restorePurchases } from '../lib/purchases';
+import { useProPrice } from '../lib/pricing';
+import { purchaseProduct, purchasesAvailable, restorePurchases } from '../lib/purchases';
 import { MONTHLY_QUOTA } from '../lib/quota';
 import { PRO_PRODUCT_ID, openManageSubscription } from '../lib/subscription';
-
-// The store price is the source of truth when available (tax/localised); the fallback matches the
-// configured product. PRO_PRODUCT_ID lives in lib/subscription.ts.
-const FALLBACK_PRICE = '29,99 €';
 
 // Abonnement Mèche Pro — one plan, dark like the design's paywall. Grant happens server-side
 // (RevenueCat webhook → subscriptions); this screen only opens the store sheet then refreshes.
@@ -24,19 +21,9 @@ export default function Paywall() {
   const qc = useQueryClient();
   const session = useSession();
   const { data: status } = useProStatus(session?.user.id);
-  const [price, setPrice] = useState<string | null>(null);
+  const price = useProPrice();
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    getStorePrices().then((prices) => {
-      if (active && prices[PRO_PRODUCT_ID]) setPrice(prices[PRO_PRODUCT_ID].priceString);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const subActive = status?.sub_active ?? false;
   const periodEnd = status?.period_end ? new Date(status.period_end) : null;
@@ -123,7 +110,7 @@ export default function Paywall() {
         <View style={{ marginTop: 24, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(255,255,255,0.05)', padding: 20, gap: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
             <MText variant="serif" size={40} color="#fff">
-              {price ?? FALLBACK_PRICE}
+              {price}
             </MText>
             <MText size={14} color="rgba(255,255,255,0.6)">
               {lang === 'fr' ? '/ mois' : '/ month'}

@@ -6,6 +6,7 @@ import { useMySalon, usePortfolio, useProStatus, useSession, useSignedUrls, useW
 import { MIcon, MPAL, MText, PrimaryButton, useLang } from '@meche/ui';
 import { cacheKeyFor } from '../../lib/img';
 import { useLocalImages } from '../../lib/localImages';
+import { useProPrice } from '../../lib/pricing';
 import { FREE_TRIALS, MONTHLY_QUOTA } from '../../lib/quota';
 import { useTryStore } from '../../lib/tryStore';
 
@@ -31,6 +32,7 @@ export default function Studio() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const lang = useLang();
+  const price = useProPrice();
   const session = useSession();
   const { data: status } = useProStatus(session?.user.id);
   const { data: salon } = useMySalon(session?.user.id);
@@ -139,11 +141,11 @@ export default function Studio() {
               <MText size={12} color={MPAL.ink2} style={{ marginTop: 1 }}>
                 {trialLeft > 0
                   ? lang === 'fr'
-                    ? `${MONTHLY_QUOTA} essais/mois pour 29,99 €. Encore ${trialLeft} ${trialLeft > 1 ? 'essais offerts' : 'essai offert'}.`
-                    : `${MONTHLY_QUOTA} try-ons/month for €29.99. ${trialLeft} free ${trialLeft > 1 ? 'try-ons' : 'try-on'} left.`
+                    ? `${MONTHLY_QUOTA} essais/mois pour ${price}. Encore ${trialLeft} ${trialLeft > 1 ? 'essais offerts' : 'essai offert'}.`
+                    : `${MONTHLY_QUOTA} try-ons/month for ${price}. ${trialLeft} free ${trialLeft > 1 ? 'try-ons' : 'try-on'} left.`
                   : lang === 'fr'
-                    ? `Essais offerts épuisés. ${MONTHLY_QUOTA} essais/mois pour 29,99 €.`
-                    : `Free try-ons used. ${MONTHLY_QUOTA} try-ons/month for €29.99.`}
+                    ? `Essais offerts épuisés. ${MONTHLY_QUOTA} essais/mois pour ${price}.`
+                    : `Free try-ons used. ${MONTHLY_QUOTA} try-ons/month for ${price}.`}
               </MText>
             </View>
             <MIcon name="chevronRight" size={16} color={MPAL.sable} />
