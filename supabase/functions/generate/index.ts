@@ -1,10 +1,16 @@
 // POST /functions/v1/generate
 // Body: { selfieBase64, mimeType, brief, name }
-// Auth: user JWT. Checks the credit balance + free-tier caps, reserves 1 credit, then records a
-// PENDING generation and its wardrobe look and RETURNS IMMEDIATELY. The AI try-on (Gemini, or mock
-// fallback) runs in the background (EdgeRuntime.waitUntil): on success it stores the result and
-// flips the rows to 'done'; on failure it refunds the credit and removes the empty look. So a
-// try-on survives the user leaving the loader — it appears in "Mes mèches" when ready.
+// Auth: user JWT. Checks the credit balance + free-tier caps, stores the selfie, records a PENDING
+// generation and its wardrobe look, and RETURNS IMMEDIATELY. The AI try-on (Gemini, or mock
+// fallback) runs in the background (EdgeRuntime.waitUntil), which is where the credit is reserved:
+// immediately before the Gemini call, the only step that costs money. On success it stores the
+// result and flips the rows to 'done'; on failure it refunds the credit and marks the look failed
+// (the look is KEPT, so the user sees a failed card and can retry). So a try-on survives the user
+// leaving the loader — it appears in "Mes mèches" when ready.
+//
+// The ordering above is load-bearing, see 0030: nothing between the reservation and the paid call
+// may be slow or memory-hungry, because a hard worker kill in that window spends a credit that no
+// catch can refund.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { decodeBase64, encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import { cors } from '../_shared/cors.ts';
@@ -62,10 +68,6 @@ Deno.serve(async (req) => {
   const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash-image';
   const GEMINI_TEXT_MODEL = Deno.env.get('GEMINI_TEXT_MODEL') ?? 'gemini-2.5-flash';
 
-  // Hoisted so the outer catch can refund the reservation if a synchronous setup step fails.
-  let admin: Admin | null = null;
-  let resvId: string | null = null;
-
   try {
     const authHeader = req.headers.get('Authorization') ?? '';
     const userClient = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: authHeader } } });
@@ -100,7 +102,7 @@ Deno.serve(async (req) => {
     // `name` is a short display label (derived from the prompt/suggestion), safe to cap defensively.
     const safeName = typeof name === 'string' ? name.slice(0, 80) : name;
 
-    admin = createClient(SUPABASE_URL, SERVICE);
+    const admin: Admin = createClient(SUPABASE_URL, SERVICE);
 
     // ── Pro path (Mèche Pro app) ────────────────────────────────────────────────────────────────
     // Pros don't use the B2C credit ledger: 3 lifetime free try-ons to discover the Studio, then an
@@ -299,19 +301,13 @@ Deno.serve(async (req) => {
       if ((userHour ?? 0) >= USER_HOURLY_CAP) return json({ error: 'rate_limited' }, 429);
     }
 
-    // ── Reserve + enqueue (all synchronous, so the client gets a definitive answer fast) ──────
+    // ── Enqueue (all synchronous, so the client gets a definitive answer fast) ────────────────
+    // Deliberately NO credit reservation here. Everything from this point down to the Gemini call
+    // is free — encoding, uploading, two inserts — so holding a credit across it buys nothing and
+    // opens a window in which the credit can be lost for good (0030). The encode below is also the
+    // step most likely to kill the worker, which makes it a useful free canary: when it dies now,
+    // the user keeps their credit and can retry.
     const genId = crypto.randomUUID();
-
-    // Reserve 1 credit ATOMICALLY before any paid work: an advisory-locked check+decrement inside
-    // the DB so concurrent /generate calls can't over-spend or fire multiple paid AI calls on the
-    // same credit. Returns the reservation id, or null when no credit is left. Refunded on failure.
-    // Pros have no credits to reserve — their spend is bounded by the quota checks above.
-    if (!isPro) {
-      const { data: rid, error: resvErr } = await admin.rpc('reserve_generation_credit', { p_user: user.id });
-      if (resvErr) throw resvErr;
-      if (!rid) return json({ error: 'no_credits' }, 402);
-      resvId = rid as string;
-    }
 
     const selfiePath = `${user.id}/${genId}-in.jpg`;
     // Store the selfie now so the before/after is available even while the result is still pending.
@@ -345,7 +341,28 @@ Deno.serve(async (req) => {
     // the worker alive until it settles, so it completes even if the client disconnects. ────────
     EdgeRuntime.waitUntil(
       (async () => {
+        let resvId: string | null = null;
         try {
+          // The credit buys exactly ONE paid Gemini call, so it is reserved HERE, with nothing
+          // between it and that call. Atomicity is unchanged (0009 / 0030): the RPC takes the
+          // per-user advisory lock BEFORE reading the balance, so N concurrent requests sharing one
+          // credit still yield exactly one paid call — the losers get null and return below without
+          // ever reaching Gemini. Moving this call site did not weaken that ceiling, because the
+          // ceiling lives in the RPC, not in the order its caller does things.
+          // Pros have no credits to reserve; their spend is bounded by the quota checks above.
+          if (!isPro) {
+            const { data: rid, error: resvErr } = await admin.rpc('reserve_generation_credit', { p_user: user.id, p_gen: genId });
+            if (resvErr) throw resvErr;
+            if (!rid) {
+              // Lost the race for the last credit. Nothing charged, nothing generated. KEEP the
+              // look as a 'failed' card, same as any other failure, so the user gets feedback and a
+              // retry rather than a look that silently never resolves.
+              await admin.from('generations').update({ status: 'failed', error: 'no_credits' }).eq('id', genId);
+              await notifyUser(admin, user.id, 'failed', lookName, genId, look.id);
+              return;
+            }
+            resvId = rid as string;
+          }
           let result;
           if (GEMINI_API_KEY) {
             // Gemini's image model intermittently replies with text only ("no image in response"),
@@ -431,15 +448,9 @@ Deno.serve(async (req) => {
     // work is now decoupled from this request.
     return json({ id: genId, lookId: look.id, status: 'pending', creditsLeft: isPro ? proQuotaLeft : balance - 1, provider: GEMINI_API_KEY ? 'gemini' : 'mock' });
   } catch (e) {
-    // A synchronous step failed after the credit was reserved → refund it. The background path has
-    // its own refund and is only scheduled once setup fully succeeds, so there's no double refund.
-    if (resvId && admin) {
-      try {
-        await admin.from('credit_transactions').delete().eq('id', resvId);
-      } catch {
-        /* best-effort refund */
-      }
-    }
+    // Nothing to refund: the synchronous path no longer reserves anything, so a setup failure here
+    // costs the user nothing and they retry with their credit intact. That is the whole point of
+    // 0030 — do not reintroduce a reservation above this line.
     const msg = String(e instanceof Error ? e.message : e);
     return json({ error: 'generation_failed', detail: msg }, 500);
   }

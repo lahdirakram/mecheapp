@@ -143,6 +143,35 @@ wrong belief survives across sessions.
   Le B2C n'était pas cassé, il marchait **par chance** : ses packs vivent dans l'offering qui porte
   le statut. C'était donc une bombe à retardement, désamorcée depuis (même helper). Si les deux
   copies divergent un jour, c'est le signe qu'il faut sortir ce helper dans `packages/`.
+- **Le crédit se réserve juste AVANT l'appel Gemini, jamais avant.** Un crédit paie un appel payant
+  et rien d'autre : validation, encodage, upload, inserts sont gratuits. `generate` réservait en
+  tête, puis encodait et uploadait le selfie avant d'écrire la ligne `generations`. Une EXCEPTION
+  dans cette fenêtre était remboursée par le catch ; un kill dur ne l'était pas (limite mémoire/CPU
+  pendant qu'imagescript décode une photo pleine résolution en bitmap brut : 12 Mpx = 49 Mo, 48 Mpx
+  = 195 Mo), donc pas de remboursement ET pas de ligne. Six comptes en prod, dont cinq nouveaux
+  users qui ont perdu leur unique crédit gratuit à leur tout premier essai et ne sont jamais
+  revenus. **Le check** quand un crédit part sans résultat : compter les objets dans
+  `selfies/<uid>/` — zéro veut dire que la ligne n'a jamais existé, pas qu'elle a été supprimée
+  (rien ne peut supprimer une `generations` : 0021 a retiré le delete au client, et
+  `delete-account` emporterait le ledger avec). Corrigé en 0030, filet de rattrapage en 0031
+  (cron `reap-stuck-generations`, toutes les 5 min, seuil 10 min — mesuré : p99 réel = 15,5 s ;
+  ne pas descendre sous la minute, on rembourserait des générations vivantes). Ce cron ne voit PAS
+  les orphelins d'avant 0030 : leur débit n'a pas de `gen:<id>` et leur ligne n'existe pas.
+- **`credit_transactions.external_id` doit porter `gen:<generationId>` sur un débit de génération.**
+  Il valait NULL, donc un débit ne pointait sur rien : c'est précisément pourquoi la perte ci-dessus
+  est restée invisible six semaines (sans lien on ne peut que COMPTER les débits et comparer à des
+  COMPTES de générations, jamais joindre). L'index unique de 0007 rend aussi le double débit
+  structurellement impossible. Même motif que `unlock:<gen>` (0026).
+- **Le plafond d'appels payants vit dans `reserve_generation_credit`, pas dans l'ordre des appels.**
+  Le `pg_advisory_xact_lock` est pris AVANT la lecture du solde : N requêtes concurrentes sur un
+  seul crédit se sérialisent et une seule gagne. C'est ce qui rend sûr de réserver depuis la tâche
+  de fond. Ne pas « simplifier » ce lock : c'est la seule chose entre 1 crédit et N générations
+  payantes.
+- **La sortie de `gemini-2.5-flash-image` est plafonnée à 1024px** (vérifié sur la doc Google, input
+  max 7 Mo/image). Redimensionner le selfie à 1024px de côté long ne dégrade donc RIEN de ce qui
+  atteint le résultat, ce qui lève la tension avec « ne jamais dégrader `modelB64` ». Attention :
+  `expo-image-manipulator` n'est installé nulle part et c'est un module natif, donc **ce
+  redimensionnement ne peut PAS partir en OTA** — il attend un build store.
 - **Un toast est invisible depuis un écran `presentation: 'modal'` sur iOS** (overlay rendu à la
   racine, le modal natif est un autre contrôleur de vue et passe devant). Depuis un modal, utiliser
   `Alert.alert`. Vaut aussi pour `useSheet`, déjà noté dans `packages/ui/src/feedback.tsx`.

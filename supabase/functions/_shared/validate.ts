@@ -2,7 +2,14 @@
 // Rejects oversized payloads, disallowed MIME types and obviously-invalid base64, so a malformed or
 // abusive request can't burn memory or AI budget.
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const MAX_BYTES = 12 * 1024 * 1024; // ~12 MB decoded ceiling
+// Gemini's own per-image input limit is 7 MB, so anything above it is a payload we would pay to
+// receive, encode and upload only for the model to reject it. Was 12 MB, i.e. the app accepted
+// images the model never would. This is a floor of defence, not the real fix: the ceiling that
+// matters is pixel COUNT (imagescript decodes to raw RGBA, so a 48 Mpx photo is a 195 MB bitmap and
+// kills the worker regardless of how well it compressed), and that is capped client-side at 1024px
+// on the long edge — the size Gemini generates at, so nothing that reaches the result is lost.
+// Keep this server-side cap anyway: an old bundle still sends full-resolution photos.
+const MAX_BYTES = 7 * 1024 * 1024;
 
 export type ImageInput = { base64: string; mimeType: string };
 
