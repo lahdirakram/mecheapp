@@ -75,6 +75,19 @@ wrong belief survives across sessions.
 - **Deploy order when a migration and an OTA go together**: OTA first, then migration. New JS calling
   a missing RPC is a window YOU close in minutes; a migration that breaks old clients lasts until
   every user updates. Then push the migration immediately — don't leave the gap open.
+- **`db push` suit le NUMÉRO de migration, pas le nom de fichier — et un worktree part d'un `main`
+  figé.** Un worktree créé avant un merge ne voit pas les migrations arrivées depuis : on écrit un
+  `0029_x.sql` alors qu'un `0029_y.sql` est DÉJÀ appliqué sur les deux lanes. `db push` considère
+  alors 0029 comme fait et **saute silencieusement** le fichier, sans erreur ni avertissement. Si la
+  fonction edge déployée juste après appelle une RPC de cette migration fantôme, chaque appel part
+  en 500. **Le check** avant tout `db push` depuis un worktree : `supabase migration list --linked`,
+  et comparer local/remote ligne à ligne. Un numéro présent des deux côtés avec un nom différent =
+  collision, il faut renuméroter. Vécu le 2026-07-30 : `0029_admin_credit_grants` arrivé par `main`
+  pendant qu'un worktree préparait son propre 0029.
+- **Une migration edge se déploie AVANT sa fonction** (l'inverse de la règle OTA juste au-dessus) :
+  la nouvelle fonction appelle la nouvelle RPC. Ajouter la RPC en SURCHARGE plutôt qu'en
+  remplacement (ex. 0030) rend la fenêtre inoffensive — les deux signatures coexistent, l'ancienne
+  fonction déployée continue de tourner pendant le déploiement.
 - **`app.json` `version` is the OTA compatibility key** (`runtimeVersion.policy = "appVersion"`). If it
   drifts from the installed binary, updates silently never arrive. Both lanes are on `1.0.1`; keep them
   aligned, or switch to `policy: "fingerprint"` at a store release (both lanes at once).

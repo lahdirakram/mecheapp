@@ -60,6 +60,22 @@ export function useLockedFirstTry(): { on: boolean; ready: boolean } {
   return { on: v === '1' || v === 'force', ready: !isPending };
 }
 
+// Lowest app version the backend still wants to serve, as a dotted numeric string ('1.0.2'). Seeded
+// DORMANT by 0032 ('0', which nothing can be below) and only ever raised by hand, once the newer
+// build is actually live on the stores.
+//
+// No `ready` flag here, on purpose, and that is the difference with useLockedFirstTry above: there,
+// both defaults are wrong, so screens wait. Here one default is always right. Absent, still
+// loading, fetch failed (useAppFlags throws, so `data` is undefined) and unparseable all collapse to
+// the same answer, "don't block" — a network blip must never be indistinguishable from "you must
+// update". Callers get the raw string and never a boolean, so the comparison stays in the app that
+// owns the version: ONE app_config table serves both apps, and meche / meche-pro are on separate
+// version lines, so a shared verdict would be meaningless.
+export function useMinVersion(): string | undefined {
+  const { data } = useAppFlags();
+  return data?.min_version;
+}
+
 // Split the balance into free vs PURCHASED pools by replaying the user's own ledger (RLS
 // credit_tx_select_own allows the read), with the SAME rules as `generate` server-side: charges hit
 // the free pool first, replayed in order. The UI shows only `paid` as "credits": under the locked

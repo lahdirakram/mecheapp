@@ -1,0 +1,36 @@
+-- `min_version` : la version minimale de l'app B2C que le backend accepte encore de servir.
+--
+-- Aucun changement de schéma. La table `app_config` (0027) est déjà lisible par tout le monde et
+-- déjà lue en entier par `useAppFlags()` (packages/api-client/src/queries.ts) : une clé de plus ne
+-- coûte AUCUNE requête supplémentaire. Écriture réservée au service_role, comme toute la table
+-- (pas de policy d'insert = refus par RLS, verrouillé par Postgres et pas par du code applicatif).
+--
+-- Le client (apps/meche/lib/updateGate.ts) compare la version du bundle à cette valeur, segment par
+-- segment en NUMÉRIQUE. Si elle est strictement inférieure, il affiche un écran bloquant qui
+-- renvoie vers le store. Sinon il ne rend rien du tout.
+--
+-- ── La ligne est semée DORMANTE, et c'est le point le plus important de ce fichier ──────────────
+-- '0' ne peut bloquer personne : aucune version publiée n'est inférieure à 0. Y mettre une vraie
+-- version au moment du `db push` briquerait INSTANTANÉMENT tout le parc, parce que le build plus
+-- récent n'est pas encore sur les stores : l'utilisateur lit « mets à jour », va sur le store, n'y
+-- trouve rien de neuf, et n'a plus d'app. La valeur réelle se pose À LA MAIN, et seulement une fois
+-- le nouveau build confirmé en ligne ET installable :
+--   update app_config set value = '1.0.2', updated_at = now() where key = 'min_version';
+-- Et pour tout rouvrir, sans OTA ni redéploiement :
+--   update app_config set value = '0', updated_at = now() where key = 'min_version';
+--
+-- ── Le contrat côté client : FAIL OPEN ─────────────────────────────────────────────────────────
+-- Clé absente, valeur vide, valeur non analysable ('1.0.x', '1.0.2-beta', 'latest'), fetch en
+-- cours ou fetch en échec : le client NE BLOQUE PAS. Une coupure réseau ne doit jamais être
+-- indiscernable d'un « tu dois mettre à jour ». Cette valeur est donc un plafond de confiance, pas
+-- un mécanisme de sécurité : elle ne remplace aucun contrôle serveur (voir 0021, 0026).
+-- Ne jamais inverser ce défaut : 747d3ec rappelle ce que coûte une garde de démarrage qui peut
+-- bloquer l'app pour toujours.
+--
+-- ── Portée : B2C uniquement ────────────────────────────────────────────────────────────────────
+-- Un seul projet Supabase sert les DEUX apps, mais elles ne sont pas sur la même ligne de version
+-- (meche 1.0.1, meche-pro 1.0.0). Cette clé n'est lue que par `apps/meche`. Le jour où Mèche Pro
+-- veut la même garde, il lui faut sa PROPRE clé (`min_version_pro`) : partager celle-ci
+-- verrouillerait une app sur le numéro de version de l'autre.
+insert into app_config (key, value) values ('min_version', '0')
+  on conflict (key) do nothing;
