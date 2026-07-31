@@ -106,30 +106,28 @@ export default function SignIn() {
               </Pressable>
             }
           />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
-            <MText
-              size={13}
-              color={MPAL.ink}
-              variant="bodySemibold"
-              onPress={sendCode}
-              style={{ textDecorationLine: 'underline' }}
-            >
-              {t('signin_code_link')}
-            </MText>
-            <MText
-              size={13}
-              color={MPAL.ink}
-              variant="bodySemibold"
-              onPress={() => router.push('/(auth)/forgot')}
-              style={{ textDecorationLine: 'underline' }}
-            >
-              {t('forgot_link')}
-            </MText>
-          </View>
+          <MText
+            size={13}
+            color={MPAL.ink}
+            variant="bodySemibold"
+            onPress={() => router.push('/(auth)/forgot')}
+            style={{ alignSelf: 'flex-end', paddingVertical: 4, textDecorationLine: 'underline' }}
+          >
+            {t('forgot_link')}
+          </MText>
         </View>
 
         <View style={{ marginTop: 'auto', paddingBottom: insets.bottom + 20, gap: 10 }}>
           <PrimaryButton label={busy ? '…' : t('auth_signin')} tone="ink" icon="arrowRight" disabled={!valid || busy} onPress={submit} />
+          <MText
+            size={13}
+            color={MPAL.ink}
+            variant="bodySemibold"
+            onPress={sendCode}
+            style={{ textAlign: 'center', paddingVertical: 6, textDecorationLine: 'underline' }}
+          >
+            {t('signin_code_link')}
+          </MText>
           <LegalConsent />
           <MText size={13} color={MPAL.mute} style={{ textAlign: 'center' }}>
             {lang === 'fr' ? 'Pas encore de compte ? ' : 'No account yet? '}
