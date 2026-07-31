@@ -1,0 +1,488 @@
+/* Tokens mirror packages/core/src/theme/palette.ts (MPAL) and the landing page in
+   legal/public/index.html. Single theme on purpose: the warm paper ground IS the brand, and the
+   landing has no dark mode either. */
+:root {
+  --paper: #FCF8F4;
+  --paper-2: #F2ECE6;
+  --ink: #15110E;
+  --ink-2: #3D342B;
+  --mute: #8E8580;
+  --line: #EEE5DE;
+  --caramel: #B07F3C;
+  --caramel-soft: #F0E2CF;
+  --ok: #1F8A5B;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+img { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; }
+::selection { background: var(--caramel); color: var(--paper); }
+
+/* header */
+.m-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 18px 30px;
+  border-bottom: 1px solid var(--line);
+}
+.wm {
+  font-family: 'Fraunces', Georgia, serif; font-weight: 400;
+  font-size: 25px; letter-spacing: -0.03em; line-height: 1;
+  position: relative; display: inline-block; white-space: nowrap;
+}
+.wm .gw { position: relative; display: inline-block; line-height: 1; }
+.wm .gw::after {
+  content: ''; position: absolute;
+  top: 0.18em; left: 0.18em; width: 0.5em; height: 0.07em;
+  background: var(--caramel); transform: rotate(22deg);
+  transform-origin: left center; border-radius: 999px;
+}
+.m-top-right { display: flex; align-items: center; gap: 16px; }
+.m-credits {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); background: var(--caramel-soft);
+  padding: 6px 12px; border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.m-credits[hidden] { display: none; }
+.m-lang {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 0.14em; color: var(--mute);
+}
+
+/* stepper — a real sequence, so it is numbered */
+.m-steps {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 16px 30px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+.m-step {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--mute);
+  padding: 5px 11px; border-radius: 999px;
+  border: 1px solid transparent;
+  transition: color .3s ease, background .3s ease, border-color .3s ease;
+}
+.m-step .n { font-size: 9px; opacity: .65; }
+.m-step[data-state="now"] {
+  color: var(--ink); background: var(--paper-2); border-color: var(--line);
+}
+.m-step[data-state="done"] { color: var(--caramel); }
+.m-step[data-state="done"] .n::after { content: ' ✓'; }
+.m-steps .sep { color: var(--line); font-size: 11px; }
+
+/* bench: portrait frame (persistent) + step panel (swaps) */
+.m-shell { max-width: 1180px; margin: 0 auto; }
+
+.m-bench {
+  display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 44px; align-items: start;
+  padding: 34px 30px 40px;
+}
+@media (max-width: 900px) {
+  .m-bench { grid-template-columns: 1fr; gap: 28px; padding: 24px 20px 32px; }
+  .m-top, .m-steps { padding-left: 20px; padding-right: 20px; }
+  /* Stacked, `sticky` would pin the frame over the panel as you scroll it. */
+  .m-frame-wrap { position: static; }
+}
+
+@media (max-width: 620px) {
+  /* Reclaim the fold. The stepper wrapping to two tall lines plus a full-width square frame put the
+     step's actual input below the fold on a 375px phone. */
+  .m-steps { gap: 5px; padding-top: 12px; padding-bottom: 12px; }
+  .m-steps .sep { display: none; }
+  .m-step { padding: 4px 8px; letter-spacing: 0.1em; }
+  /* aspect-ratio still governs the box; capping the height just crops via object-fit: cover. */
+  .m-frame-wrap[data-compact="1"] .m-frame { max-height: 38vh; }
+  .m-frame-wrap[data-compact="1"] .m-caption { margin-top: 10px; font-size: 12px; }
+}
+
+/* ── the frame ── */
+.m-frame-wrap { position: sticky; top: 20px; }
+.m-frame {
+  position: relative; aspect-ratio: 1 / 1; width: 100%;
+  border-radius: 6px; overflow: hidden;
+  background: var(--paper-2);
+  border: 1px solid rgba(21,17,14,0.12);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5), 0 18px 40px -26px rgba(21,17,14,0.5);
+}
+.m-frame img { width: 100%; height: 100%; object-fit: cover; }
+.m-shot { position: absolute; inset: 0; opacity: 0; transition: opacity .5s ease; }
+.m-shot[data-on="1"] { opacity: 1; }
+.m-shot--teaser img { transform: scale(1.02); filter: blur(1.5px); }
+
+/* empty state */
+.m-empty {
+  position: absolute; inset: 12px;
+  border: 1px dashed rgba(21,17,14,0.2); border-radius: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; padding: 24px;
+}
+.m-empty .glyph {
+  font-family: 'Fraunces', Georgia, serif; font-size: 40px; line-height: 1;
+  color: var(--caramel);
+}
+.m-empty p {
+  margin: 0; font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute);
+}
+
+/* frame overlays */
+.m-badge {
+  position: absolute; top: 12px; left: 12px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 6px 11px; border-radius: 999px;
+  background: rgba(252,248,244,0.94); color: var(--ink);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(6px);
+}
+.m-badge .lk { color: var(--caramel); }
+.m-badge--ok { color: var(--ok); }
+.m-badge--ok .lk { color: var(--ok); }
+
+/* generating shimmer */
+.m-scan {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(180deg, transparent 42%, rgba(176,127,60,0.28) 50%, transparent 58%);
+  animation: scan 2.1s ease-in-out infinite;
+}
+@keyframes scan { 0% { transform: translateY(-52%); } 100% { transform: translateY(52%); } }
+
+/* reveal wipe */
+.m-wipe {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background: var(--caramel); opacity: 0;
+}
+.m-wipe[data-play="1"] { animation: wipe .85s cubic-bezier(.65,0,.35,1) forwards; }
+@keyframes wipe {
+  0%   { opacity: 0; transform: translateY(-100%); }
+  35%  { opacity: .92; transform: translateY(0); }
+  100% { opacity: 0;   transform: translateY(100%); }
+}
+
+/* before/after toggle */
+.m-ab {
+  display: flex; gap: 6px; margin-top: 12px;
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px; width: fit-content;
+  background: var(--paper);
+}
+.m-ab button {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 999px; border: 0; background: transparent;
+  color: var(--mute); cursor: pointer;
+}
+.m-ab button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.m-ab button:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
+
+.m-caption {
+  margin: 12px 0 0; font-size: 12.5px; color: var(--mute); max-width: 42ch;
+}
+
+/* ── step panel ── */
+/* React mounts only the active step, so there is nothing to hide here. The mockup toggled
+   `data-on` on all six at once; keeping that rule would hide every screen. */
+.m-panel > section { display: block; animation: fade .45s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.m-kicker {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--caramel); margin: 0 0 14px;
+}
+.m-h {
+  font-family: 'Fraunces', Georgia, serif; font-weight: 400;
+  font-size: clamp(26px, 3.2vw, 38px); line-height: 1.06; letter-spacing: -0.03em;
+  margin: 0 0 14px; text-wrap: balance;
+}
+.m-h em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; color: var(--caramel); }
+.m-sub { color: var(--ink-2); margin: 0 0 24px; max-width: 46ch; font-size: 15px; }
+
+/* buttons */
+.m-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  font-weight: 500; font-size: 15px;
+  padding: 15px 26px; border-radius: 999px;
+  border: 1px solid transparent; cursor: pointer;
+  transition: background .18s ease, transform .18s ease, border-color .18s ease;
+}
+.m-btn:hover { transform: translateY(-1px); }
+.m-btn:focus-visible { outline: 2px solid var(--caramel); outline-offset: 3px; }
+.m-btn[disabled] { opacity: .4; cursor: not-allowed; transform: none; }
+.m-btn--primary { background: var(--ink); color: var(--paper); }
+.m-btn--primary:hover:not([disabled]) { background: var(--caramel); }
+.m-btn--ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.m-btn--ghost:hover { border-color: var(--ink); }
+.m-btn--wide { width: 100%; }
+.m-btn .arw { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 17px; line-height: 1; }
+
+.m-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* dropzone */
+.m-drop {
+  border: 1px dashed rgba(21,17,14,0.22); border-radius: 8px;
+  padding: 30px 24px; text-align: center; cursor: pointer;
+  background: var(--paper); transition: border-color .2s ease, background .2s ease;
+}
+.m-drop:hover { border-color: var(--caramel); background: var(--caramel-soft); }
+.m-drop:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
+.m-drop .big { font-weight: 500; font-size: 15.5px; display: block; margin-bottom: 5px; }
+.m-drop .small { font-size: 12.5px; color: var(--mute); }
+
+/* privacy note */
+.m-note {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-top: 20px; padding: 14px 16px;
+  background: var(--paper-2); border-radius: 8px;
+  font-size: 12.5px; color: var(--ink-2); line-height: 1.5;
+}
+.m-note .ic { color: var(--ok); flex-shrink: 0; font-size: 13px; line-height: 1.4; }
+
+/* look grid */
+.m-looks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+@media (max-width: 900px) { .m-looks { grid-template-columns: repeat(2, 1fr); } }
+.m-look {
+  position: relative; border: 0; padding: 0; background: none; cursor: pointer;
+  border-radius: 6px; overflow: hidden; text-align: left;
+  box-shadow: 0 0 0 1px var(--line);
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+.m-look:hover { transform: translateY(-2px); }
+.m-look[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.m-look:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
+.m-look img { aspect-ratio: 1/1; object-fit: cover; width: 100%; }
+.m-look .nm {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 16px 9px 7px;
+  background: linear-gradient(180deg, transparent, rgba(21,17,14,0.82));
+  color: #FCF8F4; font-size: 11.5px; font-weight: 500;
+}
+.m-look .nm em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; }
+.m-look[data-src="feed"] .src {
+  position: absolute; top: 7px; right: 7px;
+  width: 8px; height: 8px; border-radius: 999px; background: #4A88E0;
+  box-shadow: 0 0 0 2px rgba(252,248,244,0.9);
+}
+
+/* fields */
+.m-field { display: block; margin-bottom: 14px; }
+.m-label {
+  display: block; font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--mute); margin-bottom: 7px;
+}
+.m-input {
+  width: 100%; font: inherit; font-size: 15px; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+  padding: 13px 15px;
+}
+.m-input::placeholder { color: var(--mute); }
+.m-input:focus { outline: 2px solid var(--caramel); outline-offset: -1px; border-color: transparent; }
+textarea.m-input { resize: vertical; min-height: 74px; line-height: 1.5; }
+
+.m-or {
+  display: flex; align-items: center; gap: 14px; margin: 20px 0;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute);
+}
+.m-or::before, .m-or::after { content: ''; height: 1px; background: var(--line); flex: 1; }
+
+/* generating progress */
+.m-prog { height: 2px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 26px 0 16px; }
+.m-prog i { display: block; height: 100%; width: 0%; background: var(--caramel); transition: width .5s linear; }
+.m-tick {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* packs */
+.m-packs { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
+.m-pack {
+  display: flex; align-items: center; gap: 15px; width: 100%; text-align: left;
+  padding: 15px 17px; border-radius: 10px; cursor: pointer;
+  background: var(--paper); border: 1px solid var(--line);
+  transition: border-color .18s ease, background .18s ease;
+}
+.m-pack:hover { border-color: var(--ink-2); }
+.m-pack[aria-pressed="true"] { border-color: var(--ink); background: var(--paper-2); }
+.m-pack:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
+.m-pack .radio {
+  width: 17px; height: 17px; border-radius: 999px; flex-shrink: 0;
+  border: 1.5px solid var(--mute); position: relative;
+}
+.m-pack[aria-pressed="true"] .radio { border-color: var(--ink); }
+.m-pack[aria-pressed="true"] .radio::after {
+  content: ''; position: absolute; inset: 3px; border-radius: 999px; background: var(--ink);
+}
+.m-pack .body { flex: 1; min-width: 0; }
+.m-pack .ttl { font-weight: 500; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.m-pack .ttl em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; }
+.m-pack .sub { font-size: 12.5px; color: var(--mute); }
+.m-pack .price {
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; font-weight: 500;
+  flex-shrink: 0; font-variant-numeric: tabular-nums;
+}
+.m-tag {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  background: var(--caramel-soft); color: var(--ink);
+  padding: 3px 8px; border-radius: 999px;
+}
+.m-trust {
+  display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--mute);
+}
+
+/* result actions */
+.m-acts { display: flex; gap: 9px; flex-wrap: wrap; margin-bottom: 22px; }
+.m-refine { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 4px; }
+
+
+
+/* ── additions the real page needs and the mockup did not ── */
+
+/* Inline error / status messages. The mockup never had a failure state. */
+.m-alert {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-top: 18px; padding: 14px 16px;
+  border-radius: 8px; font-size: 13.5px; line-height: 1.5;
+  background: #FBEAE6; color: #7A2A19;
+  border: 1px solid #F0CFC7;
+}
+.m-alert .ic { flex-shrink: 0; }
+
+/* OTP entry: one wide field, tabular so the digits do not shift as they land. */
+.m-otp {
+  width: 100%; font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 26px; letter-spacing: 0.42em; text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 12px 16px 22px;
+}
+.m-otp:focus { outline: 2px solid var(--caramel); outline-offset: -1px; border-color: transparent; }
+
+/* Busy state on a primary action. */
+.m-btn[data-busy="1"] { opacity: .6; pointer-events: none; }
+
+/* Cross-sell to the app, after the reveal. Quiet on purpose: the result is the moment, this is a
+   footnote to it, not a competing call to action. */
+.m-app {
+  margin-top: 26px; padding: 20px 22px;
+  background: var(--paper-2); border-radius: 10px;
+}
+.m-app-title {
+  margin: 0 0 6px; font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--caramel);
+}
+.m-app-body { margin: 0 0 16px; font-size: 14px; color: var(--ink-2); max-width: 44ch; }
+.m-app .m-btn { padding: 12px 20px; font-size: 14px; background: var(--paper); text-decoration: none; }
+.m-app-fine { margin: 14px 0 0; font-size: 12px; line-height: 1.5; color: var(--mute); max-width: 46ch; }
+
+/* Google / Apple. Stacked so both read as equal-weight alternatives to the email field, and so the
+   row never squeezes the labels on a narrow phone. */
+.m-providers { display: flex; flex-direction: column; gap: 9px; }
+.m-providers .m-btn { justify-content: center; }
+.m-providers svg { flex-shrink: 0; }
+
+.m-link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font-size: 13.5px; color: var(--ink-2); text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.m-link:hover { color: var(--caramel); }
+.m-link:focus-visible { outline: 2px solid var(--caramel); outline-offset: 3px; }
+
+/* Staging banner. Never rendered against prod. */
+.m-env {
+  background: var(--ink); color: var(--paper);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  text-align: center; padding: 6px 12px;
+}
+
+/* Fatal config error, shown instead of the funnel. */
+.m-fatal { max-width: 560px; margin: 0 auto; padding: 80px 24px; }
+.m-fatal h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 30px; margin: 0 0 12px; }
+.m-fatal p { color: var(--ink-2); }
+.m-fatal code {
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px;
+  background: var(--paper-2); padding: 2px 6px; border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── Site footer ───────────────────────────────────────────────────────────
+   Copied verbatim from legal/public/index.html (same markup, same class names)
+   so /studio wears the same shell as the rest of the site. Keep it diffable:
+   if the landing footer changes, change it here the same way. `--ink` and
+   `--caramel` are this file's equivalents of the landing's `--ink`/`--coral`. */
+footer.site {
+  background: var(--ink); color: rgba(245,241,234,0.7);
+  padding: 80px 40px 32px;
+}
+.foot-inner { max-width: 1320px; margin: 0 auto; }
+.foot-top {
+  display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 48px;
+  padding-bottom: 56px; border-bottom: 1px solid rgba(245,241,234,0.15);
+}
+@media (max-width: 880px) { .foot-top { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { footer.site { padding: 56px 20px 28px; } .foot-top { gap: 32px; } }
+footer.site a { color: inherit; text-decoration: none; }
+.foot-top .wm { color: var(--paper); font-size: 56px; line-height: 0.9; margin-bottom: 16px; display: inline-block; }
+.foot-top .tag {
+  font-family: 'Instrument Serif', Georgia, serif; font-style: italic;
+  font-size: 18px; color: rgba(245,241,234,0.7); max-width: 280px;
+}
+.foot-col h5 {
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10.5px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(245,241,234,0.5); margin: 0 0 18px;
+}
+.foot-col a {
+  display: block; font-size: 14px; padding: 6px 0;
+  color: rgba(245,241,234,0.8);
+}
+.foot-col .soon {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; padding: 6px 0; color: rgba(245,241,234,0.4);
+  cursor: default;
+}
+.foot-col .soon .badge {
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 8px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--caramel);
+  border: 1px solid rgba(176,127,60,0.45);
+  padding: 2px 6px; border-radius: 999px;
+}
+.foot-col a:hover { color: var(--caramel); }
+.foot-bot {
+  padding-top: 28px;
+  display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10.5px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(245,241,234,0.4);
+}
+.foot-bot a:hover { color: var(--caramel); }
+footer.site a:focus-visible { outline: 2px solid var(--caramel); outline-offset: 3px; }

@@ -15,7 +15,7 @@ export default function SignIn() {
   const router = useRouter();
   const t = useT();
   const lang = useLang();
-  const { signInEmail } = useAuth();
+  const { signInEmail, signInWithEmailCode } = useAuth();
   const { onGoogle, busy: googleBusy } = useGoogleSignIn();
   const { onApple, busy: appleBusy } = useAppleSignIn();
   const [email, setEmail] = useState('');
@@ -23,6 +23,23 @@ export default function SignIn() {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const valid = /\S+@\S+\.\S+/.test(email) && pwd.length >= 1;
+
+  // Connexion sans mot de passe : indispensable pour les comptes créés par le studio web, qui
+  // n'en ont jamais eu. On ne distingue PAS succès et échec ici : une erreur « utilisateur
+  // inconnu » dirait qu'une adresse a un compte. `signInWithEmailCode` passe déjà
+  // `shouldCreateUser: false`, donc une faute de frappe ne crée rien, elle n'envoie rien.
+  const sendCode = async () => {
+    const addr = email.trim().toLowerCase();
+    if (!/\S+@\S+\.\S+/.test(addr)) {
+      Alert.alert(lang === 'fr' ? 'Email' : 'Email', t('code_email_first'));
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    await signInWithEmailCode(addr).catch(() => {});
+    setBusy(false);
+    router.push({ pathname: '/(auth)/code', params: { email: addr } });
+  };
 
   const submit = async () => {
     if (!valid || busy) return;
@@ -89,15 +106,26 @@ export default function SignIn() {
               </Pressable>
             }
           />
-          <MText
-            size={13}
-            color={MPAL.ink}
-            variant="bodySemibold"
-            onPress={() => router.push('/(auth)/forgot')}
-            style={{ alignSelf: 'flex-end', paddingVertical: 4, textDecorationLine: 'underline' }}
-          >
-            {t('forgot_link')}
-          </MText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+            <MText
+              size={13}
+              color={MPAL.ink}
+              variant="bodySemibold"
+              onPress={sendCode}
+              style={{ textDecorationLine: 'underline' }}
+            >
+              {t('signin_code_link')}
+            </MText>
+            <MText
+              size={13}
+              color={MPAL.ink}
+              variant="bodySemibold"
+              onPress={() => router.push('/(auth)/forgot')}
+              style={{ textDecorationLine: 'underline' }}
+            >
+              {t('forgot_link')}
+            </MText>
+          </View>
         </View>
 
         <View style={{ marginTop: 'auto', paddingBottom: insets.bottom + 20, gap: 10 }}>

@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "meche-landing",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["legal/server.js"],
+      "name": "meche-site",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd web && npm run build && node server.js"],
       "port": 3000,
       "autoPort": true
     },
@@ -19,6 +19,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd apps/meche-pro && source ~/.nvm/nvm.sh && nvm use 22 && npx expo start --web --port 8081"],
       "port": 8081
+    },
+    {
+      "name": "studio",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd web && npm run dev -- --port 5180"],
+      "port": 5180
     },
     {
       "name": "backoffice",

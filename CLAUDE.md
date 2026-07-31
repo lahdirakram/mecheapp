@@ -33,7 +33,13 @@ wrong belief survives across sessions.
   publish/refuse the AI drafts). `./backoffice/start.sh`. Deliberately OUTSIDE the pnpm workspace
   (`.npmrc` forces `node-linker=hoisted`; a web app under `apps/` would share the flat tree with the
   Expo apps). Own `node_modules`, own npm lockfile. Detail: `backoffice/README.md`.
-- `legal/` — marketing + legal pages (zero-dep Node server, Railway). Also outside the workspace.
+- `web/` — **tout le site public**, un seul service Railway (zero-dep Node + Vite/React) :
+  `site/` = landing + pages légales (l'ancien `legal/`, déplacé), `src/` = le **studio payant** servi
+  sur `/studio`. Le studio est le tunnel *premier essai verrouillé* de l'app rejoué dans le
+  navigateur, avec Paddle à la place de RevenueCat. Hors workspace comme `backoffice/`, donc **aucun
+  import `@meche/*`** : `web/src/lib/supabase.ts` est une copie qui DIVERGE volontairement
+  (`detectSessionInUrl` doit être `true` sur le web). Paiement Paddle écrit et testé en sandbox.
+  Détail : `docs/web-studio.md` + `web/README.md`.
 
 ## Working rules
 - **Node 22 for all `eas`/`expo`/`supabase` commands**: `source ~/.nvm/nvm.sh && nvm use 22`. Default
@@ -111,6 +117,19 @@ wrong belief survives across sessions.
   code, mais NE remplace PAS le mot de passe, le tout premier reste actif. `confirm.tsx` repose
   donc celui qui vient d'être saisi juste après `verifyOtp`, et avale le 422 `same_password` qui
   signifie seulement "c'était déjà le bon". Ne pas "nettoyer" ce catch.
+  **Même famille, vérifié le 2026-07-30 : le TEMPLATE d'email aussi vit dans le dashboard, et il y
+  en a plusieurs.** `signInWithOtp` (utilisé par `web/` ET, depuis la connexion par code, par
+  `apps/meche`) envoie **"Confirm signup"** si l'adresse est neuve, mais **"Magic Link"** si elle existe déjà. Seul "Confirm signup"
+  avait été passé à `{{ .Token }}` : un compte existant recevait donc un LIEN inutilisable au lieu
+  d'un code. **Le check** quand un email arrive mais ne contient pas de code : regarder QUEL
+  template a été envoyé avant de suspecter le client. Les deux doivent être en `{{ .Token }}`, sur
+  les deux projets. **Et une modification de template met plusieurs minutes à se propager** : après
+  l'édition, les envois repartent encore sur l'ancien contenu un moment. Ne pas en conclure que la
+  sauvegarde a échoué et repartir en chasse. Pour distinguer « pas propagé » de « pas envoyé » :
+  `select token_type, created_at from auth.one_time_tokens order by created_at desc limit 5;`
+  (un `recovery_token` = chemin magic link ; un `confirmation_token` = chemin inscription), et
+  `auth.users.recovery_sent_at` / `confirmation_sent_at` disent si un mail est vraiment parti.
+  `auth.audit_log_entries` est vide sur ce plan, ne pas compter dessus.
 - **Staging SQL without the service key**: `npx supabase@latest db query --linked "<sql>"` runs
   arbitrary SQL on the linked project via the Management API (CLI keychain auth). This is the test
   lever for staging (confirm a test user's email, grant test credits) — no secrets on disk needed.
@@ -185,6 +204,12 @@ wrong belief survives across sessions.
   atteint le résultat, ce qui lève la tension avec « ne jamais dégrader `modelB64` ». Attention :
   `expo-image-manipulator` n'est installé nulle part et c'est un module natif, donc **ce
   redimensionnement ne peut PAS partir en OTA** — il attend un build store.
+- **La connexion par code email de l'app (`(auth)/code.tsx`) doit garder `shouldCreateUser: false`.**
+  Au défaut `true`, une faute de frappe dans l'email CRÉE un compte : `handle_new_user` part, un
+  crédit de bienvenue est consommé, et la personne attend un code envoyé ailleurs. Et l'envoi ne
+  doit jamais distinguer succès et échec, sinon on révèle qu'une adresse a un compte. Ce chemin
+  existe parce que le studio web inscrit sans mot de passe : sans lui, un acheteur web ne peut pas
+  entrer dans l'app. Il dépend du template **« Magic Link »** en `{{ .Token }}` sur les DEUX projets.
 - **Un toast est invisible depuis un écran `presentation: 'modal'` sur iOS** (overlay rendu à la
   racine, le modal natif est un autre contrôleur de vue et passe devant). Depuis un modal, utiliser
   `Alert.alert`. Vaut aussi pour `useSheet`, déjà noté dans `packages/ui/src/feedback.tsx`.
@@ -226,12 +251,12 @@ npx supabase@latest functions deploy <fn> --project-ref <ref>
 Two Supabase refs, for copy/paste: staging `vefxfjcdvstjwieasrbq`, prod `hqhnvjjbohzktoapsytj`.
 
 ## Legal pages are a contract with the code
-`legal/public/{fr,en}/privacy.html` is public and enforceable. Two commitments there are backed by
+`web/site/{fr,en}/privacy.html` is public and enforceable. Two commitments there are backed by
 code, and changing either side without the other makes the policy false:
 - account deletion erases everything **except** a 12-month email hash (anti-abuse, migration 0023)
 - the retention period is honoured by the `purge-signup-marks` cron (0024)
 
-Deployed separately from the app, on Railway.
+Served by `web/server.js`, deployed separately from the app on Railway.
 
 ## Per-app notes
 `apps/meche/AGENTS.md` and `apps/meche-pro/AGENTS.md` carry app-specific notes (e.g. the pinned Expo

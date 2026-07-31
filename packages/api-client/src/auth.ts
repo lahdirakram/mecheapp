@@ -59,6 +59,38 @@ export function useAuth() {
     },
 
     /**
+     * Passwordless sign-in: email a 6-digit code to an EXISTING account.
+     *
+     * Why this exists: the web studio signs people up with a code and never sets a password, so
+     * those accounts could not get into the app at all (`signInEmail` needs one). It also covers
+     * the far more common case of an app user who simply forgot theirs.
+     *
+     * `shouldCreateUser: false` is load-bearing. Left at its default of `true`, a typo in the email
+     * would silently CREATE an account — firing `handle_new_user`, burning a welcome credit, and
+     * leaving the person staring at a code sent to an address they do not own. Signing up stays the
+     * deliberate path in `signup.tsx`.
+     *
+     * NOTE: this sends the dashboard's "Magic Link" template, not "Confirm signup". Both must be on
+     * `{{ .Token }}` or the email arrives with an unusable link instead of a code. See CLAUDE.md.
+     */
+    signInWithEmailCode(email: string) {
+      return client.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    },
+
+    /**
+     * Verify a passwordless sign-in code.
+     *
+     * Tries `email` then falls back to `signup`: a never-confirmed account mints a differently
+     * typed token, and this project has already lost weeks to an OTP that presented as "invalid"
+     * while the mail was delivered fine. One extra attempt, only on failure.
+     */
+    async verifySignInOtp(email: string, token: string) {
+      const first = await client.auth.verifyOtp({ email, token, type: 'email' });
+      if (!first.error) return first;
+      return client.auth.verifyOtp({ email, token, type: 'signup' });
+    },
+
+    /**
      * Apple sign-in. Pass the identityToken from expo-apple-authentication.
      * Requires the Apple provider configured in Supabase Auth.
      */

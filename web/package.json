@@ -1,0 +1,29 @@
+{
+  "name": "meche-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "meche.<tld> — marketing landing, legal pages, and the paid try-on studio at /studio. One service. Outside the pnpm workspace on purpose (see README).",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@paddle/paddle-js": "^1.6.4",
+    "@supabase/supabase-js": "^2.111.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.0"
+  }
+}
