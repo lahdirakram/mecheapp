@@ -98,6 +98,21 @@ wrong belief survives across sessions.
   drifts from the installed binary, updates silently never arrive. B2C `1.0.2`, Pro `1.0.1` (les deux
   bumpés en même temps que l'ajout d'`expo-image-manipulator`, voir ci-dessous) ; ou passer à
   `policy: "fingerprint"` à une sortie store (les deux lanes d'un coup).
+- **`expo-image-manipulator` est ÉPINGLÉ en `56.0.17` EXACT dans les deux apps. Ne pas le remonter,
+  ne pas lancer `expo install --fix` dessus.** Les modules Expo livrent un **xcframework
+  PRÉCOMPILÉ** (`prebuilds/`, voir le `if ... vendored_frameworks` du podspec) : il n'est PAS
+  recompilé contre l'`expo-modules-core` du projet, donc ses symboles Swift sont figés à la version
+  de core contre laquelle Expo l'a compilé. `expo` est épinglé en `56.0.8` -> core `56.0.14`, et à
+  partir de `56.0.18` le binaire référence `ExpoModulesCore.Record.from(dictionary:appContext:)`,
+  absent de 56.0.14. Résultat : **dyld tue l'app AU LANCEMENT**, avant la moindre ligne de JS
+  (`namespace DYLD`, `Symbol missing`, « terminated at launch »). Android n'est pas touché, le
+  linking Kotlin n'échoue pas comme ça. **Le check** quand une app iOS se ferme instantanément
+  alors qu'Android va bien : lire `termination.reasons` dans le `.ips`, puis
+  `nm -u <framework binary> | grep <symbole>` sur le xcframework de `prebuilds/` — le symbole
+  indéfini nomme le module fautif. Un `import` paresseux ne protège de RIEN ici : dyld charge les
+  frameworks au démarrage du process, indépendamment du JS. Pour remonter la version il faut
+  d'abord monter `expo` (donc core), ou forcer la compilation depuis les sources
+  (`EXPO_USE_SOURCE=1`, plus lent, s'applique à tous les modules).
 - **Ajouter un module NATIF oblige à bumper `version`, sinon le prochain OTA fait crasher tout le
   parc.** Avec `policy: "appVersion"`, un OTA garde la même runtimeVersion et atterrit donc sur les
   binaires DÉJÀ installés, qui n'ont pas le code natif. Un `import` de ce module échoue au
