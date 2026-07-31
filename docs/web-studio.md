@@ -298,6 +298,41 @@ bascule sur les prix du nouveau compte : identique.
 **Le garde-fou « prix inconnu » reste indispensable** même avec un compte dédié : c'est lui qui
 rend le webhook insensible à tout ce qui n'est pas au catalogue Mèche.
 
+## État PRODUCTION (2026-08-01)
+
+Compte Paddle **AML Technologies** (live), produit `pro_01kyx6btf76rhabnm0y2fkems0` :
+
+| Pack | Prix | `paddle_price_id` (production) |
+|---|---|---|
+| `taste` (5) | 0,99 € | `pri_01kyx6f9bz87wdmwb519ffyk3g` |
+| `star` (20) | 2,99 € | `pri_01kyx6kqc17z6e203m431p65s3` |
+| `pro` (50) | 5,99 € | `pri_01kyx6pmt88zfe897sqfg5skb9` |
+
+Fait côté prod : migration 0033 poussée, `paddle_price_id` renseigné, `paddle-webhook` déployé en
+`--no-verify-jwt`, `PADDLE_WEBHOOK_SECRET` posé, destination abonnée à **`transaction.completed` ET
+`adjustment.created`**, libellé de relevé `MECHE`, client token « Meche studio web » créé.
+
+Fumée sur le webhook prod : non signé → `401`, signé avec un prix étranger → `200 no_matching_pack`
+(donc rien crédité, aucun compte touché).
+
+### Bloqué, et dans cet ordre
+
+1. **Le domaine `mecheapp.com` n'est PAS approuvé sur le compte production.** Volontairement pas
+   soumis : Paddle exige que le site contienne « terms of service, privacy notice **and refund
+   policy** », et la politique de remboursement qu'on vient d'écrire n'est pas encore en ligne.
+   Soumettre avant le déploiement, c'est risquer un refus.
+2. **Le « Default payment link » ne s'enregistre pas** tant que le domaine n'est pas approuvé. Le
+   champ reste vide en prod, c'est normal.
+
+Donc : **déployer le site d'abord**, puis soumettre le domaine, puis renseigner le payment link.
+
+### Piège d'automatisation, vérifié deux fois
+
+Sur les cases à cocher des événements, un clic **par référence d'élément** ne fait rien du tout,
+sans erreur. Il faut cliquer **par coordonnées** et **vérifier visuellement** que la case est cochée
+avant d'enregistrer. C'est ce qui a fait croire que `adjustment.created` était activé en sandbox
+alors qu'il ne l'était pas. La colonne « Events » de la liste des destinations donne le compte réel.
+
 ## Plan de déploiement
 
 ### Phase 0 — à lancer maintenant, en parallèle du code
