@@ -6,7 +6,12 @@ import react from '@vitejs/plugin-react';
 // blank page with 404s on /assets/*, which looks like a build failure but is only a base-path
 // mistake. server.js serves dist/ at that same prefix; the two must stay in agreement.
 export default defineConfig(({ command, mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  // '.' and NOT `process.cwd()`: this file is typechecked with `types: ["vite/client"]`, which does
+  // not include Node globals. It compiled locally only because tsc walks UP the directory tree and
+  // found the monorepo root's @types/node — a parent that does not exist on Railway, where the
+  // service root IS this folder. Vite resolves envDir relative to the project root, so '.' is
+  // equivalent and costs no dependency.
+  const env = loadEnv(mode, '.', '');
 
   // Vite inlines VITE_* AT BUILD TIME. A production build with them missing succeeds, ships a bundle
   // that cannot reach Supabase, and Railway reports a perfectly green deploy. Fail here instead, so

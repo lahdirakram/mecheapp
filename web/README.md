@@ -225,6 +225,24 @@ Un build sans elles ne produit pas une erreur naturelle : il reussit et livre un
 joindre Supabase, pendant que Railway affiche un deploiement vert. `vite.config.ts` refuse donc de
 construire quand elles manquent, avec un message qui dit quoi definir.
 
+### Verifier un build Railway EN LOCAL, pour de vrai
+
+`npm run build` depuis le monorepo **ne prouve rien** sur Railway. TypeScript remonte l'arborescence
+pour resoudre `node_modules/@types`, donc un fichier peut compiler ici grace au `@types/node` de la
+racine du monorepo, et echouer sur Railway ou le Root Directory EST ce dossier : il n'y a pas de
+parent. Vecu le 2026-08-01 : `process.cwd()` dans `vite.config.ts`, vert en local, `TS2591 Cannot
+find name 'process'` sur Railway.
+
+**Le check**, qui reproduit exactement ce que Railway fait :
+
+```bash
+T=$(mktemp -d)
+rsync -a --exclude node_modules --exclude dist --exclude .env.local web/ "$T"/
+cd "$T" && npm ci && VITE_SUPABASE_URL=... VITE_SUPABASE_ANON_KEY=... npm run build
+```
+
+Pas de parent, pas de `.env.local`, `npm ci` sur le lockfile. Si ca passe la, ca passe sur Railway.
+
 ### Les deux pieges
 
 1. **`base: '/studio/'` dans `vite.config.ts` et le prefixe accepte par `server.js` doivent rester
