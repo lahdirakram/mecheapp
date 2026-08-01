@@ -169,8 +169,53 @@ button { font: inherit; color: inherit; }
   .m-steps .sep { display: none; }
   .m-step { padding: 4px 8px; letter-spacing: 0.1em; }
   /* aspect-ratio still governs the box; capping the height just crops via object-fit: cover. */
-  .m-frame-wrap[data-compact="1"] .m-frame { max-height: 38vh; }
-  .m-frame-wrap[data-compact="1"] .m-caption { margin-top: 10px; font-size: 12px; }
+  /* ── Le cadre selon ce qu'il vaut ────────────────────────────────────────────────────────────
+     Sur un téléphone la hauteur est le budget rare, et un cadre carré pleine largeur en consomme
+     l'essentiel. Mesuré à 375x812 avant ce bloc : cadre vide 337px (41% de l'écran) avec « Dépose
+     ta photo » qui dépassait de 59px sous la ligne, et à l'étape 02 le portrait à 356px repoussait
+     « Continuer » à 464px sous la ligne. */
+
+  /* Le rail garde ses quatre numéros (on veut toujours savoir où on en est, et combien il reste)
+     mais ne nomme que l'étape courante. Il tient alors sur UNE ligne au lieu de deux. */
+  .m-step:not([data-state='now']) .lb { display: none; }
+
+  /* Vide : on ne réserve pas 337px pour un pointillé. La légende part avec, elle ne décrit rien. */
+  .m-frame-wrap[data-role='empty'] { display: none; }
+
+  /* Vignette : pendant qu'on choisit un look, le portrait sert à CONFIRMER que c'est la bonne
+     photo, pas à être contemplé. Une bande horizontale dit la même chose en 72px au lieu de 356. */
+  .m-frame-wrap[data-role='thumb'] {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .m-frame-wrap[data-role='thumb'] .m-frame {
+    flex: 0 0 auto; width: 72px; height: 72px; border-radius: 6px;
+  }
+  .m-frame-wrap[data-role='thumb'] .m-caption {
+    margin-top: 0; font-size: 12px; line-height: 1.45; text-align: left;
+  }
+  /* Le badge est calibré pour le grand cadre ; dans 72px il le recouvrirait entièrement. */
+  .m-frame-wrap[data-role='thumb'] .m-badge { display: none; }
+
+  /* Héros : l'image est le sujet (calcul, aperçu, résultat), elle garde toute la place. */
+  .m-frame-wrap[data-role='hero'] .m-caption { margin-top: 10px; font-size: 12px; }
+
+  /* L'action primaire ne doit jamais être hors de portée pendant qu'on choisit. Même après avoir
+     réduit le cadre et le rail, « Continuer » restait 150px sous la ligne (mesuré) : on sélectionne
+     un look sans voir ce qui permet d'avancer. Collée en bas, elle est toujours à un pouce.
+     `sticky` et non `fixed` : le bloc se décolle de lui-même en fin de panneau, donc il ne recouvre
+     jamais le pied de page ni les mentions légales. */
+  .m-row--sticky {
+    position: sticky; bottom: 0; z-index: 5;
+    margin-top: 14px; padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+  }
+  /* Sur UNE ligne, et pas deux : empilés pleine largeur les deux boutons prenaient 160px de barre
+     collante et recouvraient les looks qu'on est justement en train de choisir. Le primaire prend
+     ce qui reste, le secondaire se contente de son texte, ce qui rend aussi la hiérarchie honnête. */
+  .m-row--sticky { flex-wrap: nowrap; }
+  .m-row--sticky .m-btn--primary { flex: 1 1 auto; justify-content: center; }
+  .m-row--sticky .m-btn--ghost { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
 }
 
 /* ── the frame ── */

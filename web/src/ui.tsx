@@ -24,8 +24,11 @@ export function Steps({ active }: { active: 1 | 2 | 3 | 4 }) {
         return (
           <span key={label} style={{ display: 'contents' }}>
             {i > 0 && <span className="sep">/</span>}
+            {/* Le libellé est dans son propre span pour que le mobile puisse ne garder que celui de
+                l'étape courante : à quatre libellés le rail passe à deux lignes et coûte 81px de
+                hauteur (mesuré), sur un écran où c'est justement ce qui manque. */}
             <span className="m-step" data-state={state} aria-current={state === 'now' ? 'step' : undefined}>
-              <span className="n">0{n}</span> {label}
+              <span className="n">0{n}</span> <span className="lb">{label}</span>
             </span>
           </span>
         );

@@ -444,6 +444,22 @@ export function App() {
    *  du résultat. */
   const showCredits = step === 'result' && credits > 0;
 
+  /**
+   * Ce que le cadre VAUT à cet instant, et donc la place qu'il mérite. Sur un téléphone la
+   * hauteur est le budget rare : un cadre vide de 337px (mesuré) repoussait « Dépose ta photo »
+   * sous la ligne de flottaison, et à l'étape 02 les 356px du portrait poussaient le bouton
+   * « Continuer » 464px plus bas, donc on choisissait un look sans jamais voir l'action.
+   *   'empty' — rien à montrer, un cadre vide n'est pas du contexte, c'est du vide.
+   *   'thumb' — le portrait sert de CONFIRMATION pendant qu'on choisit, une vignette suffit.
+   *   'hero'  — l'image EST le sujet (calcul en cours, aperçu, résultat), elle prend tout.
+   */
+  const frameRole: 'empty' | 'thumb' | 'hero' =
+    step === 'generating' || step === 'paywall' || step === 'revealing' || step === 'result'
+      ? 'hero'
+      : selfie?.previewUrl
+        ? 'thumb'
+        : 'empty';
+
   const frameImage =
     step === 'result'
       ? clearUrl
@@ -506,7 +522,7 @@ export function App() {
               the frame is the product and gets all the room it wants. */}
           <div
             className="m-frame-wrap"
-            data-compact={showingTeaser || step === 'result' ? undefined : '1'}
+            data-role={frameRole}
           >
             <div className="m-frame">
               {!frameImage && (

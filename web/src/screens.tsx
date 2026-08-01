@@ -157,7 +157,9 @@ export function LookScreen({
 
       {error && <Alert>{error}</Alert>}
 
-      <div className="m-row">
+      {/* `m-row--sticky` : sur mobile cette rangée se colle en bas (voir styles.css). C'est l'écran
+          où l'action était le plus loin, 464px sous la ligne avant refonte. */}
+      <div className="m-row m-row--sticky">
         <button className="m-btn m-btn--primary" type="button" disabled={!selected} onClick={onContinue}>
           Continuer <Arrow />
         </button>
