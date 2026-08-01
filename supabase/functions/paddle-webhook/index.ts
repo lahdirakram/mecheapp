@@ -117,15 +117,25 @@ Deno.serve(async (req) => {
   //
   // Money came back, so the credits must go with it. Without this a refunded buyer keeps what they
   // paid for, which is a straight loss and an obvious abuse route (buy, reveal, refund, repeat).
-  if (event.event_type === 'adjustment.created') {
+  //
+  // BOTH `created` AND `updated`, and that is the whole point. A refund is usually born
+  // `pending_approval` and only becomes `approved` LATER — and that approval arrives as
+  // `adjustment.updated`, a different event. Subscribing to `adjustment.created` alone means seeing
+  // every refund exactly once, in the one state where we must NOT act, and never hearing about it
+  // again. Observed on the first real sandbox refund: the webhook answered
+  // `ignored: adjustment_status:pending_approval` and the credits were never taken back.
+  //
+  // Handling both is safe: the revocation is idempotent on `paddle_adj:<adjustment_id>`, so
+  // whichever event carries `approved` first does the work and any later one is a no-op.
+  if (event.event_type === 'adjustment.created' || event.event_type === 'adjustment.updated') {
     const adj = event.data ?? {};
 
     // `credit` adjusts a future invoice (subscriptions) and takes nothing back from us.
     if (adj.action !== 'refund' && adj.action !== 'chargeback') {
       return json({ ok: true, ignored: `adjustment:${adj.action ?? 'unknown'}` });
     }
-    // A refund awaiting approval has not happened yet. Revoking on `pending_approval` would strip
-    // credits from someone whose refund may still be rejected.
+    // Wait for `approved`. Revoking on `pending_approval` would strip credits from someone whose
+    // refund may still be rejected; `rejected` and `reversed` must never revoke at all.
     if (adj.status !== 'approved') {
       return json({ ok: true, ignored: `adjustment_status:${adj.status ?? 'unknown'}` });
     }

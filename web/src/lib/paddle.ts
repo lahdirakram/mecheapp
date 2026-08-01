@@ -71,4 +71,13 @@ export async function checkout(opts: {
   });
 
   await completed;
+
+  // Paddle leaves the overlay up after a successful payment — it has no idea we are about to reveal
+  // the result underneath it, so without this the visitor stares at a spent checkout and has to
+  // dismiss it by hand at the exact moment we want their attention on the photo.
+  try {
+    p.Checkout.close();
+  } catch {
+    /* already dismissed by the visitor */
+  }
 }

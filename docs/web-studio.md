@@ -326,6 +326,37 @@ Fumée sur le webhook prod : non signé → `401`, signé avec un prix étranger
 
 Donc : **déployer le site d'abord**, puis soumettre le domaine, puis renseigner le payment link.
 
+### Un remboursement se traite sur DEUX événements, pas un
+
+**Vécu au premier vrai remboursement sandbox (2026-08-01).** Le webhook a bien reçu
+`adjustment.created`, et a répondu `ignored: adjustment_status:pending_approval`. Les crédits ne
+sont jamais repartis.
+
+Un remboursement naît **`pending_approval`** et ne passe **`approved`** que plus tard — et ce
+passage arrive en **`adjustment.updated`**, un autre événement. S'abonner au seul
+`adjustment.created`, c'est voir chaque remboursement exactement une fois, dans le seul état où il
+NE FAUT PAS agir, et ne plus jamais en entendre parler. L'infobulle de Paddle le dit elle-même :
+« pending to approved or from pending to rejected ».
+
+Corrigé : le webhook traite `adjustment.created` **et** `adjustment.updated`, et les deux
+destinations (sandbox et prod) sont abonnées aux deux. C'est sans risque parce que la reprise est
+idempotente sur `paddle_adj:<adjustment_id>` : le premier événement porteur d'`approved` fait le
+travail, les suivants ne font rien.
+
+**Le check** quand un remboursement ne reprend pas les crédits : lire le LOG DE LIVRAISON Paddle
+(Notifications → destination → View logs) et regarder la réponse de notre endpoint, avant de
+suspecter la signature ou la base. Il dit exactement pourquoi on a ignoré l'événement.
+
+### Deux réglages de présentation
+
+- **Brand Color du checkout** : `#15110E` (l'ink de `MPAL`), sandbox et prod. Le défaut Paddle est
+  un vert vif qui n'a rien à voir avec la palette. **Le champ exige le `#`** : taper `15110E` seul
+  est accepté par l'input mais n'applique rien, l'aperçu reste vert.
+- **L'overlay ne se ferme pas tout seul** après un paiement réussi : Paddle ignore qu'on s'apprête à
+  révéler le résultat dessous. `web/src/lib/paddle.ts` appelle donc `Checkout.close()` après
+  l'attente, sinon le visiteur doit fermer un checkout déjà payé au moment précis où on veut son
+  attention sur la photo.
+
 ### Piège d'automatisation, vérifié deux fois
 
 Sur les cases à cocher des événements, un clic **par référence d'élément** ne fait rien du tout,
