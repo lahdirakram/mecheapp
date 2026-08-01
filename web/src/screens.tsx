@@ -394,49 +394,6 @@ export function GeneratingScreen({ lookName }: { lookName: string }) {
   );
 }
 
-/* ── Studio fermé ────────────────────────────────────────────────────────── */
-
-/**
- * Affiché quand `app_config.web_studio` vaut '0' (0034).
- *
- * Ne s'affiche QUE sur les étapes d'avant génération : un tunnel déjà engagé, et surtout un aperçu
- * déjà payé, continue normalement. Voir 0034 pour le pourquoi.
- *
- * Le ton dit « reviens », pas « c'est cassé » : on coupe le studio pour des raisons qui nous
- * regardent (paiement, coût, bug), et le visiteur n'a rien fait de mal. On propose l'app, qui elle
- * n'est pas concernée par cet interrupteur.
- */
-export function ClosedScreen() {
-  const os = platform();
-  const href = os === 'android' ? PLAY_URL : APPSTORE_URL;
-  return (
-    <section>
-      <p className="m-kicker">Studio en pause</p>
-      <h2 className="m-h">
-        On revient <em>très vite.</em>
-      </h2>
-      <p className="m-sub">
-        Les essais en ligne sont suspendus quelques heures, le temps d'une mise au point de notre
-        côté. Rien à faire de ton côté, et rien n'a été prélevé.
-      </p>
-
-      <a
-        className="m-btn m-btn--ghost"
-        href={href ?? APPSTORE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Essayer dans l'app
-      </a>
-
-      <Note>
-        Si tu as déjà payé un essai, il n'est pas perdu. Reviens sur cette page connecté et ton
-        résultat t'attend.
-      </Note>
-    </section>
-  );
-}
-
 /* ── 05b Révélation ──────────────────────────────────────────────────────── */
 
 /**

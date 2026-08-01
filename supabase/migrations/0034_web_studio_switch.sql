@@ -14,25 +14,31 @@
 --   update app_config set value = '0', updated_at = now() where key = 'web_studio';   -- fermé
 --   update app_config set value = '1', updated_at = now() where key = 'web_studio';   -- ouvert
 --
--- ── Ce que « fermé » bloque, et surtout ce qu'il NE bloque PAS ──────────────────────────────────
--- Fermé empêche de DÉMARRER un nouvel essai (les étapes portrait / look / compte). C'est là que se
--- déclenchent la dépense Gemini et, juste après, le paiement.
+-- ── QUI lit cette clé : le SERVEUR, pas le navigateur ──────────────────────────────────────────
+-- `web/server.js` la relit toutes les 30 s et, fermé, ne sert plus RIEN sous /studio : ni le shell
+-- HTML, ni les assets. La réponse est un 503 `no-store`.
 --
--- Fermé ne touche PAS aux tunnels déjà engagés : génération en cours, aperçu verrouillé en attente,
--- déverrouillage, résultat. Quelqu'un qui vient de payer DOIT pouvoir récupérer son image, sinon
--- l'interrupteur transforme une panne en vol. C'est la raison d'être de la distinction, pas un
--- détail d'implémentation : `resumableGeneration` (24 h sur un aperçu verrouillé) veut dire qu'un
--- acheteur peut revenir le lendemain, bien après la fermeture.
+-- Ce choix est le coeur du mécanisme. Une garde équivalente dans le bundle React se désactiverait
+-- depuis les devtools en deux clics, et ne serait de toute façon pas relue par un onglet déjà
+-- ouvert. Ici le bundle n'est pas envoyé : il n'y a rien à réactiver côté client. C'est la
+-- différence entre « l'interface refuse » et « le studio n'existe plus ».
+--
+-- Conséquence à connaître : un onglet DÉJÀ chargé garde son JavaScript et peut continuer à parler à
+-- Supabase jusqu'à ce qu'il recharge. La fermeture arrête l'ARRIVÉE de nouveaux visiteurs, elle ne
+-- tue pas les sessions en cours, et c'est voulu : quelqu'un qui vient de payer doit pouvoir
+-- récupérer son image. `resumableGeneration` tient 24 h sur un aperçu verrouillé, donc un acheteur
+-- peut revenir bien après la fermeture. L'interrupteur ne doit jamais transformer une panne en vol.
 --
 -- ── FAIL OPEN, comme min_version ───────────────────────────────────────────────────────────────
--- Clé absente, valeur vide, valeur inconnue, fetch en cours ou en échec : le studio reste OUVERT.
--- Une coupure réseau ne doit jamais être indiscernable d'une fermeture volontaire. Conséquence
--- assumée : c'est un levier d'EXPLOITATION (couper l'hémorragie si Paddle déraille, si le coût
--- s'emballe, si un bug livre mal), pas un contrôle de sécurité. Il vit dans le client, donc il
--- n'arrête que les gens honnêtes. Les vraies garanties restent serveur : `generate` réserve le
--- crédit avant l'appel payant (0030), `unlock` débite avant de révéler (0026). Ne jamais présenter
--- cette clé comme une protection, et ne jamais l'inverser en fail closed : une panne Supabase
--- fermerait alors le studio toute seule, exactement quand on a le moins besoin d'une surprise.
+-- Clé absente, valeur vide, variables d'env manquantes, Supabase injoignable : le studio reste
+-- OUVERT (et le serveur conserve la dernière valeur connue). Une panne réseau ne doit jamais être
+-- indiscernable d'une fermeture volontaire, sinon Supabase qui tousse ferme la boutique tout seul,
+-- exactement quand on a le moins besoin d'une surprise. Ne jamais inverser ce défaut.
+--
+-- Ce n'est pas pour autant un contrôle de sécurité, et il ne remplace RIEN côté données : les
+-- garanties restent `generate` qui réserve le crédit avant l'appel payant (0030) et `unlock` qui
+-- débite avant de révéler (0026). C'est un levier d'exploitation, pour couper l'hémorragie si
+-- Paddle déraille, si le coût s'emballe ou si un bug livre mal.
 --
 -- ── Portée : le WEB uniquement ─────────────────────────────────────────────────────────────────
 -- Cette clé n'est lue que par web/src. Elle ne coupe pas l'app : `locked_first_try` est

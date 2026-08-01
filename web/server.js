@@ -26,6 +26,79 @@ const SITE = path.join(HERE, 'site');
 /** The Vite build of the studio SPA. Absent until `npm run build`. */
 const STUDIO = path.join(HERE, 'dist');
 
+// ── Interrupteur d'arrêt du studio ───────────────────────────────────────────────────────────────
+//
+// Fermé, /studio n'est tout simplement PAS SERVI : ni le shell, ni les assets. C'est un refus du
+// serveur, donc rien à contourner depuis le navigateur (une garde dans le bundle React se désactive
+// en deux clics dans les devtools ; celle-ci n'envoie pas le bundle du tout).
+//
+// La landing et les pages légales continuent d'être servies : elles sont un engagement public
+// opposable et ne doivent jamais tomber avec le studio. C'est toute la raison d'être de cet
+// interrupteur plutôt que d'un arrêt du service Railway.
+//
+// La valeur vit dans `app_config.web_studio` (0034), donc la bascule est une ligne SQL, sans
+// redéploiement ni redémarrage :
+//   update app_config set value='0', updated_at=now() where key='web_studio';   -- fermé
+//   update app_config set value='1', updated_at=now() where key='web_studio';   -- ouvert
+// Relu toutes les 30 s en tâche de fond : la fermeture prend effet en moins d'une minute, et une
+// requête n'attend jamais après Supabase pour être servie.
+//
+// FAIL OPEN : au démarrage, si les variables manquent, ou si la lecture échoue, le studio reste
+// OUVERT. Une panne de Supabase ne doit pas fermer la boutique toute seule. Ne pas inverser.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const FLAG_TTL_MS = 30_000;
+
+let studioOpen = true;
+
+async function refreshStudioFlag() {
+  if (!SUPABASE_URL || !SUPABASE_ANON) return; // pas configuré -> on reste ouvert
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/app_config?key=eq.web_studio&select=value`,
+      { headers: { apikey: SUPABASE_ANON, authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!r.ok) return; // on garde la dernière valeur connue
+    const rows = await r.json();
+    // Ligne absente ou valeur vide = ouvert. Seul un '0' explicite ferme.
+    if (!Array.isArray(rows) || rows.length === 0) {
+      studioOpen = true;
+      return;
+    }
+    studioOpen = String(rows[0]?.value ?? '').trim() !== '0';
+  } catch {
+    /* réseau HS : on garde la dernière valeur connue, donc ouvert au pire */
+  }
+}
+
+refreshStudioFlag();
+// `unref` pour que ce minuteur n'empêche jamais le process de se terminer.
+setInterval(refreshStudioFlag, FLAG_TTL_MS).unref();
+
+/** 503 quand le studio est fermé. `no-store` est indispensable : une page de pause mise en cache
+ *  survivrait à la réouverture. */
+function sendStudioClosed(res) {
+  const body =
+    '<!doctype html><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>Mèche Studio · en pause</title>' +
+    '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
+    'background:#FAF7F2;color:#15110E;font:16px/1.6 ui-sans-serif,system-ui,sans-serif;padding:24px}' +
+    'main{max-width:30rem;text-align:center}h1{font-size:1.5rem;margin:0 0 .75rem}' +
+    'p{margin:0 0 1.5rem;color:#5A5049}a{color:#B07F3C}</style>' +
+    '<main><h1>Studio en pause</h1>' +
+    "<p>Les essais en ligne sont suspendus quelques heures, le temps d'une mise au point de notre " +
+    "côté. Rien n'a été prélevé. Si tu as déjà payé un essai, il n'est pas perdu, il t'attend ici " +
+    'à la réouverture.</p>' +
+    '<p><a href="/">Retour à l\'accueil</a></p></main>';
+  res.writeHead(503, {
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+    'retry-after': '3600',
+  });
+  res.end(body);
+}
+
 const PAGES = new Set(['index', 'privacy', 'terms', 'mentions-legales', 'support', 'delete-account']);
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -87,7 +160,11 @@ function resolve(req) {
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
 
   // The studio owns everything under /studio, before the rules below.
-  if (p === '/studio' || p.startsWith('/studio/')) return { file: resolveStudio(p) };
+  // Fermé, on ne résout AUCUN fichier : ni le shell, ni les assets fingerprintés. Rien du studio ne
+  // quitte le serveur, donc il n'y a rien à réactiver côté navigateur.
+  if (p === '/studio' || p.startsWith('/studio/')) {
+    return studioOpen ? { file: resolveStudio(p) } : { studioClosed: true };
+  }
 
   // static asset (anything with a file extension) -> serve from the site root
   if (path.extname(p)) return { file: safeJoin(SITE, p) };
@@ -123,9 +200,12 @@ function handle(req, res) {
     return res.end('<!doctype html><meta charset="utf-8"><h1>400</h1>');
   }
   if (r.health) {
+    // `/healthz` répond 200 même studio fermé : c'est la sonde Railway. La renvoyer en 503
+    // ferait redémarrer le service en boucle, exactement ce qu'on cherche à éviter.
     res.writeHead(200, { 'content-type': 'text/plain' });
     return res.end('ok');
   }
+  if (r.studioClosed) return sendStudioClosed(res);
   if (r.notFound || !r.file) {
     res.writeHead(r.file === null ? 400 : 404, { 'content-type': 'text/html; charset=utf-8' });
     return res.end('<!doctype html><meta charset="utf-8"><h1>404</h1><p><a href="/">Accueil / Home</a></p>');

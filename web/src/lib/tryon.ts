@@ -15,10 +15,6 @@ export type TryOnCode =
   | 'rate_limited'
   | 'invalid_image'
   | 'prompt_too_long'
-  // Seul code de cette liste qui ne vient PAS du serveur : le studio est fermé côté client
-  // (`app_config.web_studio`, 0034) et on refuse d'ouvrir un paiement. Rangé ici quand même pour
-  // que l'UI n'ait qu'un seul type d'erreur à traiter dans le tunnel.
-  | 'closed'
   | 'unknown';
 
 export class TryOnError extends Error {
