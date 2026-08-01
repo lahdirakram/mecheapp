@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { IS_STAGING, PADDLE_READY } from './lib/config';
+import { fetchStudioOpen } from './lib/flags';
 import { prepareSelfie, selfieFromBlob, ImageError, type PreparedSelfie } from './lib/image';
 import { clearDraft, loadDraft, saveDraft } from './lib/draft';
 import {
@@ -27,6 +28,7 @@ import {
   PortraitScreen,
   ResultScreen,
   RevealingScreen,
+  ClosedScreen,
 } from './screens';
 
 export type Step = 'portrait' | 'look' | 'account' | 'generating' | 'paywall' | 'revealing' | 'result';
@@ -70,7 +72,15 @@ export function App() {
   /** Joue le balayage caramel une fois, à l'instant où l'image nette remplace le flou. */
   const [wipe, setWipe] = useState(false);
 
+  /** `app_config.web_studio` (0034). `null` = pas encore connu, et FAIL OPEN : tant qu'on ne sait
+   *  pas, le studio reste ouvert. Une panne réseau ne doit pas ressembler à une fermeture. */
+  const [studioOpen, setStudioOpen] = useState<boolean | null>(null);
+
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    void fetchStudioOpen().then(setStudioOpen);
+  }, []);
 
   // Session, restored on load and kept in sync.
   //
@@ -351,6 +361,17 @@ export function App() {
       setRevealing(true);
       try {
         if ((await creditBalance()) <= 0) {
+          // Studio fermé (0034) : on ne prend PLUS d'argent. La coupure vise souvent le paiement
+          // lui-même, donc laisser passer un checkout serait exactement le cas qu'on veut éviter.
+          // Ce test ne concerne que le solde nul : quelqu'un qui a DÉJÀ payé garde son crédit et
+          // passe directement au `unlock` plus bas, studio fermé ou non. La règle est « plus
+          // d'argent qui entre, mais tout ce qui est payé est livré ».
+          if (studioOpen === false) {
+            throw new TryOnError(
+              'closed',
+              "Le studio est en pause, les paiements sont suspendus. Rien n'a été prélevé.",
+            );
+          }
           if (!PADDLE_READY || !pack?.paddle_price_id) {
             // No payment configured for this environment. Nothing is given away: `unlock` charges a
             // credit server-side, so the worst case is the honest error below.
@@ -389,7 +410,9 @@ export function App() {
         setRevealing(false);
       }
     },
-    [genId, session],
+    // `studioOpen` est indispensable ici : sans lui le callback fige le `null` du premier rendu et
+    // le garde-fou ci-dessus ne verrait JAMAIS la fermeture, puisque le drapeau arrive après.
+    [genId, session, studioOpen],
   );
 
   const startOver = useCallback(() => {
@@ -399,6 +422,13 @@ export function App() {
     setError(null);
     setStep('look');
   }, []);
+
+  // L'interrupteur ferme l'ENTRÉE, jamais la sortie. Les étapes d'avant génération sont celles où
+  // partent la dépense Gemini puis le paiement ; à partir de `generating` le tunnel est engagé, et
+  // un aperçu déjà payé doit pouvoir être déverrouillé même studio fermé, sinon on encaisse sans
+  // livrer. Voir 0034.
+  const closed =
+    studioOpen === false && (step === 'portrait' || step === 'look' || step === 'account');
 
   const frameImage =
     step === 'result'
@@ -486,8 +516,9 @@ export function App() {
           </div>
 
           <div className="m-panel">
-            {step === 'portrait' && <PortraitScreen onPick={pickFile} error={error} />}
-            {step === 'look' && (
+            {closed && <ClosedScreen />}
+            {!closed && step === 'portrait' && <PortraitScreen onPick={pickFile} error={error} />}
+            {!closed && step === 'look' && (
               <LookScreen
                 selected={look}
                 onSelect={setLook}
@@ -496,7 +527,7 @@ export function App() {
                 error={error}
               />
             )}
-            {step === 'account' && (
+            {!closed && step === 'account' && (
               <AccountScreen onAuthenticated={onAuthenticated} onProvider={startProviderSignIn} />
             )}
             {step === 'generating' && <GeneratingScreen lookName={look?.name ?? 'ton essai'} />}

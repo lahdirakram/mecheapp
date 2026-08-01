@@ -1,0 +1,42 @@
+-- `web_studio` : l'interrupteur d'arrêt du tunnel payant web (web/src).
+--
+-- Aucun changement de schéma. Comme `min_version` (0032), on ajoute une clé à `app_config` (0027),
+-- déjà lisible par tout le monde et déjà écrite au seul service_role (pas de policy d'insert = refus
+-- par RLS, verrouillé par Postgres et pas par du code applicatif).
+--
+-- ── Le besoin : fermer le studio SANS toucher à Railway ─────────────────────────────────────────
+-- Le même service Railway sert la landing, les pages légales ET le studio. Couper le service pour
+-- suspendre le studio emporterait les pages légales, qui sont un engagement public opposable
+-- (voir CLAUDE.md → « Legal pages are a contract with the code »). Et un redéploiement ne convient
+-- pas non plus : les VITE_* sont inlinées au BUILD, donc passer par une variable Railway impose un
+-- rebuild complet, soit plusieurs minutes pendant lesquelles on continue d'encaisser.
+-- Ici, une ligne SQL suffit et l'effet est immédiat au prochain chargement de page :
+--   update app_config set value = '0', updated_at = now() where key = 'web_studio';   -- fermé
+--   update app_config set value = '1', updated_at = now() where key = 'web_studio';   -- ouvert
+--
+-- ── Ce que « fermé » bloque, et surtout ce qu'il NE bloque PAS ──────────────────────────────────
+-- Fermé empêche de DÉMARRER un nouvel essai (les étapes portrait / look / compte). C'est là que se
+-- déclenchent la dépense Gemini et, juste après, le paiement.
+--
+-- Fermé ne touche PAS aux tunnels déjà engagés : génération en cours, aperçu verrouillé en attente,
+-- déverrouillage, résultat. Quelqu'un qui vient de payer DOIT pouvoir récupérer son image, sinon
+-- l'interrupteur transforme une panne en vol. C'est la raison d'être de la distinction, pas un
+-- détail d'implémentation : `resumableGeneration` (24 h sur un aperçu verrouillé) veut dire qu'un
+-- acheteur peut revenir le lendemain, bien après la fermeture.
+--
+-- ── FAIL OPEN, comme min_version ───────────────────────────────────────────────────────────────
+-- Clé absente, valeur vide, valeur inconnue, fetch en cours ou en échec : le studio reste OUVERT.
+-- Une coupure réseau ne doit jamais être indiscernable d'une fermeture volontaire. Conséquence
+-- assumée : c'est un levier d'EXPLOITATION (couper l'hémorragie si Paddle déraille, si le coût
+-- s'emballe, si un bug livre mal), pas un contrôle de sécurité. Il vit dans le client, donc il
+-- n'arrête que les gens honnêtes. Les vraies garanties restent serveur : `generate` réserve le
+-- crédit avant l'appel payant (0030), `unlock` débite avant de révéler (0026). Ne jamais présenter
+-- cette clé comme une protection, et ne jamais l'inverser en fail closed : une panne Supabase
+-- fermerait alors le studio toute seule, exactement quand on a le moins besoin d'une surprise.
+--
+-- ── Portée : le WEB uniquement ─────────────────────────────────────────────────────────────────
+-- Cette clé n'est lue que par web/src. Elle ne coupe pas l'app : `locked_first_try` est
+-- l'interrupteur de l'app, et les deux sont indépendants exprès. Fermer le web ne doit pas changer
+-- l'expérience de quelqu'un sur iOS.
+insert into app_config (key, value) values ('web_studio', '1')
+  on conflict (key) do nothing;
