@@ -394,6 +394,58 @@ export function GeneratingScreen({ lookName }: { lookName: string }) {
   );
 }
 
+/* ── 05b Révélation ──────────────────────────────────────────────────────── */
+
+/**
+ * L'attente entre « payé » et « image nette ».
+ *
+ * C'est le moment le plus anxiogène du tunnel : l'argent est parti et rien n'a encore bougé à
+ * l'écran. Un simple bouton grisé y répond mal, parce qu'il ne dit ni que le paiement a marché ni
+ * ce qu'on attend. Le trajet a deux temps réels, et chacun a sa phrase :
+ *   1. `confirming` — Paddle a encaissé, on attend le webhook qui crédite le compte,
+ *   2. `fetching`   — les crédits sont là, `unlock` a débité, on récupère l'image pleine définition.
+ *
+ * Contrairement à `GeneratingScreen`, la progression ici n'est PAS une horloge décorative : les
+ * phases viennent d'événements réels, donc la barre a le droit d'être franche.
+ */
+const REVEAL_COPY = {
+  confirming: {
+    head: 'Paiement',
+    em: 'accepté.',
+    sub: "On attend la confirmation, puis tes essais arrivent sur ton compte. C'est notre serveur qui répond, quelques secondes.",
+    pct: 45,
+  },
+  fetching: {
+    head: 'Crédits',
+    em: 'reçus.',
+    sub: "On sort la version nette de ton image. Elle est déjà calculée, il ne reste qu'à te la donner.",
+    pct: 82,
+  },
+} as const;
+
+export function RevealingScreen({ phase }: { phase: 'confirming' | 'fetching' }) {
+  const copy = REVEAL_COPY[phase];
+  return (
+    <section>
+      <p className="m-kicker">Étape 05</p>
+      <h2 className="m-h">
+        {copy.head} <em>{copy.em}</em>
+      </h2>
+      <p className="m-sub">{copy.sub}</p>
+
+      <div className="m-prog">
+        <i style={{ width: `${copy.pct}%` }} />
+      </div>
+
+      {/* La reprise automatique (`resumableGeneration`) rend cette phrase vraie : un résultat payé
+          et débloqué se retrouve en revenant sur la page. Ne pas la promettre sans elle. */}
+      <Note>
+        Ton paiement est enregistré. Même si la page se ferme maintenant, ton résultat t'attend ici.
+      </Note>
+    </section>
+  );
+}
+
 /* ── 05 Paywall ──────────────────────────────────────────────────────────── */
 
 export function PaywallScreen({

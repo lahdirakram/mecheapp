@@ -26,9 +26,10 @@ import {
   PaywallScreen,
   PortraitScreen,
   ResultScreen,
+  RevealingScreen,
 } from './screens';
 
-export type Step = 'portrait' | 'look' | 'account' | 'generating' | 'paywall' | 'result';
+export type Step = 'portrait' | 'look' | 'account' | 'generating' | 'paywall' | 'revealing' | 'result';
 
 const STEP_RAIL: Record<Step, 1 | 2 | 3 | 4> = {
   portrait: 1,
@@ -36,6 +37,7 @@ const STEP_RAIL: Record<Step, 1 | 2 | 3 | 4> = {
   account: 3,
   generating: 4,
   paywall: 4,
+  revealing: 4,
   result: 4,
 };
 
@@ -45,6 +47,7 @@ const CAPTIONS: Record<Step, string> = {
   account: 'Ton portrait. La coupe sera posée dessus, ton visage ne change pas.',
   generating: 'Ton visage, ta lumière et ton cadrage sont conservés.',
   paywall: "Aperçu basse définition. L'image nette attend, elle n'a jamais quitté le serveur.",
+  revealing: "L'image nette arrive. Elle n'a jamais quitté le serveur, on vient d'en ouvrir l'accès.",
   result: 'Même visage, même lumière, même cadrage.',
 };
 
@@ -61,6 +64,11 @@ export function App() {
   const [teaserUrl, setTeaserUrl] = useState<string | null>(null);
   const [clearUrl, setClearUrl] = useState<string | null>(null);
   const [revealing, setRevealing] = useState(false);
+  /** Quelle phase de l'attente post-paiement afficher. Pilotée par les vraies étapes de
+   *  `payAndReveal`, jamais par un minuteur. */
+  const [revealPhase, setRevealPhase] = useState<'confirming' | 'fetching'>('confirming');
+  /** Joue le balayage caramel une fois, à l'instant où l'image nette remplace le flou. */
+  const [wipe, setWipe] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -353,20 +361,30 @@ export function App() {
             userId: session?.user.id ?? '',
             ...(session?.user.email ? { email: session.user.email } : {}),
           });
+          // L'argent est parti : à partir d'ici on ne revient plus au paywall, on montre l'attente.
+          // Le paywall afficherait « payer » à quelqu'un qui vient de payer.
+          setRevealPhase('confirming');
+          setStep('revealing');
           // Paid, but not necessarily granted yet.
           await waitForCredits();
         }
 
+        setRevealPhase('fetching');
+        setStep('revealing');
         await unlockGeneration(genId);
         const row = await waitForGeneration(genId).catch(() => null);
         const path = row?.result_path ?? null;
         setClearUrl(path ? await signedResultUrl(path) : null);
         setCredits(await creditBalance());
         setStep('result');
+        setWipe(true);
       } catch (e) {
         if (e instanceof PaddleError) setError(e.message);
         else if (e instanceof TryOnError) setError(e.message);
         else setError("La révélation a échoué. Réessaie, aucun crédit n'a été perdu.");
+        // Remettre le paywall SOUS l'erreur : c'est le seul écran qui porte le bouton pour
+        // réessayer. Y rester bloqué sur l'écran d'attente serait une impasse.
+        setStep('paywall');
       } finally {
         setRevealing(false);
       }
@@ -383,7 +401,14 @@ export function App() {
   }, []);
 
   const frameImage =
-    step === 'result' ? clearUrl : step === 'paywall' ? teaserUrl : (selfie?.previewUrl ?? null);
+    step === 'result'
+      ? clearUrl
+      : step === 'paywall' || step === 'revealing'
+        ? teaserUrl
+        : (selfie?.previewUrl ?? null);
+  /** Le flou et le cadre plein valent pour l'attente comme pour le paywall : c'est le même écran,
+   *  une étape plus loin. */
+  const showingTeaser = step === 'paywall' || step === 'revealing';
 
   return (
     <>
@@ -410,7 +435,7 @@ export function App() {
               the frame is the product and gets all the room it wants. */}
           <div
             className="m-frame-wrap"
-            data-compact={step === 'paywall' || step === 'result' ? undefined : '1'}
+            data-compact={showingTeaser || step === 'result' ? undefined : '1'}
           >
             <div className="m-frame">
               {!frameImage && (
@@ -428,21 +453,32 @@ export function App() {
                     alt={
                       step === 'result'
                         ? `Résultat, ${look?.name ?? 'ton essai'}`
-                        : step === 'paywall'
+                        : showingTeaser
                           ? 'Aperçu flouté de ton résultat'
                           : 'Ton portrait'
                     }
-                    style={step === 'paywall' ? { filter: 'blur(1.5px)', transform: 'scale(1.02)' } : undefined}
+                    style={showingTeaser ? { filter: 'blur(1.5px)', transform: 'scale(1.02)' } : undefined}
                   />
                 </div>
               )}
-              {step === 'generating' && <div className="m-scan" />}
-              {(step === 'paywall' || step === 'result') && (
+              {(step === 'generating' || step === 'revealing') && <div className="m-scan" />}
+              {/* Le balayage caramel : monté en permanence pour que la classe change SANS remonter
+                  l'élément, sinon l'animation ne se déclenche pas. `onAnimationEnd` le rearme. */}
+              <div
+                className="m-wipe"
+                data-play={wipe ? '1' : undefined}
+                onAnimationEnd={() => setWipe(false)}
+              />
+              {(showingTeaser || step === 'result') && (
                 <span className={`m-badge${step === 'result' ? ' m-badge--ok' : ''}`}>
                   <span className="lk" aria-hidden="true">
                     ⬤
                   </span>{' '}
-                  {step === 'paywall' ? 'Aperçu verrouillé' : 'Résultat net'}
+                  {step === 'revealing'
+                    ? 'Déverrouillage'
+                    : step === 'paywall'
+                      ? 'Aperçu verrouillé'
+                      : 'Résultat net'}
                 </span>
               )}
             </div>
@@ -467,6 +503,7 @@ export function App() {
             {step === 'paywall' && (
               <PaywallScreen onReveal={payAndReveal} busy={revealing} error={error} />
             )}
+            {step === 'revealing' && <RevealingScreen phase={revealPhase} />}
             {step === 'result' && (
               <ResultScreen
                 lookName={look?.name ?? 'ton essai'}
