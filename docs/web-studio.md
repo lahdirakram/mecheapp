@@ -309,7 +309,7 @@ n'importe quelle date future, CVV et code postal libres (la doc Paddle n'en impo
 | Succès, avec 3DS | `4000 0038 0000 0446` |
 | Visa debit valide | `4000 0566 5566 5556` |
 | Refusée | `4000 0000 0000 0002` |
-| Passe, puis refus aux paiements suivants | `4000 0027 6000 3184` |
+| Passe, puis refus aux suivants (INUTILE ICI, voir plus bas) | `4000 0027 6000 3184` |
 
 Pour tester l'écran de révélation, prendre celle **sans 3DS** : l'overlay se ferme directement et
 on voit l'enchaînement `confirming` → `fetching` → balayage sans étape intercalée. La carte 3DS est
@@ -317,6 +317,14 @@ utile pour l'inverse, vérifier que l'attente tient quand la banque s'intercale.
 
 `4000 0000 0000 0002` est la seule façon de vérifier qu'un paiement refusé ne débite AUCUN crédit :
 `payAndReveal` doit revenir au paywall avec l'erreur, jamais avancer vers `unlock`.
+
+**Ne pas se servir de `4000 0027 6000 3184`.** Elle passe une fois puis refuse tout le reste, et
+elle existe pour tester l'échec de RENOUVELLEMENT d'un abonnement (la relance, l'impayé). Le studio
+vend des packs à l'unité et l'abonnement Pro passe par RevenueCat, donc il n'y a aucun second
+prélèvement à faire échouer. La doc Paddle ne dit pas si le refus vaut aussi pour un simple second
+achat, donc au mieux elle testerait la même branche que la carte refusée, en moins reproductible.
+Le vrai risque est de l'utiliser pour un test « qui doit marcher » : l'achat SUIVANT sera refusé
+sans raison visible, et on ira chercher le bug dans `paddle-webhook` alors qu'il n'y en a pas.
 
 ## État PRODUCTION (2026-08-01)
 
