@@ -69,6 +69,7 @@ export function App() {
   const [revealPhase, setRevealPhase] = useState<'confirming' | 'fetching'>('confirming');
   /** Joue le balayage caramel une fois, à l'instant où l'image nette remplace le flou. */
   const [wipe, setWipe] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -400,6 +401,43 @@ export function App() {
     setStep('look');
   }, []);
 
+  /**
+   * Déconnexion.
+   *
+   * Le `signOut()` seul ne suffit PAS : tout le tunnel vit dans l'état React et dans IndexedDB, donc
+   * sans ce nettoyage on se retrouve déconnecté avec, toujours à l'écran, le résultat et la photo du
+   * compte précédent. Sur un ordinateur partagé c'est la personne suivante qui les voit.
+   *
+   * `clearDraft()` est le point sensible : la photo survit au rechargement par construction (c'est
+   * ce qui permet le retour d'un redirect Google ou Apple), donc elle survivrait aussi à une
+   * déconnexion si on ne l'effaçait pas explicitement.
+   *
+   * On repart de `portrait`, l'état neuf. `checkedResumable` est remis à zéro pour que la reprise
+   * puisse se refaire à la prochaine connexion : sans ça, quelqu'un qui se reconnecte dans le même
+   * onglet ne retrouverait pas son essai en attente.
+   */
+  const signOut = useCallback(async () => {
+    setSigningOut(true);
+    try {
+      await supabase.auth.signOut().catch(() => {});
+      await clearDraft().catch(() => {});
+      abortRef.current?.abort();
+      setSession(null);
+      setSelfie(null);
+      setLook(null);
+      setGenId(null);
+      setTeaserUrl(null);
+      setClearUrl(null);
+      setCredits(0);
+      setError(null);
+      setWipe(false);
+      checkedResumable.current = false;
+      setStep('portrait');
+    } finally {
+      setSigningOut(false);
+    }
+  }, []);
+
   const frameImage =
     step === 'result'
       ? clearUrl
@@ -421,6 +459,23 @@ export function App() {
             {step === 'result' && credits > 0 && (
               <span className="m-credits">
                 {credits} essai{credits > 1 ? 's' : ''}
+              </span>
+            )}
+            {session && (
+              <span className="m-who">
+                {/* `title` porte l'adresse entière : elle est tronquée visuellement, et masquée
+                    sur mobile, donc c'est le seul moyen de la relire en entier. */}
+                <span className="adr" title={session.user.email ?? undefined}>
+                  {session.user.email}
+                </span>
+                <button
+                  type="button"
+                  className="out"
+                  onClick={() => void signOut()}
+                  disabled={signingOut}
+                >
+                  {signingOut ? '...' : 'Sortir'}
+                </button>
               </span>
             )}
             <span className="m-lang">FR</span>

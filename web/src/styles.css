@@ -59,6 +59,34 @@ button { font: inherit; color: inherit; }
   font-size: 10.5px; letter-spacing: 0.14em; color: var(--mute);
 }
 
+/* compte connecté : l'adresse, puis la sortie */
+.m-who {
+  display: flex; align-items: center; gap: 10px;
+  min-width: 0; /* sans ça l'ellipse ci-dessous ne se déclenche jamais dans un flex */
+}
+.m-who .adr {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 0.06em; color: var(--mute);
+  /* Une adresse peut être très longue et ne doit jamais pousser le wordmark hors du header. */
+  max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.m-who .out {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); background: none; border: 1px solid var(--line);
+  padding: 5px 10px; border-radius: 999px; cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.m-who .out:hover { background: var(--caramel-soft); border-color: var(--caramel); }
+.m-who .out:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 620px) {
+  /* Sur un petit écran le wordmark et le bouton priment : l'adresse est une confirmation, pas une
+     information dont on a besoin en permanence. */
+  .m-who .adr { display: none; }
+  .m-top-right { gap: 10px; }
+}
+
 /* stepper — a real sequence, so it is numbered */
 .m-steps {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
