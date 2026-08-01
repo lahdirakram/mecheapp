@@ -566,9 +566,14 @@ function ContinueInApp({ credits }: { credits: number }) {
       <a className="m-btn m-btn--ghost" href={href ?? APPSTORE_URL} target="_blank" rel="noopener noreferrer">
         Télécharger Mèche
       </a>
+      {/* Un acheteur web n'a JAMAIS de mot de passe : il s'inscrit par code, sans en choisir un.
+          Le detour par « Mot de passe oublié » etait le contournement d'avant `(auth)/code.tsx`.
+          Maintenant que l'app a son bouton dedie, on le nomme tel quel : une consigne qui ne
+          correspond pas au libelle affiche coute plus qu'elle n'aide. Garder ce texte aligne sur
+          `signin_code_link` du dictionnaire si le libelle change. */}
       <p className="m-app-fine">
         Si tu t'es connecté avec Google ou Apple, utilise le même bouton dans l'app. Avec ton email,
-        choisis "Mot de passe oublié" à la première connexion pour créer ton mot de passe.
+        choisis « Me connecter avec un code » et saisis le code reçu.
       </p>
     </div>
   );
