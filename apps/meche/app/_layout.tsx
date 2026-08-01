@@ -8,6 +8,11 @@ import { PurchasesSync } from '../lib/PurchasesSync';
 import { PushSync } from '../lib/PushSync';
 import { TryStoreReset } from '../lib/TryStoreReset';
 import { UpdateGate } from '../components/UpdateGate';
+import { seedLangFromDevice } from '../lib/deviceLang';
+
+// At module scope: the earliest point available, and `seedLang` re-applies itself once the stored
+// language has loaded, so this is correct whichever finishes first.
+seedLangFromDevice();
 
 export default function RootLayout() {
   return (

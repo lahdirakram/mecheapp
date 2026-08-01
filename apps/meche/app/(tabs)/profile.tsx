@@ -10,6 +10,7 @@ import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, 
 import { getPushEnabled } from '../../lib/notifPref';
 import { setPushPreference } from '../../lib/push';
 import { openLegal } from '../../lib/legal';
+import { openStoreListing } from '../../lib/review';
 import { cacheKeyFor } from '../../lib/img';
 import { useLocalImages } from '../../lib/localImages';
 
@@ -21,7 +22,7 @@ export default function Profile() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { lang, toggle } = useLangStore();
+  const { lang, setLang } = useLangStore();
   const toast = useToast();
   const sheet = useSheet();
   const session = useSession();
@@ -104,14 +105,29 @@ export default function Profile() {
       ],
     });
 
-  // Preferences = language + notifications only (no account actions here).
-  const openPrefs = () =>
+  // Language is its OWN row, not a line inside a generic "Preferences" sheet. It used to be three
+  // taps deep behind a label that never named a language, which is why testers reported the app as
+  // French-only with no setting: an English speaker cannot read their way to a setting written in
+  // the language they are trying to escape. Hence the always-English "Language" on the row itself
+  // and the endonyms below, both readable whichever side you are stuck on.
+  const openLang = () =>
     sheet({
-      title: lang === 'fr' ? 'Préférences' : 'Preferences',
+      title: 'Langue · Language',
       options: [
-        { label: lang === 'fr' ? `Langue : ${lang.toUpperCase()} · changer` : `Language: ${lang.toUpperCase()} · switch`, onPress: toggle },
+        // Named choices, not a blind toggle: the sheet says what you are switching TO, and the
+        // current one is marked rather than hidden.
+        { label: `Français${lang === 'fr' ? ' ·' : ''}`, onPress: () => setLang('fr') },
+        { label: `English${lang === 'en' ? ' ·' : ''}`, onPress: () => setLang('en') },
+        { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
+      ],
+    });
+
+  const openNotifs = () =>
+    sheet({
+      title: lang === 'fr' ? 'Notifications' : 'Notifications',
+      options: [
         {
-          label: lang === 'fr' ? `Notifications : ${pushOn ? 'activées' : 'désactivées'} · changer` : `Notifications: ${pushOn ? 'on' : 'off'} · switch`,
+          label: pushOn ? (lang === 'fr' ? 'Désactiver' : 'Turn off') : lang === 'fr' ? 'Activer' : 'Turn on',
           onPress: () => togglePush(!pushOn),
         },
         { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
@@ -149,7 +165,18 @@ export default function Profile() {
       onPress: () => soon(lang === 'fr' ? 'Mes rendez-vous' : 'My appointments'),
     },
     { ic: 'heart', l: lang === 'fr' ? 'Salons favoris' : 'Favorite salons', sub: '', onPress: () => soon(lang === 'fr' ? 'Salons favoris' : 'Favorite salons') },
-    { ic: 'settings', l: lang === 'fr' ? 'Préférences' : 'Preferences', sub: lang === 'fr' ? 'Langue, notifications' : 'Language, notifications', onPress: openPrefs },
+    // Bilingual label on purpose — see openLang.
+    { ic: 'compass', l: 'Langue · Language', sub: lang === 'fr' ? 'Français' : 'English', onPress: openLang },
+    {
+      ic: 'settings',
+      l: lang === 'fr' ? 'Notifications' : 'Notifications',
+      sub: lang === 'fr' ? (pushOn ? 'Activées' : 'Désactivées') : pushOn ? 'On' : 'Off',
+      onPress: openNotifs,
+    },
+    // Explicit rating entry point. This one goes to the STORE LISTING, never to the native prompt:
+    // Apple's guidelines forbid wiring SKStoreReviewController to a button, and the native prompt
+    // is already fired from the reveal (lib/review.ts).
+    { ic: 'star', l: lang === 'fr' ? 'Noter Mèche' : 'Rate Mèche', sub: lang === 'fr' ? 'Laisser un avis sur le store' : 'Leave a review on the store', onPress: () => void openStoreListing() },
     { ic: 'lock', l: lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms', sub: lang === 'fr' ? 'Politique, CGU, mentions légales' : 'Policy, Terms, Legal notice', onPress: openLegalSheet },
     { ic: 'user', l: lang === 'fr' ? 'Compte' : 'Account', sub: lang === 'fr' ? 'Déconnexion, suppression' : 'Sign out, delete', onPress: openAccount },
   ];

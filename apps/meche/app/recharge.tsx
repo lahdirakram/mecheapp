@@ -195,7 +195,10 @@ export default function Recharge() {
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 18 }}>
-          {['Paiement unique', 'Crédits sans expiration', 'Sans abonnement'].map((tx) => (
+          {(lang === 'fr'
+            ? ['Paiement unique', 'Crédits sans expiration', 'Sans abonnement']
+            : ['One-time payment', 'Credits never expire', 'No subscription']
+          ).map((tx) => (
             <View key={tx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <MIcon name="check" size={12} color={MPAL.ink} />
               <MText size={11} color={MPAL.mute}>

@@ -15,7 +15,7 @@ export {
 
 export { AppProviders } from './providers';
 export { fontMap } from './theme/fonts';
-export { useLang, useLangStore, useT } from './i18n';
+export { seedLang, useLang, useLangStore, useT } from './i18n';
 export { useToast, useSheet, type SheetOption } from './feedback';
 
 export { MWordmark, type MWordmarkProps } from './components/MWordmark';

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import Svg, { Defs, Ellipse, Mask, Rect } from 'react-native-svg';
-import { MIcon, MPAL, MText, MPortrait, useT, useToast } from '@meche/ui';
+import { MIcon, MPAL, MText, MPortrait, useLang, useT, useToast } from '@meche/ui';
 import { useTryStore } from '../../lib/tryStore';
 import { useExitTry } from '../../lib/useExitTry';
 import { shrinkSelfie } from '../../lib/selfie';
@@ -42,6 +42,7 @@ export default function Selfie() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
+  const lang = useLang();
   const toast = useToast();
   const [flash, setFlash] = useState(false);
   const [facing, setFacing] = useState<CameraType>('front');
@@ -109,7 +110,7 @@ export default function Selfie() {
         const { base64, mime } = await shrinkOrKeep(photo.uri, raw.base64, raw.mime, photo.width, photo.height);
         setShot({ uri: photo.uri ?? `data:${mime};base64,${base64}`, base64, mime });
       } else {
-        toast('Capture impossible, réessaie.');
+        toast(lang === 'fr' ? 'Capture impossible, réessaie.' : 'Could not take the photo, try again.');
       }
     } catch {
       toast('Capture impossible, réessaie.');

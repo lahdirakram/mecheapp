@@ -122,6 +122,20 @@ wrong belief survives across sessions.
   a-t-elle un dossier `ios/`/`android/` ou un `expo-module.config.json` ? Si oui, c'est natif, donc
   build store obligatoire et bump de `version`. Vaut particulièrement pour Pro, dont le canal
   `production` est ce que fait tourner un reviewer Apple : un crash là = un refus.
+  **Le bump ne protège QUE ce qui n'a pas encore été buildé, et c'est le piège du deuxième module.**
+  Une fois `version` bumpée, on croit la barrière posée — mais dès qu'un binaire de CETTE version
+  existe (un `preview` sur le téléphone d'un testeur suffit), ajouter un module natif de plus
+  redevient exactement le cas de départ : même runtimeVersion, binaire sans le code natif, crash au
+  lancement. Le bump est un événement, pas un état. **Le check** avant d'ajouter un module natif :
+  `eas build:list`, et comparer `appVersion` à la version courante. Si elle apparaît déjà, il faut
+  REBUILDER avant tout OTA sur ce canal, pas seulement avant la soumission store. Vécu le
+  2026-08-01 : `expo-localization` + `expo-store-review` ajoutés en 1.0.2 alors que trois builds
+  `preview` 1.0.2 tournaient déjà.
+  **Corollaire de placement** : un module natif ne s'importe JAMAIS depuis `packages/` sans être
+  installé dans les DEUX apps. dyld charge au démarrage du process, donc un import dans du code
+  partagé tue meche-pro même si Pro n'appelle jamais la fonction. Quand une seule app en a besoin,
+  le module reste dans `apps/<app>/lib/` et le code partagé n'expose qu'une entrée neutre (ex.
+  `seedLang(lang)` dans `packages/ui/src/i18n.ts`, alimentée par `apps/meche/lib/deviceLang.ts`).
 - **La longueur du code OTP email vit dans le dashboard, pas dans le repo — et elle est figée à 6
   côté app.** Les 4 écrans de saisie (`confirm` + `reset`, meche et meche-pro) coupent à 6 chiffres
   et auto-vérifient dès le 6e ; `supabase/config.toml` (`otp_length = 6`) ne vaut QUE pour le
@@ -235,6 +249,26 @@ wrong belief survives across sessions.
   doit jamais distinguer succès et échec, sinon on révèle qu'une adresse a un compte. Ce chemin
   existe parce que le studio web inscrit sans mot de passe : sans lui, un acheteur web ne peut pas
   entrer dans l'app. Il dépend du template **« Magic Link »** en `{{ .Token }}` sur les DEUX projets.
+- **La langue est semée depuis la locale du téléphone, et `chosen` est ce qui rend ça sûr.** Le
+  store (`packages/ui/src/i18n.ts`) distingue un `lang` choisi d'un `lang` par défaut : sans ce
+  drapeau, un `'fr'` stocké est indiscernable d'un « jamais demandé » et la graine écraserait le
+  choix explicite de quelqu'un à chaque lancement. `seedLangFromDevice()` tourne au SCOPE MODULE de
+  `app/_layout.tsx`, pas dans un effet : `persist` fusionne l'état stocké PAR-DESSUS l'état initial,
+  donc semer avant l'hydratation ne peut pas écraser un habitué, alors qu'un effet après le gate
+  repeindrait l'UI du français vers l'anglais sous les yeux de l'utilisateur.
+- **La notation est UNIQUEMENT la ligne « Noter Mèche » du profil. Le prompt natif a été construit
+  puis RETIRÉ, ne pas le réintroduire sans lever d'abord le problème de vérifiabilité.** Il ne
+  s'affiche sur aucun de nos canaux de test : le flux Android exige que l'app soit dans la
+  BIBLIOTHÈQUE Play du compte (vérifié sur la doc Google), donc un APK sideloadé depuis EAS ne le
+  montre jamais, même contrainte que l'IAP Android ; iOS ne le montre jamais sous TestFlight. Les
+  deux échouent en SILENCE. On expédiait donc un mécanisme dont le seul comportement observable est
+  « rien ne s'est passé » : impossible de confirmer qu'il marche, impossible de remarquer qu'il
+  casse, pour un gain faible face à une ligne de menu visible. S'il revient un jour : jamais depuis
+  un bouton (règle Apple), et jamais pendant la révélation d'un résultat payé, ce qui parle
+  par-dessus la récompense et réclame un verdict avant que la personne s'en soit fait un. Armer au
+  bon moment, demander plus tard, sur un écran inactif, dans une session ultérieure.
+  `expo-store-review` reste installé : `storeUrl()` lit `ios.appStoreUrl` / `android.playStoreUrl`
+  de la config pour la ligne de menu.
 - **Un toast est invisible depuis un écran `presentation: 'modal'` sur iOS** (overlay rendu à la
   racine, le modal natif est un autre contrôleur de vue et passe devant). Depuis un modal, utiliser
   `Alert.alert`. Vaut aussi pour `useSheet`, déjà noté dans `packages/ui/src/feedback.tsx`.

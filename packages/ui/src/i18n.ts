@@ -6,6 +6,12 @@ import { mt, type Lang, type MKey } from '@meche/core';
 
 interface LangState {
   lang: Lang;
+  /**
+   * Whether `lang` came from the human or from a default/seed. Without this a stored `'fr'` is
+   * indistinguishable from never having been asked, so `seedLang` could not tell whom it is allowed
+   * to overwrite.
+   */
+  chosen: boolean;
   setLang: (l: Lang) => void;
   toggle: () => void;
 }
@@ -18,31 +24,72 @@ interface LangState {
  * wait on a network round-trip to know which language to paint. Syncing the column on top, for
  * cross-device, is a separate change and would need a device-vs-server precedence rule.
  *
- * FR stays the FIRST-RUN default, so an English speaker still starts in French. Seeding from the
- * device locale would be better, but `expo-localization` is a new native dependency: it cannot
- * reach anyone by OTA.
+ * FR is the fallback default, but it is no longer what an English speaker gets: the B2C app seeds
+ * from the device locale on first run (see `seedLang`). This module stays deliberately FREE of
+ * `expo-localization` even so, because it is shared with meche-pro, whose binary does not carry that
+ * native module. An import here would be loaded by dyld at process start, i.e. an unavoidable
+ * launch crash for Pro on the next OTA. The caller supplies the locale; the store only arbitrates.
  */
 export const useLangStore = create<LangState>()(
   persist(
     (set) => ({
       lang: 'fr',
-      setLang: (lang) => set({ lang }),
-      toggle: () => set((s) => ({ lang: s.lang === 'fr' ? 'en' : 'fr' })),
+      chosen: false,
+      setLang: (lang) => set({ lang, chosen: true }),
+      toggle: () => set((s) => ({ lang: s.lang === 'fr' ? 'en' : 'fr', chosen: true })),
     }),
     {
       name: 'meche.lang',
       storage: createJSONStorage(() => AsyncStorage),
       // Only the choice is worth storing. The actions are rebuilt on every boot, and persisting
       // them would write functions that come back as null.
-      partialize: (s) => ({ lang: s.lang }),
+      partialize: (s) => ({ lang: s.lang, chosen: s.chosen }),
       // The ONLY signal zustand gives on a failed read: the success path fires onFinishHydration
       // instead. Log it, since otherwise a user stuck on the default has nothing to report.
       onRehydrateStorage: () => (_state, error) => {
         if (error) console.warn('[i18n] lang hydration failed, keeping default', error);
+        // The device seed is (re)applied HERE, after the stored value has been merged in. Verified
+        // in zustand's compiled middleware: `merge()` runs at line 419 and overwrites whatever the
+        // store held, and this callback runs at 431 — before `hasHydrated = true` (433) and before
+        // the listeners that open <AppProviders>' render gate. So this is both the first point where
+        // the seed can survive, and the last point where changing the language is still invisible.
+        applyDeviceLang();
       },
     },
   ),
 );
+
+/**
+ * The device language, as reported by whichever app bothered to look it up. Module-level rather than
+ * store state because it is an INPUT to the decision, not part of it: persisting it would resurrect
+ * a stale phone locale on the next launch.
+ */
+let deviceLang: Lang | null = null;
+
+function applyDeviceLang(): void {
+  if (!deviceLang) return;
+  const s = useLangStore.getState();
+  // `chosen` is deliberately read as falsy-or-not rather than `=== false`: a value stored by a build
+  // that predates this flag comes back with `chosen` undefined, and "stored before we ever asked" is
+  // exactly the case the seed exists to serve. Reading it as a strict boolean would freeze every
+  // existing user on French forever, which is the bug this whole mechanism was meant to fix.
+  if (s.chosen) return;
+  if (s.lang !== deviceLang) useLangStore.setState({ lang: deviceLang });
+}
+
+/**
+ * Tell the store what language the phone is in. Only ever overrides a default, never an explicit
+ * choice, so it is safe to call on every launch.
+ *
+ * Applied twice on purpose: once now (covers a call that lands after hydration has finished) and
+ * once from `onRehydrateStorage` (covers the normal case, where this is called at module scope
+ * before the storage read completes). Whichever happens last wins, and both orders end in the same
+ * state, so the caller does not have to know anything about hydration timing.
+ */
+export function seedLang(lang: Lang): void {
+  deviceLang = lang;
+  applyDeviceLang();
+}
 
 /**
  * Never let the language gate hold the app for longer than this. See useLangHydrated: the wait MUST

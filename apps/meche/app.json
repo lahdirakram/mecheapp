@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.meche.app",
+      "appStoreUrl": "https://apps.apple.com/app/id6777728552",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -70,6 +71,7 @@
     },
     "android": {
       "package": "com.meche.app",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.meche.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#15110E",
@@ -110,6 +112,7 @@
         }
       ],
       "expo-sharing",
+      "expo-localization",
       [
         "expo-media-library",
         {
