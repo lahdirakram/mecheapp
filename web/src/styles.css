@@ -59,32 +59,68 @@ button { font: inherit; color: inherit; }
   font-size: 10.5px; letter-spacing: 0.14em; color: var(--mute);
 }
 
-/* compte connecté : l'adresse, puis la sortie */
+/* ── compte connecté ────────────────────────────────────────────────────────────────────────────
+   Deux niveaux volontairement inégaux : l'IDENTITÉ est calme (pastille + adresse, aucune bordure,
+   ça se lit sans se cliquer) et l'ACTION est le seul élément cerné, donc le seul qui a l'air
+   cliquable. Deux pastilles bordées côte à côte se seraient disputé le regard avec le compteur de
+   crédits juste à côté. */
 .m-who {
-  display: flex; align-items: center; gap: 10px;
-  min-width: 0; /* sans ça l'ellipse ci-dessous ne se déclenche jamais dans un flex */
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0; /* sans ça l'ellipse plus bas ne se déclenche jamais dans un flex */
+}
+/* Ancre visuelle : l'initiale suffit à reconnaître son compte d'un coup d'oeil, et elle reste
+   lisible quand l'adresse est tronquée. */
+.m-who .av {
+  flex: 0 0 auto;
+  width: 22px; height: 22px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: var(--caramel-soft); color: var(--ink);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px; text-transform: uppercase; line-height: 1;
 }
 .m-who .adr {
   font-family: 'Geist Mono', ui-monospace, monospace;
-  font-size: 10.5px; letter-spacing: 0.06em; color: var(--mute);
+  font-size: 11px; letter-spacing: 0.02em; color: var(--mute);
   /* Une adresse peut être très longue et ne doit jamais pousser le wordmark hors du header. */
-  max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0; max-width: 24ch;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .m-who .out {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 6px;
   font-family: 'Geist Mono', ui-monospace, monospace;
-  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--ink); background: none; border: 1px solid var(--line);
-  padding: 5px 10px; border-radius: 999px; cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--mute); background: none; border: 1px solid var(--line);
+  height: 30px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.m-who .out:hover { background: var(--caramel-soft); border-color: var(--caramel); }
+.m-who .out:hover { background: var(--caramel-soft); border-color: var(--caramel); color: var(--ink); }
+.m-who .out:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
 .m-who .out:disabled { opacity: 0.5; cursor: default; }
+.m-who .out svg { display: block; }
 
 @media (max-width: 620px) {
-  /* Sur un petit écran le wordmark et le bouton priment : l'adresse est une confirmation, pas une
-     information dont on a besoin en permanence. */
-  .m-who .adr { display: none; }
+  /* On rétrécit l'ACTION, jamais l'identité : masquer l'adresse supprimerait précisément
+     l'information que ce bloc existe pour donner. Le libellé cède la place à l'icône. */
+  .m-who .out .lbl { display: none; }
+  .m-who .out { width: 34px; height: 34px; padding: 0; justify-content: center; }
+  .m-who .adr { max-width: 13ch; }
   .m-top-right { gap: 10px; }
+  /* « FR » est un libellé figé, pas un sélecteur : il ne fait rien et il prend la largeur dont
+     l'adresse a besoin. Sur un téléphone, l'identité vaut mieux qu'une décoration. */
+  .m-lang { display: none; }
+
+  /* Écran résultat : le compteur de crédits arrive dans le même header et le fait déborder
+     (mesuré : 407px pour 375 disponibles). C'est l'ADRESSE qui cède, pas le compteur : à ce
+     moment-là le nombre d'essais restants est l'information utile, et la pastille d'initiale
+     continue d'indiquer sur quel compte on se trouve. */
+  .m-top-right[data-credits='1'] .m-who .adr { display: none; }
+}
+@media (max-width: 330px) {
+  /* Dernier recours, et seulement là : sous cette largeur il ne reste plus de place. L'initiale
+     porte encore l'identité. Ne PAS remonter ce seuil : à 375px (l'iPhone le plus répandu)
+     l'adresse doit rester visible, c'est tout l'intérêt du bloc. */
+  .m-who .adr { display: none; }
 }
 
 /* stepper — a real sequence, so it is numbered */

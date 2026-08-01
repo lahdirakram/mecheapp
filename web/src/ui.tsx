@@ -149,6 +149,29 @@ export function AppleMark() {
   );
 }
 
+/** Porte de sortie. Sous 620px l'icône remplace le libellé, d'où l'`aria-label` porté par le bouton
+ *  qui l'utilise : sans lui le bouton n'aurait plus de nom accessible du tout. */
+export function ExitMark() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
 export function Arrow() {
   return (
     <span className="arw" aria-hidden="true">

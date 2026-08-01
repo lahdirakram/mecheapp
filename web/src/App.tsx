@@ -18,7 +18,7 @@ import {
 import { signInWith, type Provider } from './lib/auth';
 import { checkout, PaddleError } from './lib/paddle';
 import type { Pack } from './lib/packs';
-import { SiteFooter, Steps, Wordmark } from './ui';
+import { ExitMark, SiteFooter, Steps, Wordmark } from './ui';
 import {
   AccountScreen,
   GeneratingScreen,
@@ -438,6 +438,12 @@ export function App() {
     }
   }, []);
 
+  /** Le compteur de crédits ne s'affiche que sur le résultat, mais quand il est là il prend ~82px
+   *  dans le header. Sur un téléphone, cumulé à l'adresse, ça déborde (mesuré : 407px pour 375
+   *  disponibles). Le style s'en sert pour arbitrer, plutôt qu'un `:has()` dont le support décide
+   *  du résultat. */
+  const showCredits = step === 'result' && credits > 0;
+
   const frameImage =
     step === 'result'
       ? clearUrl
@@ -455,16 +461,21 @@ export function App() {
       <div className="m-shell">
         <header className="m-top">
           <Wordmark />
-          <div className="m-top-right">
-            {step === 'result' && credits > 0 && (
+          <div className="m-top-right" data-credits={showCredits ? '1' : undefined}>
+            {showCredits && (
               <span className="m-credits">
                 {credits} essai{credits > 1 ? 's' : ''}
               </span>
             )}
             {session && (
               <span className="m-who">
-                {/* `title` porte l'adresse entière : elle est tronquée visuellement, et masquée
-                    sur mobile, donc c'est le seul moyen de la relire en entier. */}
+                {/* L'initiale : elle survit à la troncature ET à la disparition de l'adresse sous
+                    380px, donc c'est elle qui porte l'identité jusqu'au bout. */}
+                <span className="av" aria-hidden="true">
+                  {(session.user.email ?? '?').slice(0, 1)}
+                </span>
+                {/* `title` porte l'adresse entière : elle est tronquée visuellement, c'est le seul
+                    moyen de la relire en entier. */}
                 <span className="adr" title={session.user.email ?? undefined}>
                   {session.user.email}
                 </span>
@@ -473,8 +484,13 @@ export function App() {
                   className="out"
                   onClick={() => void signOut()}
                   disabled={signingOut}
+                  // Nomme le compte : sous 620px le libellé disparaît au profit de l'icône, et
+                  // « se déconnecter » tout court ne dirait plus de QUEL compte on sort.
+                  aria-label={`Se déconnecter de ${session.user.email ?? 'ce compte'}`}
+                  title="Se déconnecter"
                 >
-                  {signingOut ? '...' : 'Sortir'}
+                  <ExitMark />
+                  <span className="lbl">{signingOut ? 'Sortie' : 'Déconnexion'}</span>
                 </button>
               </span>
             )}
