@@ -65,8 +65,33 @@ export function App() {
   const abortRef = useRef<AbortController | null>(null);
 
   // Session, restored on load and kept in sync.
+  //
+  // `getSession()` only reads localStorage — it happily returns a token for a user who no longer
+  // exists. That is not hypothetical: delete an account server-side and the browser keeps a session
+  // whose uid matches nothing. Every query then runs as a ghost, `my_credit_balance()` sums zero
+  // rows and answers 0, and the funnel tells the visitor "ton essai offert a déjà été utilisé" —
+  // pointing at the one explanation that is certainly wrong.
+  //
+  // `getUser()` asks the SERVER, so it is the only way to know the session is still real. On failure
+  // we sign out and fall back to the signed-out funnel, which is the honest state.
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      const { error } = await supabase.auth.getUser();
+      // Only a REJECTION means the session is dead. A network failure must not sign anyone out:
+      // `getUser()` errors on offline too, and dropping a valid session because the wifi blipped
+      // would lose the funnel for someone who did nothing wrong. Auth rejections carry an HTTP
+      // status; transient fetch failures do not.
+      const rejected = error && [401, 403, 404].includes(error.status ?? 0);
+      if (rejected) {
+        console.warn('[auth] session belongs to a user that no longer exists, signing out');
+        await supabase.auth.signOut().catch(() => {});
+        setSession(null);
+        return;
+      }
+      setSession(data.session);
+    })();
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
