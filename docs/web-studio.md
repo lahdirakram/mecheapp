@@ -402,6 +402,30 @@ alors qu'il ne l'était pas. La colonne « Events » de la liste des destination
 - Supabase (staging **et** prod) : ajouter `https://mecheapp.com/studio/` aux *Redirect URLs*, créer le
   client OAuth **Web** Google et le **Services ID** Apple (voir le piège Apple ci-dessous).
 
+#### Une `redirect_to` non autorisée est REMPLACÉE, pas refusée
+
+C'est le piège le plus coûteux du lot, parce qu'il ne produit aucune erreur là où on la cherche.
+Si l'URL passée à `signInWithOAuth({ redirectTo })` n'est pas dans *Auth → URL Configuration →
+Redirect URLs*, Supabase ne refuse pas : il lui **substitue la Site URL**. Ici la Site URL vaut
+`meche://auth-callback` (le deep link de l'app mobile), donc le navigateur reçoit le code OAuth sur
+un schéma qu'il ne sait pas ouvrir :
+
+```
+Failed to launch 'meche://auth-callback?error=invalid_request&error_code=flow_state_already_used'
+because the scheme does not have a registered handler.
+```
+
+Le `flow_state_already_used` n'est qu'une conséquence du deuxième essai, pas la cause : chercher de
+ce côté fait perdre du temps. **Le check** : `admin/generate_link` avec un `redirect_to` et regarder
+ce qui revient dans le lien. S'il a changé, l'URL n'est pas dans la liste. Vérifié le 2026-08-01,
+les deux URLs du studio revenaient en `meche://auth-callback`.
+
+Il faut donc AJOUTER à la liste, sur les deux projets :
+`https://mecheapp.com/studio/` et `http://localhost:5180/studio/`.
+
+**Ne pas toucher à Site URL** : `meche://auth-callback` est ce qui fait revenir l'app mobile après un
+OAuth. La remplacer par l'URL du studio réparerait le web en cassant les deux apps.
+
 #### Apple sur le web : deux pièges qui donnent le même message
 
 `invalid_request — Invalid client id or web redirect url` apparaît à l'étape d'AUTORISATION, donc
