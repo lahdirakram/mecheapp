@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@meche/api-client';
 import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
+import { AuthScreen } from '../../components/AuthScreen';
 
 // Onboarding · Connexion par code (OTP), sans mot de passe.
 //
@@ -18,7 +18,6 @@ import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@me
 const RESEND_COOLDOWN = 60;
 
 export default function SignInWithCode() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
   const lang = useLang();
@@ -63,74 +62,52 @@ export default function SignInWithCode() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 8 }}>
-      <View style={{ paddingHorizontal: 26 }}>
-        <Pressable
-          hitSlop={8}
-          onPress={() => router.back()}
-          style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}
-        >
-          <MIcon name="chevronLeft" size={18} />
-        </Pressable>
+    <AuthScreen
+      header={
+        <>
+          <MText variant="serif" size={30} style={{ marginTop: 12, lineHeight: 34 }}>
+            {t('code_title')}
+          </MText>
+          <MText size={14} color={MPAL.mute} style={{ marginTop: 8, lineHeight: 20 }}>
+            {t('confirm_sub')}
+            {'\n'}
+            <MText size={14} color={MPAL.ink} variant="bodySemibold">
+              {email ?? ''}
+            </MText>
+          </MText>
+        </>
+      }
+    >
+      <View style={{ gap: 12 }}>
+        <TextField
+          icon="lock"
+          value={code}
+          onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 6))}
+          placeholder={t('confirm_code_ph')}
+          keyboardType="number-pad"
+          maxLength={6}
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
+          autoFocus
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}>
+          <MIcon name="mail" size={14} color={MPAL.mute} />
+          <MText size={12} color={MPAL.mute} style={{ flex: 1, lineHeight: 16 }}>
+            {t('code_help')}
+          </MText>
+        </View>
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 26, paddingTop: 18 }}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
-        showsVerticalScrollIndicator={false}
+      <PrimaryButton label={busy ? '…' : t('auth_signin')} tone="ink" icon="check" disabled={code.length < 6 || busy} onPress={verify} />
+      <Pressable
+        disabled={cooldown > 0}
+        onPress={resend}
+        style={{ height: 46, borderRadius: 23, borderWidth: 1, borderColor: MPAL.border, alignItems: 'center', justifyContent: 'center', opacity: cooldown > 0 ? 0.45 : 1 }}
       >
-        <MText variant="serif" size={30} style={{ marginTop: 12, lineHeight: 34 }}>
-          {t('code_title')}
+        <MText size={14} color={MPAL.ink}>
+          {cooldown > 0 ? `${t('confirm_resend')} (${cooldown}s)` : t('confirm_resend')}
         </MText>
-        <MText size={14} color={MPAL.mute} style={{ marginTop: 8, lineHeight: 20 }}>
-          {t('confirm_sub')}
-          {'\n'}
-          <MText size={14} color={MPAL.ink} variant="bodySemibold">
-            {email ?? ''}
-          </MText>
-        </MText>
-
-        <View style={{ marginTop: 18 }}>
-          <TextField
-            icon="lock"
-            value={code}
-            onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 6))}
-            placeholder={t('confirm_code_ph')}
-            keyboardType="number-pad"
-            maxLength={6}
-            textContentType="oneTimeCode"
-            autoComplete="one-time-code"
-            autoFocus
-          />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingHorizontal: 4 }}>
-            <MIcon name="mail" size={14} color={MPAL.mute} />
-            <MText size={12} color={MPAL.mute} style={{ flex: 1, lineHeight: 16 }}>
-              {t('code_help')}
-            </MText>
-          </View>
-        </View>
-
-        <View style={{ marginTop: 'auto', paddingBottom: insets.bottom + 16, gap: 10 }}>
-          <PrimaryButton
-            label={busy ? '…' : t('auth_signin')}
-            tone="ink"
-            icon="check"
-            disabled={code.length < 6 || busy}
-            onPress={verify}
-          />
-          <Pressable
-            disabled={cooldown > 0}
-            onPress={resend}
-            style={{ height: 46, borderRadius: 23, borderWidth: 1, borderColor: MPAL.border, alignItems: 'center', justifyContent: 'center', opacity: cooldown > 0 ? 0.45 : 1 }}
-          >
-            <MText size={14} color={MPAL.ink}>
-              {cooldown > 0 ? `${t('confirm_resend')} (${cooldown}s)` : t('confirm_resend')}
-            </MText>
-          </Pressable>
-        </View>
-      </ScrollView>
-    </View>
+      </Pressable>
+    </AuthScreen>
   );
 }

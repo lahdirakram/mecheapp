@@ -8,12 +8,15 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   label?: string;
   icon?: MIconName;
   trailing?: React.ReactNode;
+  /** Pass a ref to drive focus from outside (returnKeyType="next" → next field). */
+  inputRef?: React.RefObject<TextInput | null>;
 }
 
 /** Labeled input: uppercase mono label + rounded card with a leading icon. The whole row is a
  *  tap target that focuses the input (≥48pt min height), so taps don't miss on small screens. */
-export function TextField({ label, icon, trailing, ...input }: TextFieldProps) {
-  const ref = useRef<TextInput>(null);
+export function TextField({ label, icon, trailing, inputRef, ...input }: TextFieldProps) {
+  const localRef = useRef<TextInput>(null);
+  const ref = inputRef ?? localRef;
   return (
     <View>
       {label ? (

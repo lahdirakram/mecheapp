@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Alert, TextInput, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { rememberSignupPassword, useAuth } from '@meche/api-client';
-import { MIcon, MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
+import { MPAL, MText, PrimaryButton, TextField, useLang, useT } from '@meche/ui';
 import { LegalConsent } from '../../components/LegalConsent';
+import { AuthScreen, ShowHide } from '../../components/AuthScreen';
 
 // Onboarding 01c · Email (form) — real Supabase email/password sign-up (role: b2c).
 export default function SignupEmail() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
   const lang = useLang();
   const { signUpEmail } = useAuth();
+  const pwdRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [show, setShow] = useState(false);
@@ -43,75 +43,66 @@ export default function SignupEmail() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: MPAL.bg, paddingTop: insets.top + 8 }}>
-      <View style={{ paddingHorizontal: 26 }}>
-        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }}>
-          <MIcon name="chevronLeft" size={18} />
-        </Pressable>
+    <AuthScreen
+      header={
+        <>
+          <MText variant="mono" size={10} color={MPAL.ink} style={{ letterSpacing: 1.4 }}>
+            ÉTAPE 1 · COMPTE
+          </MText>
+          <MText variant="serif" size={34} style={{ marginTop: 8, lineHeight: 38 }}>
+            {lang === 'fr' ? 'Ton ' : 'Your '}
+            <MText variant="serifItalic" size={34}>
+              {lang === 'fr' ? 'email' : 'email'}
+            </MText>
+            {lang === 'fr' ? ' et un mot de passe.' : ' and a password.'}
+          </MText>
+        </>
+      }
+    >
+      <View style={{ gap: 14 }}>
+        <TextField
+          label={t('email_label')}
+          icon="mail"
+          value={email}
+          onChangeText={setEmail}
+          placeholder={t('email_ph')}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => pwdRef.current?.focus()}
+          blurOnSubmit={false}
+          autoFocus
+        />
+        <TextField
+          label={t('pwd_label')}
+          icon="lock"
+          inputRef={pwdRef}
+          value={pwd}
+          onChangeText={setPwd}
+          placeholder={t('pwd_ph')}
+          secureTextEntry={!show}
+          autoCapitalize="none"
+          autoComplete="new-password"
+          textContentType="newPassword"
+          passwordRules="minlength: 8;"
+          returnKeyType="go"
+          onSubmitEditing={submit}
+          trailing={<ShowHide shown={show} onToggle={() => setShow((s) => !s)} />}
+        />
+        <View style={{ flexDirection: 'row', gap: 4 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={{ flex: 1, height: 4, borderRadius: 4, backgroundColor: i < strength ? MPAL.ink : MPAL.border }} />
+          ))}
+        </View>
+        <MText size={11} color={MPAL.mute}>
+          8 caractères, 1 chiffre. Tu choisis.
+        </MText>
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 26, paddingTop: 18 }}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
-        showsVerticalScrollIndicator={false}
-      >
-        <MText variant="mono" size={10} color={MPAL.ink} style={{ letterSpacing: 1.4 }}>
-          ÉTAPE 1 · COMPTE
-        </MText>
-        <MText variant="serif" size={34} style={{ marginTop: 8, lineHeight: 38 }}>
-          {lang === 'fr' ? 'Ton ' : 'Your '}
-          <MText variant="serifItalic" size={34}>
-            {lang === 'fr' ? 'email' : 'email'}
-          </MText>
-          {lang === 'fr' ? ' et un mot de passe.' : ' and a password.'}
-        </MText>
-
-        <View style={{ marginTop: 24, gap: 14 }}>
-          <TextField
-            label={t('email_label')}
-            icon="mail"
-            value={email}
-            onChangeText={setEmail}
-            placeholder={t('email_ph')}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-          <TextField
-            label={t('pwd_label')}
-            icon="lock"
-            value={pwd}
-            onChangeText={setPwd}
-            placeholder={t('pwd_ph')}
-            secureTextEntry={!show}
-            autoCapitalize="none"
-            returnKeyType="go"
-            onSubmitEditing={submit}
-            trailing={
-              <Pressable hitSlop={12} onPress={() => setShow((s) => !s)}>
-                <MText variant="bodySemibold" size={11} color={MPAL.mute}>
-                  {show ? 'CACHER' : 'VOIR'}
-                </MText>
-              </Pressable>
-            }
-          />
-          <View style={{ flexDirection: 'row', gap: 4 }}>
-            {[0, 1, 2, 3].map((i) => (
-              <View key={i} style={{ flex: 1, height: 4, borderRadius: 4, backgroundColor: i < strength ? MPAL.ink : MPAL.border }} />
-            ))}
-          </View>
-          <MText size={11} color={MPAL.mute}>
-            8 caractères, 1 chiffre. Tu choisis.
-          </MText>
-        </View>
-
-        <View style={{ marginTop: 'auto', paddingBottom: insets.bottom + 24, gap: 10 }}>
-          <PrimaryButton label={busy ? '…' : t('create_account')} tone="ink" icon="arrowRight" disabled={!valid || busy} onPress={submit} />
-          <LegalConsent />
-        </View>
-      </ScrollView>
-    </View>
+      <PrimaryButton label={busy ? '…' : t('create_account')} tone="ink" icon="arrowRight" disabled={!valid || busy} onPress={submit} />
+      <LegalConsent />
+    </AuthScreen>
   );
 }

@@ -269,6 +269,14 @@ wrong belief survives across sessions.
   bon moment, demander plus tard, sur un écran inactif, dans une session ultérieure.
   `expo-store-review` reste installé : `storeUrl()` lit `ios.appStoreUrl` / `android.playStoreUrl`
   de la config pour la ligne de menu.
+- **Un bloc ancré en bas ne monte PAS tout seul avec le clavier, et chaque OS a son piège** (vécu
+  sur les écrans d'auth, 2026-08-01). `automaticallyAdjustKeyboardInsets` n'ajoute que de l'inset
+  de scroll : un contenu collé en bas reste SOUS le clavier. iOS : `KeyboardAvoidingView` en
+  `padding`. Android : l'edge-to-edge imposé par le SDK empêche la fenêtre de se redimensionner
+  (adjustResize inopérant) et `KeyboardAvoidingView` n'y fait rien non plus, sur TOUS les écrans,
+  pas seulement les fullScreenModal : mesurer la hauteur du clavier à la main et soulever le
+  contenu (`apps/meche/components/AuthScreen.tsx`, même motif que `try/result.tsx`). Les deux
+  vérifiés sur device.
 - **Un toast est invisible depuis un écran `presentation: 'modal'` sur iOS** (overlay rendu à la
   racine, le modal natif est un autre contrôleur de vue et passe devant). Depuis un modal, utiliser
   `Alert.alert`. Vaut aussi pour `useSheet`, déjà noté dans `packages/ui/src/feedback.tsx`.
