@@ -400,7 +400,26 @@ alors qu'il ne l'était pas. La colonne « Events » de la liste des destination
 - Prod : OTP à 6, et **les DEUX templates d'email en `{{ .Token }}`** sur les deux projets.
   `locked_first_try` reste à `'0'` pour l'instant : c'est le dernier interrupteur, en phase 3.
 - Supabase (staging **et** prod) : ajouter `https://mecheapp.com/studio/` aux *Redirect URLs*, créer le
-  client OAuth **Web** Google et le **Services ID** Apple.
+  client OAuth **Web** Google et le **Services ID** Apple (voir le piège Apple ci-dessous).
+
+#### Apple sur le web : deux pièges qui donnent le même message
+
+`invalid_request — Invalid client id or web redirect url` apparaît à l'étape d'AUTORISATION, donc
+avant que le client secret ne serve : inutile de suspecter le JWT quand on voit cet écran.
+
+1. **L'ordre de `Client IDs` compte.** Supabase envoie la **première** entrée comme `client_id` du
+   flux web. Un bundle id en tête (`com.meche.app`) fait refuser Apple, qui attend un Services ID.
+   Le bon ordre est donc `com.meche.web,com.meche.app`. Ça ne casse pas iOS : le flux natif accepte
+   n'importe quel id de la liste, quel que soit l'ordre. Seul le web dépend de la position.
+2. **Le domaine à déclarer est celui de SUPABASE, pas le nôtre.** La redirection OAuth va sur
+   `<ref>.supabase.co`, jamais sur `mecheapp.com`. Donc dans le Services ID :
+   *Domains and Subdomains* = `hqhnvjjbohzktoapsytj.supabase.co` (et l'équivalent staging), et
+   *Return URLs* = `https://hqhnvjjbohzktoapsytj.supabase.co/auth/v1/callback`.
+
+Et le champ **Secret Key (for OAuth)** n'est PAS le `.p8` : c'est un JWT signé avec, valable 6 mois
+maximum, généré par `scripts/apple-client-secret.mjs`. Le bandeau « expire every 6 months » du
+dashboard est ce qui tranche : un `.p8` n'expire jamais. À l'expiration, la connexion Apple **web**
+casse seule pendant que l'app native continue de marcher.
 
 ### Phase 1 — le code qui manque
 
