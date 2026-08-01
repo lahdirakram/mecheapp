@@ -298,6 +298,26 @@ bascule sur les prix du nouveau compte : identique.
 **Le garde-fou « prix inconnu » reste indispensable** même avec un compte dédié : c'est lui qui
 rend le webhook insensible à tout ce qui n'est pas au catalogue Mèche.
 
+## Cartes de test sandbox
+
+Aucune vraie carte n'est acceptée par un compte sandbox. Nom du porteur libre, expiration
+n'importe quelle date future, CVV et code postal libres (la doc Paddle n'en impose aucun).
+
+| Cas | Numéro |
+| --- | --- |
+| Succès, sans 3DS | `4242 4242 4242 4242` |
+| Succès, avec 3DS | `4000 0038 0000 0446` |
+| Visa debit valide | `4000 0566 5566 5556` |
+| Refusée | `4000 0000 0000 0002` |
+| Passe, puis refus aux paiements suivants | `4000 0027 6000 3184` |
+
+Pour tester l'écran de révélation, prendre celle **sans 3DS** : l'overlay se ferme directement et
+on voit l'enchaînement `confirming` → `fetching` → balayage sans étape intercalée. La carte 3DS est
+utile pour l'inverse, vérifier que l'attente tient quand la banque s'intercale.
+
+`4000 0000 0000 0002` est la seule façon de vérifier qu'un paiement refusé ne débite AUCUN crédit :
+`payAndReveal` doit revenir au paywall avec l'erreur, jamais avancer vers `unlock`.
+
 ## État PRODUCTION (2026-08-01)
 
 Compte Paddle **AML Technologies** (live), produit `pro_01kyx6btf76rhabnm0y2fkems0` :
