@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSupabase, useUnlockGeneration } from '@meche/api-client';
-import { purchaseProduct, purchasesAvailable } from './purchases';
+import { getStorePrices, purchaseProduct, purchasesAvailable } from './purchases';
+import { logMarketingPurchase } from './marketing';
 
 export type BuyOutcome =
   /** Store sheet unavailable (simulator, staging build, missing RC key). */
@@ -31,6 +32,14 @@ export function useBuyPack() {
       const r = await purchaseProduct(productId);
       if ('cancelled' in r) return { status: 'cancelled' };
       if ('error' in r) return { status: 'error' };
+
+      // TikTok purchase event with the real store price (Meta and GA4 get purchases server-side
+      // from RevenueCat; TikTok has no such integration, the client is its only source). Both
+      // entry points funnel through here, so this is logged exactly once per pack.
+      void getStorePrices().then((prices) => {
+        const p = prices[productId];
+        if (p) logMarketingPurchase({ productId, value: p.price, currency: p.currencyCode });
+      });
 
       // The store confirmed payment; RevenueCat's webhook grants the credits server-side, so poll
       // the balance until it rises (usually a couple of seconds).

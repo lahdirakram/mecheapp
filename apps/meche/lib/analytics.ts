@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { forwardEvent } from './marketing';
 
 // Firebase Analytics (GA4) wrapper, used for ad conversion tracking (Google Ads imports GA4 events
 // as conversions; RevenueCat forwards purchases to GA4 via the app instance id). Same lazy-import
@@ -24,6 +25,9 @@ async function analytics(): Promise<AnalyticsHandle> {
 
 /** Log a GA4 event. Prefer standard names (sign_up, login, purchase) so ad platforms recognize them. */
 export async function logEvent(name: string, params?: Record<string, unknown>): Promise<void> {
+  // One choke point for the whole funnel: the same events also feed Meta/TikTok (consent-gated,
+  // mapped and filtered in marketing.ts), so call sites never enumerate ad platforms.
+  forwardEvent(name, params);
   try {
     const a = await analytics();
     if (a) await a.api.logEvent(a.instance, name, params);

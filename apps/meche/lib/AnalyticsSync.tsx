@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useSession } from '@meche/api-client';
 import { logEvent } from './analytics';
+import { identifyMarketing } from './marketing';
 
 // Logs auth events to GA4 from one central place, so every method (email, confirm deep link,
 // Apple, Google) is covered without touching each screen. A user whose account was created in the
@@ -18,6 +19,8 @@ export function AnalyticsSync() {
     const isNew = Number.isFinite(createdAt) && Date.now() - createdAt < 5 * 60_000;
     const method = session?.user?.app_metadata?.provider ?? 'unknown';
     void logEvent(isNew ? 'sign_up' : 'login', { method });
+    // Ad-platform user matching (TikTok hashes on-device). Consent-gated inside marketing.ts.
+    identifyMarketing(uid, session?.user?.email);
   }, [session?.user?.id, session?.user?.created_at, session?.user?.app_metadata?.provider]);
 
   return null;

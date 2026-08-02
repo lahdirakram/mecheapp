@@ -8,6 +8,7 @@ import { PurchasesSync } from '../lib/PurchasesSync';
 import { PushSync } from '../lib/PushSync';
 import { TryStoreReset } from '../lib/TryStoreReset';
 import { UpdateGate } from '../components/UpdateGate';
+import { ConsentGate } from '../components/ConsentGate';
 import { seedLangFromDevice } from '../lib/deviceLang';
 
 // At module scope: the earliest point available, and `seedLang` re-applies itself once the stored
@@ -42,6 +43,10 @@ export default function RootLayout() {
             <Stack.Screen name="recharge" options={{ presentation: 'modal' }} />
             <Stack.Screen name="share" options={{ presentation: 'modal' }} />
           </Stack>
+          {/* After the Stack so the consent screen overlays the tabs when its moment comes (the
+              timing lives in lib/consent.ts, it is NOT first-launch). Also boots marketing.ts each
+              launch (stored consent), so keep it mounted even once answered. */}
+          <ConsentGate />
         </UpdateGate>
       </SupabaseProvider>
     </AppProviders>

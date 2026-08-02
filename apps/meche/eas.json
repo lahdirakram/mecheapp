@@ -8,8 +8,12 @@
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
-      "ios": { "simulator": true },
-      "android": { "buildType": "apk" },
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "APP_ENV": "staging",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vefxfjcdvstjwieasrbq.supabase.co",
@@ -18,14 +22,20 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "909044731824-k1tofiptvtnarmrg7s3jb4c33ubf6glp.apps.googleusercontent.com",
         "GOOGLE_STAGING_IOS_REVERSED": "com.googleusercontent.apps.909044731824-k1tofiptvtnarmrg7s3jb4c33ubf6glp",
         "EXPO_PUBLIC_RC_IOS_API_KEY": "appl_YxSBruJqJQKcaoBKuYxhneonuSG",
-        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_iyPQvEPfoaDIvudpYLEZZGhgSgM"
+        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_iyPQvEPfoaDIvudpYLEZZGhgSgM",
+        "EXPO_PUBLIC_FB_APP_ID": "1054761336953574",
+        "EXPO_PUBLIC_FB_CLIENT_TOKEN": "ce398dee70276f7d44a11194040a2148",
+        "EXPO_PUBLIC_TT_APP_ID": "7669075190136635399",
+        "EXPO_PUBLIC_TT_ACCESS_TOKEN": "TTDiAvf2U3c67KfuqiirhBWh0n16CXqH"
       }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
       "ios": {},
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "APP_ENV": "staging",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vefxfjcdvstjwieasrbq.supabase.co",
@@ -34,7 +44,11 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "909044731824-k1tofiptvtnarmrg7s3jb4c33ubf6glp.apps.googleusercontent.com",
         "GOOGLE_STAGING_IOS_REVERSED": "com.googleusercontent.apps.909044731824-k1tofiptvtnarmrg7s3jb4c33ubf6glp",
         "EXPO_PUBLIC_RC_IOS_API_KEY": "appl_YxSBruJqJQKcaoBKuYxhneonuSG",
-        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_iyPQvEPfoaDIvudpYLEZZGhgSgM"
+        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_iyPQvEPfoaDIvudpYLEZZGhgSgM",
+        "EXPO_PUBLIC_FB_APP_ID": "1054761336953574",
+        "EXPO_PUBLIC_FB_CLIENT_TOKEN": "ce398dee70276f7d44a11194040a2148",
+        "EXPO_PUBLIC_TT_APP_ID": "7669075190136635399",
+        "EXPO_PUBLIC_TT_ACCESS_TOKEN": "TTDiAvf2U3c67KfuqiirhBWh0n16CXqH"
       }
     },
     "production": {
@@ -48,13 +62,19 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "909044731824-p3682dg7av55v93s20lo0vt88u6blhnc.apps.googleusercontent.com",
         "GOOGLE_PRODUCTION_IOS_REVERSED": "com.googleusercontent.apps.909044731824-p3682dg7av55v93s20lo0vt88u6blhnc",
         "EXPO_PUBLIC_RC_IOS_API_KEY": "appl_YxSBruJqJQKcaoBKuYxhneonuSG",
-        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_iyPQvEPfoaDIvudpYLEZZGhgSgM"
+        "EXPO_PUBLIC_RC_ANDROID_API_KEY": "goog_iyPQvEPfoaDIvudpYLEZZGhgSgM",
+        "EXPO_PUBLIC_FB_APP_ID": "1054761336953574",
+        "EXPO_PUBLIC_FB_CLIENT_TOKEN": "ce398dee70276f7d44a11194040a2148",
+        "EXPO_PUBLIC_TT_APP_ID": "7669075190136635399",
+        "EXPO_PUBLIC_TT_ACCESS_TOKEN": "TTDiAvf2U3c67KfuqiirhBWh0n16CXqH"
       }
     }
   },
   "submit": {
     "production": {
-      "ios": { "ascAppId": "6777728552" }
+      "ios": {
+        "ascAppId": "6777728552"
+      }
     }
   }
 }

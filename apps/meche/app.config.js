@@ -8,6 +8,27 @@ module.exports = () => {
   // Deep clone so overrides never mutate the shared base object.
   const expo = JSON.parse(JSON.stringify(base));
 
+  // Meta SDK: the appID/clientToken MUST live in the native manifest (Android hard-crashes on a
+  // runtime-only configuration, FBSettingsModule has no try/catch, seen 2026-08-02). Everything
+  // automatic stays OFF: the SDK is inert until lib/marketing.ts initializes it after the user's
+  // ad-measurement consent. Env-driven so a build without the keys simply ships without Meta.
+  const FB_APP_ID = process.env.EXPO_PUBLIC_FB_APP_ID;
+  const FB_CLIENT_TOKEN = process.env.EXPO_PUBLIC_FB_CLIENT_TOKEN;
+  if (FB_APP_ID && FB_CLIENT_TOKEN) {
+    expo.plugins.push([
+      'react-native-fbsdk-next',
+      {
+        appID: FB_APP_ID,
+        clientToken: FB_CLIENT_TOKEN,
+        displayName: 'Mèche',
+        scheme: `fb${FB_APP_ID}`,
+        isAutoInitEnabled: false,
+        autoLogAppEventsEnabled: false,
+        advertiserIDCollectionEnabled: false,
+      },
+    ]);
+  }
+
   if (process.env.APP_ENV === 'staging') {
     expo.name = 'Mèche (staging)';
     expo.scheme = 'meche-staging';

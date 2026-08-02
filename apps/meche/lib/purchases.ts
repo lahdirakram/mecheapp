@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { getAppInstanceId } from './analytics';
+import { pushAdIdentifiersToRevenueCat } from './marketing';
 
 // RevenueCat (in-app purchases) wrapper. The native module is imported lazily so the web bundle
 // never pulls it in, and every call no-ops gracefully when purchases aren't available (web, Expo
@@ -43,6 +44,9 @@ export async function syncPurchaseUser(appUserId: string): Promise<void> {
       if (Platform.OS === 'ios') {
         void Purchases.enableAdServicesAttributionTokenCollection();
       }
+      // Meta attribution ($fbAnonId + device identifiers) so RevenueCat's Meta integration can
+      // match server-side purchase events. Consent-gated inside; no-ops until the user accepted.
+      void pushAdIdentifiersToRevenueCat();
     } else {
       await Purchases.logIn(appUserId);
     }

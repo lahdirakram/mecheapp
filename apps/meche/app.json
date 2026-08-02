@@ -65,7 +65,8 @@
           { "SKAdNetworkIdentifier": "8c4e2ghe7u.skadnetwork" },
           { "SKAdNetworkIdentifier": "3rd42ekr43.skadnetwork" },
           { "SKAdNetworkIdentifier": "97r2b46745.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3qcr597p9d.skadnetwork" }
+          { "SKAdNetworkIdentifier": "3qcr597p9d.skadnetwork" },
+          { "SKAdNetworkIdentifier": "238da6jt44.skadnetwork" }
         ]
       }
     },
@@ -91,9 +92,10 @@
       [
         "@react-native-firebase/analytics",
         {
-          "withoutAdIdSupport": true
+          "withoutAdIdSupport": false
         }
       ],
+      "./plugins/withAnalyticsConsentDefaults",
       "expo-router",
       "expo-font",
       "expo-image",
@@ -139,6 +141,9 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "extraMavenRepos": ["https://jitpack.io"]
+          },
           "ios": {
             "useFrameworks": "static",
             "forceStaticLinking": ["RNFBApp", "RNFBAnalytics"],

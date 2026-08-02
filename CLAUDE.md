@@ -269,7 +269,20 @@ wrong belief survives across sessions.
   bon moment, demander plus tard, sur un écran inactif, dans une session ultérieure.
   `expo-store-review` reste installé : `storeUrl()` lit `ios.appStoreUrl` / `android.playStoreUrl`
   de la config pour la ligne de menu.
-- **Un bloc ancré en bas ne monte PAS tout seul avec le clavier, et chaque OS a son piège** (vécu
+- **Mesure pub (Google Ads, Meta, TikTok) : tout passe par `apps/meche/lib/marketing.ts`, et rien
+  ne part sans le consentement de l'utilisateur** (`lib/consent.ts` + `ConsentGate`, écran CMP à
+  finalités avec case dédiée, lié à l'AUTH : il s'affiche dès qu'une session existe sans choix
+  stocké, jamais pour un curieux sans compte ; la case pub n'est JAMAIS fusionnée avec les CGU,
+  le RGPD exige un consentement spécifique ; ligne profil pour changer d'avis, sign_up rejoué à
+  l'acceptation ; installs iOS comptées sans consentement via SKAN). Historique des variantes
+  rejetées et détail : `docs/ads-tracking.md`. Invariants : (1) les achats vont à Meta et GA4 par RevenueCat SERVER-SIDE, jamais
+  depuis le client (double comptage) ; TikTok est l'inverse, client-side uniquement, et
+  l'auto-payment-tracking de son SDK est désactivé pour la même raison. (2) Les SDKs Meta/TikTok
+  sont configurés 100% au RUNTIME depuis 4 clés `EXPO_PUBLIC_*` d'eas.json (vides = éteint) :
+  activables par OTA sans rebuild, et ne pas ajouter le config plugin de fbsdk-next, il
+  réactiverait l'auto-init avant consentement. (3) Les defaults Consent Mode natifs sont
+  denied (`plugins/withAnalyticsConsentDefaults.js`) : fail-closed si la carte n'est jamais
+  répondue. Setup console et vérification : `docs/ads-tracking.md`. (vécu
   sur les écrans d'auth, 2026-08-01). `automaticallyAdjustKeyboardInsets` n'ajoute que de l'inset
   de scroll : un contenu collé en bas reste SOUS le clavier. iOS : `KeyboardAvoidingView` en
   `padding`. Android : l'edge-to-edge imposé par le SDK empêche la fenêtre de se redimensionner

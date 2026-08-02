@@ -8,6 +8,7 @@ import { useAuth, useBookings, useCreditPacks, useCreditSummary, useLockedFirstT
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, useT, useToast } from '@meche/ui';
 import { getPushEnabled } from '../../lib/notifPref';
+import { getAdConsent, setAdConsent, type AdConsent } from '../../lib/consent';
 import { setPushPreference } from '../../lib/push';
 import { openLegal } from '../../lib/legal';
 import { openStoreListing } from '../../lib/review';
@@ -28,8 +29,10 @@ export default function Profile() {
   const session = useSession();
   const { signOut, deleteAccount } = useAuth();
   const [pushOn, setPushOn] = useState(true);
+  const [adConsent, setAdConsentState] = useState<AdConsent | null>(null);
   useEffect(() => {
     void getPushEnabled().then(setPushOn);
+    void getAdConsent().then(setAdConsentState);
   }, []);
   const togglePush = (v: boolean) => {
     setPushOn(v); // optimistic
@@ -134,6 +137,34 @@ export default function Profile() {
       ],
     });
 
+  // The withdraw path the consent card promises ("modifiable à tout moment"). Granting here also
+  // starts the ad SDKs live (marketing.ts listens on the consent store), no restart needed.
+  const openAdConsent = () =>
+    sheet({
+      title: lang === 'fr' ? 'Mesure et publicité' : 'Measurement and ads',
+      message:
+        lang === 'fr'
+          ? 'Partager des mesures anonymisées avec Google, Meta et TikTok pour savoir quelles pubs font découvrir Mèche.'
+          : 'Share anonymized measurements with Google, Meta and TikTok to know which ads bring people to Mèche.',
+      options: [
+        {
+          label: `${lang === 'fr' ? 'Accepter' : 'Accept'}${adConsent === 'granted' ? ' ·' : ''}`,
+          onPress: () => {
+            setAdConsentState('granted');
+            void setAdConsent('granted');
+          },
+        },
+        {
+          label: `${lang === 'fr' ? 'Refuser' : 'Refuse'}${adConsent === 'denied' ? ' ·' : ''}`,
+          onPress: () => {
+            setAdConsentState('denied');
+            void setAdConsent('denied');
+          },
+        },
+        { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
+      ],
+    });
+
   const openLegalSheet = () =>
     sheet({
       title: lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms',
@@ -177,6 +208,12 @@ export default function Profile() {
     // Apple's guidelines forbid wiring SKStoreReviewController to a button, and the native prompt
     // is already fired from the reveal (lib/review.ts).
     { ic: 'star', l: lang === 'fr' ? 'Noter Mèche' : 'Rate Mèche', sub: lang === 'fr' ? 'Laisser un avis sur le store' : 'Leave a review on the store', onPress: () => void openStoreListing() },
+    {
+      ic: 'zap',
+      l: lang === 'fr' ? 'Mesure et publicité' : 'Measurement and ads',
+      sub: adConsent === 'granted' ? (lang === 'fr' ? 'Activée' : 'On') : lang === 'fr' ? 'Désactivée' : 'Off',
+      onPress: openAdConsent,
+    },
     { ic: 'lock', l: lang === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms', sub: lang === 'fr' ? 'Politique, CGU, mentions légales' : 'Policy, Terms, Legal notice', onPress: openLegalSheet },
     { ic: 'user', l: lang === 'fr' ? 'Compte' : 'Account', sub: lang === 'fr' ? 'Déconnexion, suppression' : 'Sign out, delete', onPress: openAccount },
   ];
