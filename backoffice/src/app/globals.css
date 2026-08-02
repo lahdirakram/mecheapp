@@ -320,6 +320,28 @@ tbody tr.row:hover td {
 .dim {
   color: var(--mute);
 }
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ---------- tableau d'activité (onglet du dashboard) ---------- */
+
+/* La ligne dépliée réutilise BeforeAfter tel quel ; borné en largeur, sinon deux images 3/4
+   côte à côte sur un shell de 1400px deviennent énormes. */
+.act-detail td {
+  padding: 0;
+  background: var(--bg);
+}
+.act-detail .ba {
+  padding: 14px 15px 16px;
+  max-width: 680px;
+}
+.act-user {
+  display: inline-block;
+}
+.act-user:hover .strong {
+  text-decoration: underline;
+}
 
 /* ---------- controles ---------- */
 

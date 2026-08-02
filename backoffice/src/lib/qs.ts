@@ -9,7 +9,10 @@ export function withParams(
     else sp.set(k, String(v));
   }
   const s = sp.toString();
-  return s ? `?${s}` : '';
+  // Jamais de chaîne vide : un href="" recharge l'URL COURANTE, query comprise, donc un lien qui
+  // retire le dernier paramètre (retour à l'onglet Utilisateurs, remise à « Tout » d'un filtre)
+  // ne ferait rien. Un "?" seul navigue vers le chemin courant avec une query vide.
+  return s ? `?${s}` : '?';
 }
 
 /** Aplatit les searchParams de Next (string | string[] | undefined) en Record<string, string>. */

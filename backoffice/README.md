@@ -1,7 +1,9 @@
 # Backoffice Mèche
 
-Dashboard admin **local** et **en lecture seule** : vue d'ensemble chiffrée, tableau d'utilisateurs
-paginé avec recherche, et fiche utilisateur avec l'activité et l'avant/après de chaque essai.
+Dashboard admin **local** et **en lecture seule** : vue d'ensemble chiffrée, un panneau à deux
+onglets — tableau d'utilisateurs paginé avec recherche, et tableau d'activité (essais + suggestions,
+tous comptes, filtrable par type, lignes dépliables avec l'avant/après) — et fiche utilisateur avec
+l'activité et l'avant/après de chaque essai.
 
 > **Usage local uniquement, ne pas déployer.** Il n'y a aucune authentification, et le process
 > détient la clé `service_role` plus un accès Postgres direct : la mettre en ligne exposerait toute

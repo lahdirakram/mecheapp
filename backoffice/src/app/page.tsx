@@ -1,12 +1,19 @@
 import Link from 'next/link';
+import { ActivityTable } from '@/components/ActivityTable';
 import { Fatal } from '@/components/Fatal';
 import { FilterBar } from '@/components/FilterBar';
 import { MetricCard } from '@/components/MetricCard';
 import { Pager } from '@/components/Pager';
 import { SearchBox } from '@/components/SearchBox';
 import { UsersTable } from '@/components/UsersTable';
+import { toVM } from '@/lib/activity-vm';
 import { fmtEurCents, fmtInt, fmtPct } from '@/lib/format';
-import { flatten, readInt } from '@/lib/qs';
+import { flatten, readInt, withParams } from '@/lib/qs';
+import {
+  listGlobalActivity,
+  type ActivityKind,
+  type GlobalActivity,
+} from '@/queries/activity';
 import { feedCounts, type StatusCounts } from '@/queries/feed';
 import { parseScope, PERIOD_LABEL } from '@/queries/filters';
 import { getMetrics, type Metrics } from '@/queries/metrics';
@@ -15,6 +22,12 @@ import { isSortKey, listUsers, type SortKey, type UserRow } from '@/queries/user
 // Un dashboard admin doit montrer l'état courant, jamais une page mise en cache.
 export const dynamic = 'force-dynamic';
 
+/** Valeurs d'URL courtes → valeurs de requête. Tout le reste retombe sur 'all'. */
+const KIND_FROM_URL: Record<string, ActivityKind> = {
+  gen: 'generation',
+  sugg: 'suggestion',
+};
+
 export default async function Dashboard({
   searchParams,
 }: {
@@ -22,6 +35,8 @@ export default async function Dashboard({
 }) {
   const params = flatten(await searchParams);
   const scope = parseScope(params);
+  const tab = params.tab === 'activity' ? 'activity' : 'users';
+  const kind: ActivityKind = KIND_FROM_URL[params.kind ?? ''] ?? 'all';
   const q = (params.q ?? '').trim();
   const sort: SortKey = isSortKey(params.sort ?? '') ? (params.sort as SortKey) : 'created_at';
   const dir = params.dir === 'asc' ? 'asc' : 'desc';
@@ -32,12 +47,15 @@ export default async function Dashboard({
   // ne serait vérifié.
   let m: Metrics;
   let rows: UserRow[];
+  let acts: GlobalActivity[];
   let counts: StatusCounts;
   try {
-    [m, rows, counts] = await Promise.all([
+    // Seul le tableau de l'onglet actif est chargé : l'autre requête ne sert à rien.
+    [m, counts, rows, acts] = await Promise.all([
       getMetrics(scope),
-      listUsers(scope, { q, sort, dir, page, size }),
       feedCounts(),
+      tab === 'users' ? listUsers(scope, { q, sort, dir, page, size }) : Promise.resolve([]),
+      tab === 'activity' ? listGlobalActivity(scope, { kind, page, size }) : Promise.resolve([]),
     ]);
   } catch (error) {
     return <Fatal error={error} />;
@@ -45,7 +63,7 @@ export default async function Dashboard({
   // Le nombre de visuels en attente doit se voir depuis l'accueil, sinon la file grossit sans bruit.
   const drafts = counts.draft;
 
-  const total = rows[0]?.total_count ?? 0;
+  const total = (tab === 'users' ? rows[0]?.total_count : acts[0]?.total_count) ?? 0;
   const periode = PERIOD_LABEL[scope.period];
   const essaisReussisSeuls = scope.attempts === 'done';
   // Dénominateur du taux d'échec : la répartition réelle, indépendante du filtre de statut.
@@ -213,13 +231,77 @@ export default async function Dashboard({
       <section className="section">
         <div className="panel">
           <div className="panel__head">
-            <div className="panel__title">
-              Utilisateurs <span className="section-note">même périmètre que les cartes</span>
+            <div className="fgroup">
+              {/* Changer d'onglet nettoie les paramètres propres à l'autre (tri, recherche, type)
+                  et remet la pagination à 1 : ils ne veulent rien dire de l'autre côté. */}
+              <div className="seg">
+                <Link
+                  href={withParams(params, { tab: undefined, kind: undefined, page: undefined })}
+                  aria-current={tab === 'users'}
+                  scroll={false}
+                >
+                  Utilisateurs
+                </Link>
+                <Link
+                  href={withParams(params, {
+                    tab: 'activity',
+                    q: undefined,
+                    sort: undefined,
+                    dir: undefined,
+                    page: undefined,
+                  })}
+                  aria-current={tab === 'activity'}
+                  scroll={false}
+                >
+                  Activité
+                </Link>
+              </div>
+              <span className="section-note">même périmètre que les cartes</span>
             </div>
-            <SearchBox params={params} initial={q} />
+            {tab === 'users' ? (
+              <SearchBox params={params} initial={q} />
+            ) : (
+              <div className="seg">
+                <Link
+                  href={withParams(params, { kind: undefined, page: undefined })}
+                  aria-current={kind === 'all'}
+                  scroll={false}
+                >
+                  Tout
+                </Link>
+                <Link
+                  href={withParams(params, { kind: 'gen', page: undefined })}
+                  aria-current={kind === 'generation'}
+                  scroll={false}
+                >
+                  Essais
+                </Link>
+                <Link
+                  href={withParams(params, { kind: 'sugg', page: undefined })}
+                  aria-current={kind === 'suggestion'}
+                  scroll={false}
+                >
+                  Suggestions
+                </Link>
+              </div>
+            )}
           </div>
-          <UsersTable rows={rows} sort={sort} dir={dir} params={params} />
-          <Pager params={params} page={page} size={size} total={total} label="utilisateurs" />
+          {tab === 'users' ? (
+            <>
+              <UsersTable rows={rows} sort={sort} dir={dir} params={params} />
+              <Pager params={params} page={page} size={size} total={total} label="utilisateurs" />
+            </>
+          ) : (
+            <>
+              <ActivityTable
+                rows={acts.map((a) => ({
+                  ...toVM(a),
+                  user: { id: a.user_id, name: a.user_name, email: a.user_email },
+                }))}
+              />
+              <Pager params={params} page={page} size={size} total={total} label="activités" />
+            </>
+          )}
         </div>
       </section>
     </>
