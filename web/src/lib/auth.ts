@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { REDIRECT_URL } from './config';
+import { tr } from './i18n';
 
 /**
  * The email OTP length is FIXED AT 6 here, exactly like the four native screens.
@@ -33,7 +34,7 @@ export class AuthError extends Error {}
 export async function sendCode(email: string): Promise<void> {
   const clean = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(clean)) {
-    throw new AuthError('Cette adresse ne ressemble pas à un email.');
+    throw new AuthError(tr().auth.badEmail);
   }
   const { error } = await supabase.auth.signInWithOtp({
     email: clean,
@@ -42,9 +43,9 @@ export async function sendCode(email: string): Promise<void> {
   if (error) {
     // Rate limiting is the common one and deserves its own wording.
     if (/rate|too many|seconds/i.test(error.message)) {
-      throw new AuthError('Trop de demandes. Attends une minute avant de redemander un code.');
+      throw new AuthError(tr().auth.tooMany);
     }
-    throw new AuthError("Le code n'a pas pu être envoyé. Vérifie ton adresse.");
+    throw new AuthError(tr().auth.sendFailed);
   }
 }
 
@@ -59,7 +60,7 @@ export async function sendCode(email: string): Promise<void> {
 export async function verifyCode(email: string, code: string): Promise<void> {
   const digits = code.replace(/\D/g, '').slice(0, OTP_LENGTH);
   if (digits.length !== OTP_LENGTH) {
-    throw new AuthError(`Le code fait ${OTP_LENGTH} chiffres.`);
+    throw new AuthError(tr().auth.codeLength(OTP_LENGTH));
   }
   const clean = email.trim().toLowerCase();
 
@@ -71,7 +72,7 @@ export async function verifyCode(email: string, code: string): Promise<void> {
 
   // Log both so a genuine mismatch is diagnosable; never show a raw code to a visitor.
   console.warn('[auth] verify failed', { email: first.error.message, signup: second.error.message });
-  throw new AuthError('Ce code est invalide ou expiré. Redemande-en un.');
+  throw new AuthError(tr().auth.codeInvalid);
 }
 
 export type Provider = 'google' | 'apple';
@@ -94,11 +95,7 @@ export async function signInWith(provider: Provider): Promise<void> {
   });
   // Reached only if the redirect never happened; otherwise the page is already gone.
   if (error) {
-    throw new AuthError(
-      provider === 'apple'
-        ? "La connexion avec Apple n'a pas pu démarrer. Utilise ton email."
-        : "La connexion avec Google n'a pas pu démarrer. Utilise ton email.",
-    );
+    throw new AuthError(provider === 'apple' ? tr().auth.appleFailed : tr().auth.googleFailed);
   }
 }
 

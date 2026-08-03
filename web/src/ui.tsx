@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { tr, useLang } from './lib/i18n';
 
 export function Wordmark() {
   return (
@@ -13,12 +14,12 @@ export function Wordmark() {
 
 /** The numbered rail. Screens 5 and 6 both sit under step 4: the paywall is not a step of its own,
  *  it is the result you have not paid for yet. */
-const LABELS = ['Portrait', 'Look', 'Compte', 'Résultat'] as const;
-
 export function Steps({ active }: { active: 1 | 2 | 3 | 4 }) {
+  useLang();
+  const t = tr();
   return (
-    <nav className="m-steps" aria-label="Étapes">
-      {LABELS.map((label, i) => {
+    <nav className="m-steps" aria-label={t.stepsAria}>
+      {t.steps.map((label, i) => {
         const n = i + 1;
         const state = n < active ? 'done' : n === active ? 'now' : 'todo';
         return (
@@ -46,49 +47,51 @@ export function Steps({ active }: { active: 1 | 2 | 3 | 4 }) {
  * that serves these pages, so they resolve without any base-path juggling.
  */
 export function SiteFooter() {
+  useLang();
+  const f = tr().footer;
   return (
     <footer className="site">
       <div className="foot-inner">
         <div className="foot-top">
           <div>
-            <a href="/" className="wm" aria-label="Mèche">
+            <a href={f.home} className="wm" aria-label="Mèche">
               m<span className="gw">e</span>che
             </a>
-            <p className="tag">Vois-toi avant. Change après. Paris vers partout.</p>
+            <p className="tag">{f.tag}</p>
           </div>
           <div className="foot-col">
-            <h5>Produit</h5>
-            <a href="/#paths">Try-on</a>
-            <a href="/#how">Comment ça marche</a>
-            <a href="/#why">Pourquoi Mèche</a>
-            <a href="/#download">Télécharger</a>
+            <h5>{f.product}</h5>
+            <a href={`${f.home}#paths`}>{f.tryon}</a>
+            <a href={`${f.home}#how`}>{f.how}</a>
+            <a href={`${f.home}#why`}>{f.why}</a>
+            <a href={`${f.home}#download`}>{f.download}</a>
           </div>
           <div className="foot-col">
-            <h5>Coiffeurs</h5>
+            <h5>{f.stylists}</h5>
             <span className="soon">
-              Mèche Pro <span className="badge">Bientôt</span>
+              {f.pro} <span className="badge">{f.soon}</span>
             </span>
             <span className="soon">
-              Rejoindre <span className="badge">Bientôt</span>
+              {f.join} <span className="badge">{f.soon}</span>
             </span>
             <span className="soon">
-              Tarification <span className="badge">Bientôt</span>
+              {f.pricing} <span className="badge">{f.soon}</span>
             </span>
           </div>
           <div className="foot-col">
-            <h5>Mèche</h5>
-            <a href="/support">Assistance</a>
-            <a href="/delete-account">Suppression de compte</a>
-            <a href="/privacy">Confidentialité</a>
-            <a href="/terms">CGU</a>
-            <a href="/mentions-legales">Mentions légales</a>
+            <h5>{f.brand}</h5>
+            <a href={f.supportHref}>{f.support}</a>
+            <a href={f.deleteHref}>{f.deleteAccount}</a>
+            <a href={f.privacyHref}>{f.privacy}</a>
+            <a href={f.termsHref}>{f.terms}</a>
+            <a href={f.legalHref}>{f.legal}</a>
           </div>
         </div>
         <div className="foot-bot">
           <span>© 2026 Mèche · Paris</span>
           <span>
-            <a href="/mentions-legales">Mentions légales</a> · <a href="/terms">CGU</a> ·{' '}
-            <a href="/privacy">Confidentialité</a> · <a href="/privacy">Cookies</a>
+            <a href={f.legalHref}>{f.legal}</a> · <a href={f.termsHref}>{f.terms}</a> ·{' '}
+            <a href={f.privacyHref}>{f.privacy}</a> · <a href={f.privacyHref}>{f.cookies}</a>
           </span>
         </div>
       </div>

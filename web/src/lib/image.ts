@@ -14,6 +14,8 @@
 // 1600px is deliberate, not arbitrary: this is the image Gemini actually sees, and the repo's rule
 // is that the STORED selfie may be shrunk but the MODEL INPUT may not. Lowering it degrades the
 // product itself.
+import { tr } from './i18n';
+
 const MAX_EDGE = 1600;
 const QUALITY = 0.9;
 /** Comfortably under the server's decoded cap, leaving room for base64 inflation. */
@@ -38,14 +40,14 @@ export class ImageError extends Error {}
 
 export async function prepareSelfie(file: File): Promise<PreparedSelfie> {
   if (!ALLOWED.has(file.type)) {
-    throw new ImageError('Format non reconnu. Choisis un JPG, un PNG ou un WebP.');
+    throw new ImageError(tr().image.badFormat);
   }
 
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new ImageError("Cette image n'a pas pu être ouverte. Essaie une autre photo.");
+    throw new ImageError(tr().image.unreadable);
   }
 
   const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
@@ -56,7 +58,7 @@ export async function prepareSelfie(file: File): Promise<PreparedSelfie> {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new ImageError("Ton navigateur n'a pas pu préparer l'image.");
+  if (!ctx) throw new ImageError(tr().image.browserFailed);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
@@ -65,7 +67,7 @@ export async function prepareSelfie(file: File): Promise<PreparedSelfie> {
     new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', q));
 
   let blob = await encode(QUALITY);
-  if (!blob) throw new ImageError("Ton navigateur n'a pas pu préparer l'image.");
+  if (!blob) throw new ImageError(tr().image.browserFailed);
   // Only ever runs for an unusually noisy image; normal photos clear SAFE_BYTES on the first pass.
   for (const q of FALLBACK_QUALITY) {
     if (blob.size <= SAFE_BYTES) break;
@@ -93,7 +95,7 @@ export async function selfieFromBlob(blob: Blob): Promise<PreparedSelfie> {
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new ImageError("La lecture de l'image a échoué."));
+    reader.onerror = () => reject(new ImageError(tr().image.readFailed));
     reader.onload = () => {
       const url = String(reader.result);
       const comma = url.indexOf(',');

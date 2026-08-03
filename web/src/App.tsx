@@ -18,6 +18,7 @@ import {
 import { signInWith, type Provider } from './lib/auth';
 import { checkout, PaddleError } from './lib/paddle';
 import type { Pack } from './lib/packs';
+import { setLang, tr, useLang } from './lib/i18n';
 import { ExitMark, SiteFooter, Steps, Wordmark } from './ui';
 import {
   AccountScreen,
@@ -41,17 +42,9 @@ const STEP_RAIL: Record<Step, 1 | 2 | 3 | 4> = {
   result: 4,
 };
 
-const CAPTIONS: Record<Step, string> = {
-  portrait: 'Un portrait de face, bien éclairé, cheveux dégagés du visage.',
-  look: 'Ton portrait. La coupe sera posée dessus, ton visage ne change pas.',
-  account: 'Ton portrait. La coupe sera posée dessus, ton visage ne change pas.',
-  generating: 'Ton visage, ta lumière et ton cadrage sont conservés.',
-  paywall: "Aperçu basse définition. L'image nette attend, elle n'a jamais quitté le serveur.",
-  revealing: "L'image nette arrive. Elle n'a jamais quitté le serveur, on vient d'en ouvrir l'accès.",
-  result: 'Même visage, même lumière, même cadrage.',
-};
-
 export function App() {
+  const lang = useLang();
+  const t = tr();
   const [step, setStep] = useState<Step>('portrait');
   const [session, setSession] = useState<Session | null>(null);
   const [selfie, setSelfie] = useState<PreparedSelfie | null>(null);
@@ -145,7 +138,7 @@ export function App() {
       const row = await resumableGeneration();
       if (!row) return;
       setGenId(row.id);
-      const name = row.brief?.lookName || row.brief?.prompt || 'ton essai';
+      const name = row.brief?.lookName || row.brief?.prompt || tr().fallbackLook;
       setLook({ name });
 
       if (row.status === 'failed') {
@@ -213,7 +206,7 @@ export function App() {
       });
       setStep('look');
     } catch (e) {
-      setError(e instanceof ImageError ? e.message : "Cette photo n'a pas pu être préparée.");
+      setError(e instanceof ImageError ? e.message : tr().errors.prepareFailed);
     }
   }, []);
 
@@ -238,9 +231,7 @@ export function App() {
         if (balance <= 0) {
           // No welcome credit left and nothing purchased. Nothing to show yet, so the paywall would
           // be selling an image that does not exist. Send them back with a clear reason instead.
-          setError(
-            "Ton essai offert a déjà été utilisé sur ce compte. Prends des crédits pour lancer un nouvel essai.",
-          );
+          setError(tr().errors.welcomeUsed);
           setStep('look');
           return;
         }
@@ -286,7 +277,7 @@ export function App() {
         }
       } catch (e) {
         if (controller.signal.aborted) return;
-        setError(e instanceof TryOnError ? e.message : "L'essai n'a pas pu être lancé. Réessaie.");
+        setError(e instanceof TryOnError ? e.message : tr().errors.launchFailed);
         setStep('look');
       }
     },
@@ -355,7 +346,7 @@ export function App() {
           if (!PADDLE_READY || !pack?.paddle_price_id) {
             // No payment configured for this environment. Nothing is given away: `unlock` charges a
             // credit server-side, so the worst case is the honest error below.
-            throw new TryOnError('no_credits', "Le paiement n'est pas encore disponible ici.");
+            throw new TryOnError('no_credits', tr().paddle.notConfigured);
           }
           await checkout({
             priceId: pack.paddle_price_id,
@@ -382,7 +373,7 @@ export function App() {
       } catch (e) {
         if (e instanceof PaddleError) setError(e.message);
         else if (e instanceof TryOnError) setError(e.message);
-        else setError("La révélation a échoué. Réessaie, aucun crédit n'a été perdu.");
+        else setError(tr().errors.revealFailed);
         // Remettre le paywall SOUS l'erreur : c'est le seul écran qui porte le bouton pour
         // réessayer. Y rester bloqué sur l'écran d'attente serait une impasse.
         setStep('paywall');
@@ -478,11 +469,7 @@ export function App() {
         <header className="m-top">
           <Wordmark />
           <div className="m-top-right" data-credits={showCredits ? '1' : undefined}>
-            {showCredits && (
-              <span className="m-credits">
-                {credits} essai{credits > 1 ? 's' : ''}
-              </span>
-            )}
+            {showCredits && <span className="m-credits">{t.header.credits(credits)}</span>}
             {session && (
               <span className="m-who">
                 {/* L'initiale : elle survit à la troncature ET à la disparition de l'adresse sous
@@ -502,15 +489,25 @@ export function App() {
                   disabled={signingOut}
                   // Nomme le compte : sous 620px le libellé disparaît au profit de l'icône, et
                   // « se déconnecter » tout court ne dirait plus de QUEL compte on sort.
-                  aria-label={`Se déconnecter de ${session.user.email ?? 'ce compte'}`}
-                  title="Se déconnecter"
+                  aria-label={t.header.signOutAria(session.user.email ?? t.header.signOutFallbackAccount)}
+                  title={t.header.signOutTitle}
                 >
                   <ExitMark />
-                  <span className="lbl">{signingOut ? 'Sortie' : 'Déconnexion'}</span>
+                  <span className="lbl">{signingOut ? t.header.signingOut : t.header.signOut}</span>
                 </button>
               </span>
             )}
-            <span className="m-lang">FR</span>
+            <button
+              type="button"
+              className="m-lang"
+              onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+              // Announce the language the button SWITCHES TO, in that language, so a French speaker
+              // lost on the English page can still read their way home.
+              aria-label={lang === 'fr' ? 'Switch to English' : 'Passer en français'}
+              title={lang === 'fr' ? 'English' : 'Français'}
+            >
+              {lang === 'fr' ? 'EN' : 'FR'}
+            </button>
           </div>
         </header>
 
@@ -530,7 +527,7 @@ export function App() {
                   <span className="glyph" aria-hidden="true">
                     ◌
                   </span>
-                  <p>Ton portrait apparaît ici</p>
+                  <p>{t.frame.empty}</p>
                 </div>
               )}
               {frameImage && (
@@ -539,10 +536,10 @@ export function App() {
                     src={frameImage}
                     alt={
                       step === 'result'
-                        ? `Résultat, ${look?.name ?? 'ton essai'}`
+                        ? t.frame.altResult(look?.name ?? t.fallbackLook)
                         : showingTeaser
-                          ? 'Aperçu flouté de ton résultat'
-                          : 'Ton portrait'
+                          ? t.frame.altTeaser
+                          : t.frame.altPortrait
                     }
                     style={showingTeaser ? { filter: 'blur(1.5px)', transform: 'scale(1.02)' } : undefined}
                   />
@@ -562,14 +559,14 @@ export function App() {
                     ⬤
                   </span>{' '}
                   {step === 'revealing'
-                    ? 'Déverrouillage'
+                    ? t.frame.badgeRevealing
                     : step === 'paywall'
-                      ? 'Aperçu verrouillé'
-                      : 'Résultat net'}
+                      ? t.frame.badgeLocked
+                      : t.frame.badgeClear}
                 </span>
               )}
             </div>
-            <p className="m-caption">{CAPTIONS[step]}</p>
+            <p className="m-caption">{t.captions[step]}</p>
           </div>
 
           <div className="m-panel">
@@ -586,14 +583,14 @@ export function App() {
             {step === 'account' && (
               <AccountScreen onAuthenticated={onAuthenticated} onProvider={startProviderSignIn} />
             )}
-            {step === 'generating' && <GeneratingScreen lookName={look?.name ?? 'ton essai'} />}
+            {step === 'generating' && <GeneratingScreen lookName={look?.name ?? t.fallbackLook} />}
             {step === 'paywall' && (
               <PaywallScreen onReveal={payAndReveal} busy={revealing} error={error} />
             )}
             {step === 'revealing' && <RevealingScreen phase={revealPhase} />}
             {step === 'result' && (
               <ResultScreen
-                lookName={look?.name ?? 'ton essai'}
+                lookName={look?.name ?? t.fallbackLook}
                 imageUrl={clearUrl}
                 credits={credits}
                 onAgain={startOver}

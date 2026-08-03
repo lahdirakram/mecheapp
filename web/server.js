@@ -10,9 +10,20 @@
 // enforceable commitment. If that ever bites during an urgent policy fix, deploy with the build step
 // removed, then restore it.
 //
-// Language handling for the legal pages is unchanged from when this lived in legal/server.js:
-// /fr/* and /en/* serve explicitly; the canonical /privacy, /terms, /mentions-legales detect the
-// language (?lang -> Accept-Language -> default fr) so the store URLs stay stable.
+// Language handling: /fr/* and /en/* serve explicitly; the canonical /privacy, /terms,
+// /mentions-legales and the landing / detect the language (?lang -> `lang` cookie ->
+// Accept-Language -> default fr) so the store URLs stay stable.
+//
+// The landing is bilingual: / is the French page, /en the English one (a full landing, not the old
+// legal hub), and /fr redirects to / so each language has exactly one canonical URL. An
+// English-preferring visitor on / is 302-redirected to /en. Why this stays SEO-safe:
+//   - the redirect is a 302, never a 301, so nothing consolidates onto /en;
+//   - crawlers send no cookie and generally no Accept-Language, so they see the stable French 200
+//     at / and follow the hreflang alternates declared in both pages' <head>;
+//   - language-detected responses carry `vary: accept-language, cookie` so no shared cache can pin
+//     one language onto the canonical URL.
+// An explicit choice (visiting /en, /fr, or any ?lang=) is remembered in the `lang` cookie, which
+// OUTRANKS Accept-Language: the FR/EN switch would otherwise bounce the visitor straight back.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -131,9 +142,16 @@ function safeJoin(base, rel) {
   return filePath.startsWith(base) ? filePath : null;
 }
 
+function cookieLang(req) {
+  const m = /(?:^|;\s*)lang=(fr|en)(?:;|$)/.exec(req.headers.cookie || '');
+  return m ? m[1] : null;
+}
+
 function pickLang(req, url) {
   const q = url.searchParams.get('lang');
   if (q === 'en' || q === 'fr') return q;
+  const c = cookieLang(req);
+  if (c) return c; // an explicit past choice beats the browser's guess
   const al = (req.headers['accept-language'] || '').toLowerCase();
   const en = al.indexOf('en');
   const fr = al.indexOf('fr');
@@ -156,7 +174,15 @@ function resolve(req) {
   const url = new URL(req.url, 'http://localhost');
   let p = decodeURIComponent(url.pathname);
   if (p === '/healthz') return { health: true };
-  if (p === '/') return { file: safeJoin(SITE, '/index.html') }; // marketing landing
+  if (p === '/') {
+    // Marketing landing, language-detected. `vary` because the same URL answers differently by
+    // Accept-Language and cookie; `setLang` only on an EXPLICIT ?lang, never on a mere guess.
+    const q = url.searchParams.get('lang');
+    if (pickLang(req, url) === 'en') {
+      return { redirect: '/en', vary: true, ...(q === 'en' ? { setLang: 'en' } : {}) };
+    }
+    return { file: safeJoin(SITE, '/index.html'), vary: true, ...(q === 'fr' ? { setLang: 'fr' } : {}) };
+  }
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
 
   // The studio owns everything under /studio, before the rules below.
@@ -172,17 +198,33 @@ function resolve(req) {
   const parts = p.split('/').filter(Boolean);
 
   // explicit language: /fr, /en, /fr/privacy, /en/terms ...
+  // /en is the English landing (site/en/index.html). The French landing lives at /, so /fr
+  // redirects there instead of serving a file — one canonical URL per language. Visiting either
+  // landing is an explicit choice and pins the `lang` cookie; the legal pages do not, reading
+  // one document in English is not a decision about the whole site.
   if (parts[0] === 'fr' || parts[0] === 'en') {
     const page = parts[1] || 'index';
+    if (page === 'index') {
+      if (parts[0] === 'fr') return { redirect: '/', setLang: 'fr' };
+      return { file: safeJoin(SITE, '/en/index.html'), setLang: 'en' };
+    }
     if (!PAGES.has(page)) return { notFound: true };
     return { file: safeJoin(SITE, `/${parts[0]}/${page}.html`) };
   }
 
   // canonical: /privacy, /terms -> language-detected
   const page = parts[0] || 'index';
-  if (PAGES.has(page)) return { file: safeJoin(SITE, `/${pickLang(req, url)}/${page}.html`) };
+  if (PAGES.has(page)) {
+    return { file: safeJoin(SITE, `/${pickLang(req, url)}/${page}.html`), vary: true };
+  }
 
   return { notFound: true };
+}
+
+/** The `lang` cookie header, or nothing. One year: it records a choice, not a session. */
+function langCookie(lang) {
+  if (lang !== 'fr' && lang !== 'en') return {};
+  return { 'set-cookie': `lang=${lang}; Path=/; Max-Age=31536000; SameSite=Lax` };
 }
 
 function send404(res) {
@@ -206,6 +248,18 @@ function handle(req, res) {
     return res.end('ok');
   }
   if (r.studioClosed) return sendStudioClosed(res);
+  if (r.redirect) {
+    // 302 + no-store, both deliberate: a cached or permanent language redirect would weld one
+    // visitor's language onto the URL for everyone behind the same cache, and 301 would make
+    // search engines consolidate / into /en.
+    res.writeHead(302, {
+      location: r.redirect,
+      'cache-control': 'no-store',
+      ...(r.vary ? { vary: 'accept-language, cookie' } : {}),
+      ...langCookie(r.setLang),
+    });
+    return res.end();
+  }
   if (r.notFound || !r.file) {
     res.writeHead(r.file === null ? 400 : 404, { 'content-type': 'text/html; charset=utf-8' });
     return res.end('<!doctype html><meta charset="utf-8"><h1>404</h1><p><a href="/">Accueil / Home</a></p>');
@@ -223,6 +277,8 @@ function handle(req, res) {
       'last-modified': stat.mtime.toUTCString(),
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'strict-origin-when-cross-origin',
+      ...(r.vary ? { vary: 'accept-language, cookie' } : {}),
+      ...langCookie(r.setLang),
     };
     // Conditional request -> 304, no body. Saves the whole image on revalidation.
     if (req.headers['if-none-match'] === etag) {

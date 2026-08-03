@@ -54,10 +54,17 @@ button { font: inherit; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .m-credits[hidden] { display: none; }
+/* Le sélecteur de langue : il affiche la langue CIBLE (« EN » sur la page française), un seul tap
+   pour basculer. Même famille visuelle que le bouton de déconnexion, c'est une action. */
 .m-lang {
   font-family: 'Geist Mono', ui-monospace, monospace;
   font-size: 10.5px; letter-spacing: 0.14em; color: var(--mute);
+  background: none; border: 1px solid var(--line);
+  height: 30px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+.m-lang:hover { background: var(--caramel-soft); border-color: var(--caramel); color: var(--ink); }
+.m-lang:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
 
 /* ── compte connecté ────────────────────────────────────────────────────────────────────────────
    Deux niveaux volontairement inégaux : l'IDENTITÉ est calme (pastille + adresse, aucune bordure,
@@ -106,9 +113,9 @@ button { font: inherit; color: inherit; }
   .m-who .out { width: 34px; height: 34px; padding: 0; justify-content: center; }
   .m-who .adr { max-width: 13ch; }
   .m-top-right { gap: 10px; }
-  /* « FR » est un libellé figé, pas un sélecteur : il ne fait rien et il prend la largeur dont
-     l'adresse a besoin. Sur un téléphone, l'identité vaut mieux qu'une décoration. */
-  .m-lang { display: none; }
+  /* Connecté, l'adresse a besoin de toute la largeur : le sélecteur de langue cède. Il reste
+     visible tant qu'on n'est pas connecté, là où le choix de langue se joue vraiment. */
+  .m-who + .m-lang { display: none; }
 
   /* Écran résultat : le compteur de crédits arrive dans le même header et le fait déborder
      (mesuré : 407px pour 375 disponibles). C'est l'ADRESSE qui cède, pas le compteur : à ce

@@ -1,5 +1,6 @@
 import { initializePaddle, type Paddle } from '@paddle/paddle-js';
 import { PADDLE_ENV, PADDLE_READY, PADDLE_TOKEN } from './config';
+import { getLang, tr } from './i18n';
 
 /**
  * Paddle overlay checkout.
@@ -50,11 +51,11 @@ export async function checkout(opts: {
   signal?: AbortSignal;
 }): Promise<void> {
   const p = await paddle();
-  if (!p) throw new PaddleError('Le paiement est indisponible pour le moment.');
+  if (!p) throw new PaddleError(tr().paddle.unavailable);
 
   const completed = new Promise<void>((resolve, reject) => {
     completedResolver = resolve;
-    opts.signal?.addEventListener('abort', () => reject(new PaddleError('Paiement interrompu.')), { once: true });
+    opts.signal?.addEventListener('abort', () => reject(new PaddleError(tr().paddle.interrupted)), { once: true });
   });
 
   p.Checkout.open({
@@ -64,7 +65,7 @@ export async function checkout(opts: {
     settings: {
       displayMode: 'overlay',
       theme: 'light',
-      locale: 'fr',
+      locale: getLang(),
       // No successUrl on purpose: staying on the page is what lets us wait for the webhook and
       // reveal in place. A redirect would drop the visitor back into a cold page load.
     },

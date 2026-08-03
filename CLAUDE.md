@@ -39,7 +39,13 @@ wrong belief survives across sessions.
   navigateur, avec Paddle à la place de RevenueCat. Hors workspace comme `backoffice/`, donc **aucun
   import `@meche/*`** : `web/src/lib/supabase.ts` est une copie qui DIVERGE volontairement
   (`detectSessionInUrl` doit être `true` sur le web). Paiement Paddle écrit et testé en sandbox.
-  Détail : `docs/web-studio.md` + `web/README.md`.
+  **Tout `web/` est bilingue FR/EN** : la landing existe en deux copies HTML (`site/index.html` +
+  `site/en/index.html`, à modifier ENSEMBLE, style partagé `site/landing.css`), le studio lit tout
+  son texte dans `src/lib/i18n.ts` (aucune chaîne en dur dans `src/`). La langue sur `/` est
+  détectée SEO-safe : 302 (jamais 301) vers `/en`, cookie `lang` posé sur choix explicite
+  seulement, et qui l'emporte sur Accept-Language (sinon le bouton FR de `/en` rebondit, d'où son
+  href `/?lang=fr`). Un crawler sans en-têtes voit un `/` français stable + hreflang. Détail :
+  `docs/web-studio.md` + `web/README.md` + l'en-tête de `web/server.js`.
 
 ## Working rules
 - **Node 22 for all `eas`/`expo`/`supabase` commands**: `source ~/.nvm/nvm.sh && nvm use 22`. Default

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getLang, tr } from './i18n';
 
 export type Look = {
   id: string;
@@ -36,9 +37,11 @@ export async function fetchLooks(limit = 8): Promise<Look[]> {
     return [];
   }
 
+  // `name` is an i18n object on feed rows; prefer the active language, then the other, then a label.
+  const lang = getLang();
   return (data as FeedRow[]).map((row) => ({
     id: row.id,
-    name: row.name?.fr ?? row.name?.en ?? 'Ce look',
+    name: row.name?.[lang] ?? row.name?.fr ?? row.name?.en ?? tr().looks.fallbackName,
     imageUrl: publicFeedUrl(row.image_url),
     fromFeed: row.kind === 'user' || row.kind === 'community',
   }));

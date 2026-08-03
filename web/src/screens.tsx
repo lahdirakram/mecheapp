@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase';
 import { APPSTORE_URL, PLAY_URL, platform } from './lib/config';
 import { fetchLooks, type Look } from './lib/looks';
 import { badgeLabel, defaultPackId, fetchPacks, type Pack } from './lib/packs';
+import { tr } from './lib/i18n';
 import { Alert, AppleMark, Arrow, GoogleMark, Note } from './ui';
 
 /* ── 01 Portrait ─────────────────────────────────────────────────────────── */
@@ -18,17 +19,15 @@ export function PortraitScreen({
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const t = tr();
 
   return (
     <section>
-      <p className="m-kicker">Étape 01</p>
+      <p className="m-kicker">{t.portrait.kicker}</p>
       <h2 className="m-h">
-        Commence par <em>ton visage.</em>
+        {t.portrait.h}<em>{t.portrait.hEm}</em>
       </h2>
-      <p className="m-sub">
-        Pas un mannequin, pas une simulation générique. La coupe est posée sur ta photo, avec ton
-        visage, ta carnation et ta lumière.
-      </p>
+      <p className="m-sub">{t.portrait.sub}</p>
 
       <div
         className="m-drop"
@@ -54,10 +53,10 @@ export function PortraitScreen({
           if (file) onPick(file);
         }}
       >
-        <span className="big">Dépose ta photo</span>
+        <span className="big">{t.portrait.dropBig}</span>
         {/* Pas de taille annoncée : la photo est redimensionnée et convertie en JPEG dans le
             navigateur avant l'envoi, donc le poids du fichier d'origine n'a aucune importance. */}
-        <span className="small">ou clique pour choisir un fichier · JPG, PNG ou WebP</span>
+        <span className="small">{t.portrait.dropSmall}</span>
       </div>
       <input
         ref={input}
@@ -74,10 +73,7 @@ export function PortraitScreen({
 
       {error && <Alert>{error}</Alert>}
 
-      <Note>
-        Ta photo sert à générer ton essai, et à rien d'autre. Elle n'est jamais publiée, jamais
-        utilisée pour entraîner un modèle. Tu peux la supprimer à tout moment.
-      </Note>
+      <Note>{t.portrait.note}</Note>
     </section>
   );
 }
@@ -101,6 +97,7 @@ export function LookScreen({
   // Seeded from the selection so a look restored from a draft (after an OAuth redirect) shows its
   // text back in the field. Without this the box reads as empty while "Continuer" is enabled.
   const [idea, setIdea] = useState(selected?.prompt ?? '');
+  const t = tr();
 
   useEffect(() => {
     void fetchLooks(4).then(setLooks);
@@ -108,14 +105,11 @@ export function LookScreen({
 
   return (
     <section>
-      <p className="m-kicker">Étape 02</p>
+      <p className="m-kicker">{t.look.kicker}</p>
       <h2 className="m-h">
-        Choisis, ou <em>décris.</em>
+        {t.look.h}<em>{t.look.hEm}</em>
       </h2>
-      <p className="m-sub">
-        Une sélection éditoriale, ou tes propres mots. Tu n'as pas besoin de connaître le vocabulaire
-        du salon.
-      </p>
+      <p className="m-sub">{t.look.sub}</p>
 
       {looks.length > 0 && (
         <div className="m-looks">
@@ -133,19 +127,19 @@ export function LookScreen({
             >
               {look.imageUrl && <img src={look.imageUrl} alt={look.name} loading="lazy" />}
               <span className="nm">{look.name}</span>
-              {look.fromFeed && <span className="src" title="Repéré dans le feed" />}
+              {look.fromFeed && <span className="src" title={t.look.fromFeed} />}
             </button>
           ))}
         </div>
       )}
 
       <label className="m-field">
-        <span className="m-label">Ou dis-le avec tes mots</span>
+        <span className="m-label">{t.look.fieldLabel}</span>
         <textarea
           className="m-input"
           value={idea}
           maxLength={240}
-          placeholder="un carré flou, plus court derrière, reflets miel"
+          placeholder={t.look.placeholder}
           onChange={(e) => {
             const value = e.target.value;
             setIdea(value);
@@ -161,10 +155,10 @@ export function LookScreen({
           où l'action était le plus loin, 464px sous la ligne avant refonte. */}
       <div className="m-row m-row--sticky">
         <button className="m-btn m-btn--primary" type="button" disabled={!selected} onClick={onContinue}>
-          Continuer <Arrow />
+          {t.look.continue} <Arrow />
         </button>
         <button className="m-btn m-btn--ghost" type="button" onClick={onBack}>
-          Changer de photo
+          {t.look.changePhoto}
         </button>
       </div>
     </section>
@@ -185,6 +179,7 @@ export function AccountScreen({
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = tr();
 
   async function provider(p: Provider) {
     setBusy(true);
@@ -193,7 +188,7 @@ export function AccountScreen({
       await onProvider(p);
       // On success the browser is already navigating away; nothing after this runs.
     } catch (e) {
-      setError(e instanceof AuthError ? e.message : "La connexion n'a pas pu démarrer.");
+      setError(e instanceof AuthError ? e.message : tr().account.startFailed);
       setBusy(false);
     }
   }
@@ -205,7 +200,7 @@ export function AccountScreen({
       await sendCode(email);
       setSent(true);
     } catch (e) {
-      setError(e instanceof AuthError ? e.message : "Le code n'a pas pu être envoyé.");
+      setError(e instanceof AuthError ? e.message : tr().account.sendFailed);
     } finally {
       setBusy(false);
     }
@@ -218,9 +213,9 @@ export function AccountScreen({
       await verifyCode(email, value);
       const { data } = await supabase.auth.getSession();
       if (data.session) onAuthenticated(data.session);
-      else setError('La session ne s’est pas ouverte. Redemande un code.');
+      else setError(tr().account.sessionFailed);
     } catch (e) {
-      setError(e instanceof AuthError ? e.message : 'Ce code est invalide ou expiré.');
+      setError(e instanceof AuthError ? e.message : tr().account.codeInvalid);
       setCode('');
     } finally {
       setBusy(false);
@@ -230,14 +225,11 @@ export function AccountScreen({
   if (!sent) {
     return (
       <section>
-        <p className="m-kicker">Étape 03</p>
+        <p className="m-kicker">{t.account.kicker}</p>
         <h2 className="m-h">
-          Où on t'envoie <em>ton essai.</em>
+          {t.account.h}<em>{t.account.hEm}</em>
         </h2>
-        <p className="m-sub">
-          La génération prend une trentaine de secondes. Ton essai reste rattaché à ce compte, donc
-          tu le retrouves en revenant sur cette page.
-        </p>
+        <p className="m-sub">{t.account.sub}</p>
 
         <div className="m-providers">
           <button
@@ -246,7 +238,7 @@ export function AccountScreen({
             data-busy={busy ? '1' : undefined}
             onClick={() => void provider('google')}
           >
-            <GoogleMark /> Continuer avec Google
+            <GoogleMark /> {t.account.google}
           </button>
           <button
             className="m-btn m-btn--ghost m-btn--wide"
@@ -254,21 +246,21 @@ export function AccountScreen({
             data-busy={busy ? '1' : undefined}
             onClick={() => void provider('apple')}
           >
-            <AppleMark /> Continuer avec Apple
+            <AppleMark /> {t.account.apple}
           </button>
         </div>
 
-        <div className="m-or">ou</div>
+        <div className="m-or">{t.account.or}</div>
 
         <label className="m-field">
-          <span className="m-label">Ton email</span>
+          <span className="m-label">{t.account.emailLabel}</span>
           <input
             className="m-input"
             type="email"
             autoComplete="email"
             inputMode="email"
             value={email}
-            placeholder="prenom@email.com"
+            placeholder={t.account.emailPlaceholder}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && email.trim()) void submitEmail();
@@ -285,30 +277,26 @@ export function AccountScreen({
           disabled={!email.trim()}
           onClick={() => void submitEmail()}
         >
-          {busy ? 'Envoi…' : 'Recevoir mon code'} <Arrow />
+          {busy ? t.account.sending : t.account.sendCode} <Arrow />
         </button>
 
-        <Note>
-          Pas de mot de passe à retenir. On envoie un code à {OTP_LENGTH} chiffres, valable quelques
-          minutes.
-        </Note>
+        <Note>{t.account.note(OTP_LENGTH)}</Note>
       </section>
     );
   }
 
   return (
     <section>
-      <p className="m-kicker">Étape 03</p>
+      <p className="m-kicker">{t.account.kicker}</p>
       <h2 className="m-h">
-        Ton code est <em>parti.</em>
+        {t.account.sentH}<em>{t.account.sentHEm}</em>
       </h2>
       <p className="m-sub">
-        On l'a envoyé à <strong>{email}</strong>. Il fait {OTP_LENGTH} chiffres et se vérifie tout
-        seul dès le dernier.
+        {t.account.sentSub1}<strong>{email}</strong>{t.account.sentSub2(OTP_LENGTH)}
       </p>
 
       <label className="m-field">
-        <span className="m-label">Le code</span>
+        <span className="m-label">{t.account.codeLabel}</span>
         <input
           className="m-otp"
           inputMode="numeric"
@@ -339,7 +327,7 @@ export function AccountScreen({
             setError(null);
           }}
         >
-          Changer d'adresse ou redemander un code
+          {t.account.changeAddress}
         </button>
       </div>
     </section>
@@ -348,16 +336,9 @@ export function AccountScreen({
 
 /* ── 04 Génération ───────────────────────────────────────────────────────── */
 
-const GEN_COPY = [
-  'Lecture de ton portrait.',
-  'Repérage de la ligne de cheveux.',
-  'Pose de la coupe, brin par brin.',
-  'Réglage de la lumière et de la matière.',
-  'Presque prêt.',
-];
-
 export function GeneratingScreen({ lookName }: { lookName: string }) {
   const [elapsed, setElapsed] = useState(0);
+  const t = tr();
 
   useEffect(() => {
     const id = setInterval(() => setElapsed((s) => s + 1), 1000);
@@ -365,17 +346,17 @@ export function GeneratingScreen({ lookName }: { lookName: string }) {
   }, []);
 
   // Copy advances on a rough schedule; the real signal is the poll in App, not this clock.
-  const phase = Math.min(Math.floor(elapsed / 6), GEN_COPY.length - 1);
+  const phase = Math.min(Math.floor(elapsed / 6), t.generating.phases.length - 1);
   // Ease toward 95% so the bar never sits full while the work is still running.
   const pct = Math.min(95, Math.round((1 - Math.exp(-elapsed / 14)) * 100));
 
   return (
     <section>
-      <p className="m-kicker">Étape 04</p>
+      <p className="m-kicker">{t.generating.kicker}</p>
       <h2 className="m-h">
-        On pose ta <em>coupe.</em>
+        {t.generating.h}<em>{t.generating.hEm}</em>
       </h2>
-      <p className="m-sub">{GEN_COPY[phase]}</p>
+      <p className="m-sub">{t.generating.phases[phase]}</p>
 
       <div className="m-prog">
         <i style={{ width: `${pct}%` }} />
@@ -388,10 +369,7 @@ export function GeneratingScreen({ lookName }: { lookName: string }) {
       {/* NE PAS promettre un email ici : `generate` ne notifie que par push Expo, et un navigateur
           n'a pas d'appareil enregistré. Revenir sur la page est le seul moyen de retrouver un
           résultat, et c'est ce que fait la reprise automatique dans App.tsx. */}
-      <Note>
-        Le calcul continue même si tu fermes cet onglet. Reviens sur cette page connecté et ton essai
-        t'attend.
-      </Note>
+      <Note>{t.generating.note}</Note>
     </section>
   );
 }
@@ -410,40 +388,26 @@ export function GeneratingScreen({ lookName }: { lookName: string }) {
  * Contrairement à `GeneratingScreen`, la progression ici n'est PAS une horloge décorative : les
  * phases viennent d'événements réels, donc la barre a le droit d'être franche.
  */
-const REVEAL_COPY = {
-  confirming: {
-    head: 'Paiement',
-    em: 'accepté.',
-    sub: "On attend la confirmation, puis tes essais arrivent sur ton compte. C'est notre serveur qui répond, quelques secondes.",
-    pct: 45,
-  },
-  fetching: {
-    head: 'Crédits',
-    em: 'reçus.',
-    sub: "On sort la version nette de ton image. Elle est déjà calculée, il ne reste qu'à te la donner.",
-    pct: 82,
-  },
-} as const;
+const REVEAL_PCT = { confirming: 45, fetching: 82 } as const;
 
 export function RevealingScreen({ phase }: { phase: 'confirming' | 'fetching' }) {
-  const copy = REVEAL_COPY[phase];
+  const t = tr();
+  const copy = t.revealing[phase];
   return (
     <section>
-      <p className="m-kicker">Étape 05</p>
+      <p className="m-kicker">{t.revealing.kicker}</p>
       <h2 className="m-h">
         {copy.head} <em>{copy.em}</em>
       </h2>
       <p className="m-sub">{copy.sub}</p>
 
       <div className="m-prog">
-        <i style={{ width: `${copy.pct}%` }} />
+        <i style={{ width: `${REVEAL_PCT[phase]}%` }} />
       </div>
 
       {/* La reprise automatique (`resumableGeneration`) rend cette phrase vraie : un résultat payé
           et débloqué se retrouve en revenant sur la page. Ne pas la promettre sans elle. */}
-      <Note>
-        Ton paiement est enregistré. Même si la page se ferme maintenant, ton résultat t'attend ici.
-      </Note>
+      <Note>{t.revealing.note}</Note>
     </section>
   );
 }
@@ -461,6 +425,7 @@ export function PaywallScreen({
 }) {
   const [packs, setPacks] = useState<Pack[] | null>(null);
   const [selected, setSelected] = useState<string | undefined>(undefined);
+  const t = tr();
 
   useEffect(() => {
     void fetchPacks().then((rows) => {
@@ -471,21 +436,16 @@ export function PaywallScreen({
 
   return (
     <section>
-      <p className="m-kicker">Ton essai est prêt</p>
+      <p className="m-kicker">{t.paywall.kicker}</p>
       <h2 className="m-h">
-        Il ne reste qu'à <em>le voir.</em>
+        {t.paywall.h}<em>{t.paywall.hEm}</em>
       </h2>
-      <p className="m-sub">
-        Ton résultat existe, en pleine définition. Révèle-le, et garde de quoi essayer autant de
-        coupes que tu veux.
-      </p>
+      <p className="m-sub">{t.paywall.sub}</p>
 
       {/* An empty list here is a TOTAL failure of the money screen, and it failed silently once
           already (the query selected a column the migration had not created yet). Never render an
           empty box: say something is wrong. */}
-      {packs?.length === 0 && (
-        <Alert>Les offres n'ont pas pu être chargées. Recharge la page, ton résultat t'attend.</Alert>
-      )}
+      {packs?.length === 0 && <Alert>{t.paywall.packsFailed}</Alert>}
 
       <div className="m-packs">
         {(packs ?? []).map((pack) => {
@@ -501,10 +461,10 @@ export function PaywallScreen({
               <span className="radio" aria-hidden="true" />
               <span className="body">
                 <span className="ttl">
-                  Ton résultat net <em>+ {pack.credits - 1} essais</em>
+                  {t.paywall.packTitle}<em>{t.paywall.packExtra(pack.credits - 1)}</em>
                   {badge && <span className="m-tag">{badge}</span>}
                 </span>
-                <span className="sub">{pack.unit} l'essai</span>
+                <span className="sub">{t.paywall.perTry(pack.unit)}</span>
               </span>
               <span className="price">{pack.price}</span>
             </button>
@@ -521,13 +481,13 @@ export function PaywallScreen({
         disabled={!packs?.length}
         onClick={() => onReveal((packs ?? []).find((p) => p.id === selected))}
       >
-        {busy ? 'Révélation…' : 'Révéler mon résultat'} <Arrow />
+        {busy ? t.paywall.revealing : t.paywall.reveal} <Arrow />
       </button>
 
       <div className="m-trust">
-        <span>Paiement par Paddle</span>
-        <span>TVA incluse</span>
-        <span>Sans abonnement</span>
+        {t.paywall.trust.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
       </div>
     </section>
   );
@@ -546,37 +506,34 @@ export function PaywallScreen({
  */
 function ContinueInApp({ credits }: { credits: number }) {
   const os = platform();
+  const t = tr();
   // Nothing to point an Android visitor at until the Play listing exists.
   if (os === 'android' && !PLAY_URL) return null;
   const href = os === 'android' ? PLAY_URL : APPSTORE_URL;
 
   return (
     <div className="m-app">
-      <p className="m-app-title">Continue sur l'app</p>
+      <p className="m-app-title">{t.result.appTitle}</p>
       <p className="m-app-body">
         {credits > 0 ? (
           <>
-            Tes <strong>{credits} essais</strong> et tous tes résultats sont sur ton compte. Connecte-toi
-            avec la même adresse et tu les retrouves.
+            {t.result.appBodyCredits1}
+            <strong>{t.result.appBodyCreditsStrong(credits)}</strong>
+            {t.result.appBodyCredits2}
           </>
         ) : (
-          <>
-            Tes résultats sont sur ton compte. Connecte-toi avec la même adresse et tu les retrouves.
-          </>
+          <>{t.result.appBody}</>
         )}
       </p>
       <a className="m-btn m-btn--ghost" href={href ?? APPSTORE_URL} target="_blank" rel="noopener noreferrer">
-        Télécharger Mèche
+        {t.result.appDownload}
       </a>
       {/* Un acheteur web n'a JAMAIS de mot de passe : il s'inscrit par code, sans en choisir un.
           Le detour par « Mot de passe oublié » etait le contournement d'avant `(auth)/code.tsx`.
           Maintenant que l'app a son bouton dedie, on le nomme tel quel : une consigne qui ne
           correspond pas au libelle affiche coute plus qu'elle n'aide. Garder ce texte aligne sur
-          `signin_code_link` du dictionnaire si le libelle change. */}
-      <p className="m-app-fine">
-        Si tu t'es connecté avec Google ou Apple, utilise le même bouton dans l'app. Avec ton email,
-        choisis « Me connecter avec un code » et saisis le code reçu.
-      </p>
+          `signin_code_link` du dictionnaire si le libelle change (les DEUX langues du studio). */}
+      <p className="m-app-fine">{t.result.appFine}</p>
     </div>
   );
 }
@@ -592,18 +549,19 @@ export function ResultScreen({
   credits: number;
   onAgain: () => void;
 }) {
+  const t = tr();
   return (
     <section>
       <p className="m-kicker">{lookName}</p>
       <h2 className="m-h">
-        Voilà <em>toi,</em> en {lookName.toLowerCase()}.
+        {t.result.h1}<em>{t.result.hEm}</em>{t.result.h2(lookName)}
       </h2>
       <p className="m-sub">
-        Télécharge-le, montre-le à ton coiffeur, ou relance un essai.
+        {t.result.sub}
         {credits > 0 && (
           <>
             {' '}
-            Il te reste <strong>{credits} essai{credits > 1 ? 's' : ''}</strong>.
+            {t.result.remaining1}<strong>{t.result.remainingStrong(credits)}</strong>{t.result.remaining2}
           </>
         )}
       </p>
@@ -611,11 +569,11 @@ export function ResultScreen({
       <div className="m-acts">
         {imageUrl && (
           <a className="m-btn m-btn--primary" href={imageUrl} download={`meche-${lookName}.jpg`}>
-            Télécharger
+            {t.result.download}
           </a>
         )}
         <button className="m-btn m-btn--ghost" type="button" onClick={onAgain}>
-          Essayer un autre look
+          {t.result.again}
         </button>
       </div>
 

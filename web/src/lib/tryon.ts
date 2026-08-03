@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { tr } from './i18n';
 
 export type Brief = {
   prompt?: string;
@@ -47,26 +48,23 @@ async function decodeError(error: unknown): Promise<TryOnError> {
   }
 
   if (code === 'no_credits' || status === 402) {
-    return new TryOnError('no_credits', 'Il faut un crédit pour lancer cet essai.');
+    return new TryOnError('no_credits', tr().tryon.needCredit);
   }
   if (code === 'daily_cap' || status === 503) {
-    return new TryOnError(
-      'daily_cap',
-      "Beaucoup de monde aujourd'hui, la limite des essais gratuits est atteinte. Reviens demain, ou prends des crédits pour passer devant.",
-    );
+    return new TryOnError('daily_cap', tr().tryon.dailyCap);
   }
   if (code === 'rate_limited' || status === 429) {
-    return new TryOnError('rate_limited', "Tu as enchaîné beaucoup d'essais. Réessaie dans quelques minutes.");
+    return new TryOnError('rate_limited', tr().tryon.rateLimited);
   }
   if (code === 'invalid_image') {
-    return new TryOnError('invalid_image', "Cette photo n'a pas pu être lue. Essaie une autre image.");
+    return new TryOnError('invalid_image', tr().tryon.invalidImage);
   }
   if (code === 'prompt_too_long') {
-    return new TryOnError('prompt_too_long', 'Ta description est trop longue. Raccourcis-la.');
+    return new TryOnError('prompt_too_long', tr().tryon.promptTooLong);
   }
   // Never surface a raw code to a visitor.
   console.warn('[tryon] unhandled error', { status, code });
-  return new TryOnError('unknown', "L'essai n'a pas pu être lancé. Réessaie.");
+  return new TryOnError('unknown', tr().tryon.launchFailed);
 }
 
 export type Enqueued = { id: string; lookId?: string };
@@ -108,7 +106,7 @@ export async function readGeneration(id: string): Promise<GenerationRow | null> 
     .select('id, status, locked, result_path, thumb_path, error')
     .eq('id', id)
     .maybeSingle();
-  if (error) throw new TryOnError('unknown', "L'état de ton essai n'a pas pu être lu.");
+  if (error) throw new TryOnError('unknown', tr().tryon.stateUnreadable);
   return (data as GenerationRow | null) ?? null;
 }
 
@@ -120,18 +118,17 @@ const POLL_TIMEOUT_MS = 180_000;
 export async function waitForGeneration(id: string, signal?: AbortSignal): Promise<GenerationRow> {
   const startedAt = Date.now();
   for (;;) {
-    if (signal?.aborted) throw new TryOnError('unknown', 'Suivi interrompu.');
+    if (signal?.aborted) throw new TryOnError('unknown', tr().tryon.watchAborted);
     await new Promise((r) => setTimeout(r, POLL_MS));
-    if (signal?.aborted) throw new TryOnError('unknown', 'Suivi interrompu.');
+    if (signal?.aborted) throw new TryOnError('unknown', tr().tryon.watchAborted);
 
     const row = await readGeneration(id);
     if (row && row.status !== 'pending') return row;
 
     if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
-      throw new TryOnError(
-        'unknown',
-        "Ton essai prend plus longtemps que prévu. On t'envoie le lien par email dès qu'il est prêt.",
-      );
+      // No email exists on web (`generate` only pushes to Expo device tokens), so this copy must
+      // never promise one: coming back to the page is the real recovery path (resumableGeneration).
+      throw new TryOnError('unknown', tr().tryon.takingLong);
     }
   }
 }
@@ -185,14 +182,10 @@ export async function resumableGeneration(): Promise<ResumableGeneration | null>
 /** Visitor-facing explanation for a failed row. Never shows the raw server string. */
 export function failureMessage(row: Pick<GenerationRow, 'error'>): string {
   const err = row.error ?? '';
-  if (err.includes('no_credits')) {
-    return "Ton essai offert a déjà été utilisé sur ce compte. Prends des crédits pour en relancer un.";
-  }
-  if (err.startsWith('reaped')) {
-    // 0031: the worker died mid-generation. The credit was refunded with it.
-    return "Ton essai précédent s'est interrompu et n'a pas abouti. Ton crédit a été rendu, tu peux recommencer.";
-  }
-  return "Ton essai précédent n'a pas abouti. Ton crédit a été conservé, tu peux recommencer.";
+  if (err.includes('no_credits')) return tr().tryon.failedNoCredits;
+  // 0031: the worker died mid-generation. The credit was refunded with it.
+  if (err.startsWith('reaped')) return tr().tryon.failedReaped;
+  return tr().tryon.failedKept;
 }
 
 /** Signed URL for a private result image. `generated` holds the teaser while a row is locked. */
@@ -230,10 +223,7 @@ export async function waitForCredits(timeoutMs = 90_000): Promise<number> {
     const balance = await creditBalance();
     if (balance > 0) return balance;
     if (Date.now() - startedAt > timeoutMs) {
-      throw new TryOnError(
-        'unknown',
-        "Ton paiement est bien passé, mais tes crédits mettent plus longtemps que prévu à arriver. Recharge la page dans une minute, ton résultat t'attend.",
-      );
+      throw new TryOnError('unknown', tr().tryon.creditsSlow);
     }
     await new Promise((r) => setTimeout(r, 2000));
   }

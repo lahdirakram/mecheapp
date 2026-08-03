@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { tr } from './i18n';
 
 export type Pack = {
   id: string;
@@ -40,8 +41,8 @@ export async function fetchPacks(): Promise<Pack[]> {
 
 /** The table stores a machine badge; the copy lives here. */
 export function badgeLabel(badge: string | null): string | null {
-  if (badge === 'popular') return 'Le plus pris';
-  if (badge === 'best') return 'Le meilleur prix';
+  if (badge === 'popular') return tr().packs.popular;
+  if (badge === 'best') return tr().packs.best;
   return null;
 }
 

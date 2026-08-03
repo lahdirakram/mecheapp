@@ -1,46 +1,383 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mèche · Legal</title>
-  <link rel="stylesheet" href="/style.css" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mèche · See yourself first.</title>
+<meta name="description" content="Try cuts, colors and highlights on your own photo before you sit in the chair. First try free, in the app or right in your browser." />
+<link rel="canonical" href="https://mecheapp.com/en" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="alternate" hreflang="fr" href="https://mecheapp.com/" />
+<link rel="alternate" hreflang="en" href="https://mecheapp.com/en" />
+<link rel="alternate" hreflang="x-default" href="https://mecheapp.com/" />
+<link rel="stylesheet" href="/landing.css" />
 <!-- Umami analytics -->
 <script defer src="https://cloud.umami.is/script.js" data-website-id="e4d51509-6c02-47d8-8369-725f141cef0b"></script>
 </head>
 <body>
-<nav class="nav">
-  <a href="/" class="wm" aria-label="Mèche">m<span class="gw">e</span>che</a>
-  <div class="nav-right">
-    <span class="lang"><a href="/fr">FR</a><span>·</span><a href="/en" class="active">EN</a></span>
-    <a href="/#download" class="nav-cta">Get the app</a>
-  </div>
-</nav>
 
-  <main class="legal">
-    <p class="updated">Legal</p>
-    <h1>Legal <em>documents.</em></h1>
-    <p class="lead">Mèche, AI hairstyle try-on service.</p>
-    <div class="hub-links">
-    <a href="/en/privacy">Privacy Policy <span class="arr">↗</span></a>
-    <a href="/en/terms">Terms of Service <span class="arr">↗</span></a>
-    <a href="/en/mentions-legales">Legal Notice <span class="arr">↗</span></a>
+<!-- ?lang=fr, pas un simple / : la détection du serveur renverrait un navigateur anglophone
+     droit sur /en, et le bouton FR ne ferait rien. Le paramètre pose le cookie et gagne. -->
+<div class="lang-switch"><a href="/?lang=fr">FR</a><span>·</span><a href="/en" class="active">EN</a></div>
+
+<!-- ============ BRAND ============ -->
+<div class="brandmark">
+  <span class="wm" aria-label="Mèche">m<span class="gw">e</span>che</span>
+</div>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div>
+    <span class="eyebrow"><span class="dot"></span>Virtual try-on · cut, color, highlights</span>
+    <h1>See yourself <em>first.</em></h1>
+    <p class="sub">Mèche tries the change so you don't have to. Cut, color, highlights, straightening. You actually see the result before anyone touches your hair.</p>
+    <div class="cta-row">
+      <a href="#download" class="store js-store" aria-label="Get the app" data-umami-event="cta-download" data-umami-event-location="hero">
+        <svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <span class="txt"><span class="big">Get the app</span></span>
+      </a>
+      <a href="/studio?lang=en" class="btn btn-ghost" data-umami-event="cta-studio" data-umami-event-location="hero">Try it online <span class="arrow">↗</span></a>
     </div>
-  </main>
+  </div>
 
+  <div class="tryon-stage">
+    <div class="tryon-card">
+      <div class="tryon-head">
+        <span class="live">Try-on · live</span>
+        <span>try #03</span>
+      </div>
+      <div class="portrait" id="hero-portrait">
+        <img class="shot" id="hero-shot" src="/looks/pixie.jpg" alt="Mèche hairstyle try-on on the same face" />
+        <span class="tag coral">Try-on</span>
+        <div class="name">
+          <div class="lbl">You with…</div>
+          <div class="which" id="hero-which">Brunette <em>pixie</em></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+
+
+<!-- ============ 3 PATHS ============ -->
+<section class="s" id="paths">
+  <div class="s-head">
+    <span class="s-eyebrow">Three ways to try</span>
+    <h2 class="s-title">Spot it in the <em>feed,</em> let the AI suggest, or describe it.</h2>
+    <p class="s-desc">Not everyone knows what to ask for at the salon. Mèche shows you looks worn by others, suggests some for you, or just listens. Cut, color, highlights: you choose how to find it.</p>
+  </div>
+
+  <div class="paths">
+    <div class="path dark">
+      <div class="n">Path 01 ·</div>
+      <h3>A cut you love in the <em>feed</em>? Try it on yourself.</h3>
+      <p>You scroll real looks worn by real people. This one's for you? One tap, and Mèche puts it on your own face. Not on a model.</p>
+      <div class="demo">
+        <div class="demo-ai" style="grid-template-columns:1fr 1fr;">
+          <div class="mini">
+            <img class="shot-img" src="/looks/feed-person.jpg" alt="A cut spotted on someone in the feed" />
+            <span class="tag">in the feed</span>
+          </div>
+          <div class="mini on">
+            <img class="shot-img" src="/looks/boucles.jpg" alt="The same cut on your own face" />
+            <span class="tag">on you →</span>
+          </div>
+          <div class="label" style="color:rgba(245,241,234,0.8);">
+            <span class="dot" style="background:var(--paper);"></span>
+            you spot it · you tap · it's your face
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="path coral">
+      <div class="n">Path 02 ·</div>
+      <h3>The AI <em>suggests for you</em>.</h3>
+      <p>The AI looks at your face, your style, your saved looks, and suggests a cut, a color or a balayage made for you. With the why.</p>
+      <div class="demo">
+        <div class="demo-ai">
+          <div class="mini on">
+            <img class="shot-img" src="/looks/boucles.jpg" alt="AI suggestion for you" />
+            <span class="tag">picked for you</span>
+          </div>
+          <div class="mini">
+            <img class="shot-img" src="/looks/carre.jpg" alt="Another AI suggestion" />
+            <span class="tag">or maybe…</span>
+          </div>
+          <div class="label" style="color:rgba(245,241,234,0.8);">
+            <span class="dot" style="background:var(--paper);"></span>
+            oval face · streetwear · spring
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="path">
+      <div class="n">Path 03 ·</div>
+      <h3>Or <em>describe it.</em></h3>
+      <p>"A soft caramel bob, right at the shoulder." You type or you dictate, in English or in French. Mèche gets it and shows you, no salon vocabulary needed.</p>
+      <div class="demo">
+        <div class="demo-prompt">
+          <span class="opa">"A soft caramel bob,</span><br/>
+          right at the shoulder…"<span class="cur"></span>
+          <div class="examples">
+            <span class="ex">Chestnut wolf cut</span>
+            <span class="ex">Honey highlights</span>
+            <span class="ex">Cool balayage</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BEFORE / AFTER ============ -->
+<section class="s" style="padding-top: 32px;">
+  <div class="s-head">
+    <span class="s-eyebrow">One try · then another · then another</span>
+    <h2 class="s-title">One look at a time. <em>As many</em> as you want.</h2>
+    <p class="s-desc">Mèche generates one photo at a time. Your real face, that exact look, in HD. Try one, keep it, go again. Your wardrobe lines them up to compare.</p>
+  </div>
+  <div class="ba-strip">
+    <div class="frame"><img class="shot-img" src="/looks/balayage.jpg" alt="Same face, caramel balayage" /><span class="tag">Caramel balayage</span><span class="num">·01</span></div>
+    <div class="frame"><img class="shot-img" src="/looks/pixie.jpg" alt="Same face, pixie cut" /><span class="tag">Brunette pixie</span><span class="num">·02</span></div>
+    <div class="frame"><img class="shot-img" src="/looks/boucles.jpg" alt="Same face, copper curls" /><span class="tag">Copper curls</span><span class="num">·03</span></div>
+    <div class="frame"><img class="shot-img" src="/looks/carre.jpg" alt="Same face, sleek bob" /><span class="tag">Sleek bob</span><span class="num">·04</span></div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="s-head">
+      <span class="s-eyebrow" style="color:var(--coral);">How it works</span>
+      <h2 class="s-title">A selfie. A <em>look.</em> Thirty seconds.</h2>
+      <p class="s-desc">Selfie, pick your path, try. Each generation creates one photo, yours, that exact look. The first render is on us, so you can taste it. Then you decide if you keep going.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="n">Step 01 ·</div>
+        <h4>A <em>selfie</em>, face in the frame.</h4>
+        <p>Good light, we tell you when it's right. Mèche detects your face, your skin, your hair color and texture.</p>
+      </div>
+      <div class="step">
+        <div class="n">Step 02 ·</div>
+        <h4>Pick your <em>path.</em></h4>
+        <p>Spot a look in the feed, let the AI suggest, or describe it. You can mix all three.</p>
+      </div>
+      <div class="step">
+        <div class="n">Step 03 ·</div>
+        <h4>Try. Compare. <em>Keep.</em></h4>
+        <p>One photo at a time, side by side with your current self. Save your favorites to your wardrobe. Come back anytime.</p>
+      </div>
+      <div class="step">
+        <div class="n">Step 04 ·</div>
+        <h4>Booking, <em>soon.</em></h4>
+        <p>For now, download your render and show it to your stylist. In-app booking is coming next.</p>
+        <div class="opt">Soon</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 REASONS ============ -->
+<section class="s" id="why">
+  <div class="s-head">
+    <span class="s-eyebrow">Why Mèche · three reasons</span>
+    <h2 class="s-title">Three reasons to never <em>regret</em> your look again.</h2>
+    <p class="s-desc">Everyone has a hair fail story. A bad cut, a color that came out too warm, a balayage gone brassy. Mèche exists so it stays a story from the past.</p>
+  </div>
+
+
+  <div class="reasons">
+    <div class="reason span-3 coral">
+      <div class="num">01 ·</div>
+      <h3>You see <em>your actual</em> face.<br/>Not a model.</h3>
+      <p>A Mèche render is your head, your skin, your light. Not a stock photo with a wig on top. What you see is what you'll get.</p>
+      <div class="viz">0 models · 0 wigs · 0 stock photos</div>
+    </div>
+    <div class="reason span-3 dark">
+      <div class="num">02 ·</div>
+      <h3>No more <em>guessing</em> the vocabulary.</h3>
+      <p>"Something medium length, layered, but not a mullet. With highlights, not too warm." Mèche turns what you say into a look your stylist recognizes. You walk into the salon with the image. Not a messy Pinterest board.</p>
+      <div class="viz">you describe · they recognize · same wavelength</div>
+    </div>
+
+    <div class="reason span-6 cream">
+      <div class="num">03 ·</div>
+      <h3>Booking, <em>soon.</em></h3>
+      <p>First you see. In-app booking, finding a stylist near you who can do your look, is coming next. Until then, download your render and show it.</p>
+      <div class="viz">try-on first · booking soon</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="s" style="padding-top: 0;">
+  <div class="quotes">
+    <div class="quote">
+      <q>I tried <em>forty cuts</em> in one evening. By morning I had my answer. By Tuesday, my stylist had it in her hands.</q>
+      <div class="who">
+        <div class="av"></div>
+        <div class="who-text"><b>Camille, 26</b><span>Paris 11e · 12 looks saved</span></div>
+      </div>
+    </div>
+    <div class="quote">
+      <q>First time I ever walked into a salon <em>knowing</em> what I want. Changed my hair life, honestly.</q>
+      <div class="who">
+        <div class="av" style="background:linear-gradient(135deg,#C9B9A0,#2a2520);"></div>
+        <div class="who-text"><b>Yanis, 31</b><span>Lyon · wolf cut for 6 months</span></div>
+      </div>
+    </div>
+    <div class="quote">
+      <q>The most <em>honest</em> app I've installed. No ads, no freemium traps, no fake brand DMs.</q>
+      <div class="who">
+        <div class="av" style="background:linear-gradient(135deg,#f0e2cf,#b07f3c);"></div>
+        <div class="who-text"><b>Margaux, 24</b><span>Marseille · ambassador</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section class="s" id="get">
+  <div class="plans-head">
+    <div>
+      <span class="s-eyebrow">AI credits · no subscription</span>
+      <h2 class="s-title">You pay for <em>the tries.</em><br/>Not a subscription.</h2>
+      <p class="s-desc">Your first try is free. After that, AI credits. 1 credit = 1 HD photo, no watermark. Credits <em>never</em> expire.</p>
+    </div>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Taste</em></div>
+        <div class="plan-price"><span class="big">€0.99</span></div>
+        <div class="plan-credits">5 AI credits · €0.20 / try</div>
+        <div class="plan-sub">For when you can't pick between two looks.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>5 tries</b> in HD</span></li>
+        <li><span class="c">↳</span><span>All three paths · feed, AI, prompt</span></li>
+        <li><span class="c">↳</span><span>Side-by-side compare</span></li>
+        <li><span class="c">↳</span><span>Export without watermark</span></li>
+      </ul>
+      <a href="#download" class="btn btn-ghost btn-full" data-umami-event="cta-download" data-umami-event-location="pricing-taste">Get the app <span class="arrow">↗</span></a>
+    </div>
+
+    <div class="plan pro">
+      <div class="plan-badge">Most popular</div>
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Star</em></div>
+        <div class="plan-price"><span class="big">€2.99</span></div>
+        <div class="plan-credits">20 AI credits · €0.15 / try</div>
+        <div class="plan-sub">To really make up your mind.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>20 tries</b> in HD</span></li>
+        <li><span class="c">↳</span><span><b>Unlimited</b> wardrobe</span></li>
+        <li><span class="c">↳</span><span>All three paths · feed, AI, prompt</span></li>
+        <li><span class="c">↳</span><span>One-tap sharing</span></li>
+        <li><span class="c">↳</span><span>Save <b>25%</b> vs Pack Taste</span></li>
+      </ul>
+      <a href="#download" class="btn btn-primary btn-full" data-umami-event="cta-download" data-umami-event-location="pricing-star">Get the app <span class="arrow">↗</span></a>
+    </div>
+
+    <div class="plan lite">
+      <div class="plan-badge">Best value</div>
+      <div class="plan-head">
+        <div class="plan-name">Pack <em>Pro</em></div>
+        <div class="plan-price"><span class="big">€5.99</span></div>
+        <div class="plan-credits">50 AI credits · €0.12 / try</div>
+        <div class="plan-sub">For the chronically undecided.</div>
+      </div>
+      <ul class="plan-list">
+        <li><span class="c">↳</span><span><b>50 tries</b> in HD</span></li>
+        <li><span class="c">↳</span><span>Everything in Star</span></li>
+        <li><span class="c">↳</span><span>Early access to new cuts</span></li>
+        <li><span class="c">↳</span><span><b>4K</b> resolution for your book</span></li>
+        <li><span class="c">↳</span><span>Save <b>40%</b> vs Pack Taste</span></li>
+      </ul>
+      <a href="#download" class="btn btn-ghost btn-full" data-umami-event="cta-download" data-umami-event-location="pricing-pro">Get the app <span class="arrow">↗</span></a>
+    </div>
+  </div>
+
+  <div class="plans-foot">
+    <span>Credits never expire.</span>
+    <span>One-time payment · zero subscription.</span>
+    <span>Your selfies, encrypted on our servers.</span>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="s" id="faq" style="max-width: 920px;">
+  <div class="s-head">
+    <span class="s-eyebrow">FAQ</span>
+    <h2 class="s-title">The questions <em>we get.</em></h2>
+  </div>
+
+  <div class="faq">
+    <details class="faq-item" open>
+      <summary>Is the render actually realistic?<span class="icon">+</span></summary>
+      <p>Yes. Mèche uses a model trained on real cuts, not avatars. It keeps your skin, your light, your features, and only changes the hair. You can compare before and after in the app. If a render looks off, report it and we fix it.</p>
+    </details>
+    <details class="faq-item">
+      <summary>The business model, plainly?<span class="icon">+</span></summary>
+      <p>Your first try is free. After that, you buy AI credits: <b>1 credit = 1 photo generated in HD, exported without watermark.</b> Three packs: <b>5 credits at €0.99, 20 credits at €2.99 (most popular), 50 credits at €5.99 (best value).</b> No subscription, no monthly charge, no card required for the free try. Purchased credits never expire.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Does it work on curly / coily / textured hair?<span class="icon">+</span></summary>
+      <p>Yes. We trained the model on every hair type (1A to 4C), every skin tone, every gender. If a texture or color doesn't render well, write to us, we iterate.</p>
+    </details>
+    <details class="faq-item">
+      <summary>What about the "book a stylist" part?<span class="icon">+</span></summary>
+      <p>It's coming soon. For now, once you've picked your cut, you download the image and show it to your stylist. In-app booking is in the works: finding a stylist near you who can do your look, with their book and their slots.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Which countries?<span class="icon">+</span></summary>
+      <p>The try-on works everywhere in the world, right now. In-app booking will land first in France (Paris, Lyon, Marseille, Bordeaux, Lille, Nantes), then Italy and Spain.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="final" id="download">
+  <h2>See yourself <em>first.</em><br/>Change after.</h2>
+  <p class="sub">Free to download. First try on us. No card required.</p>
+  <div class="stores">
+    <a href="https://apps.apple.com/app/m%C3%A8che/id6777728552" class="store" aria-label="Download on the App Store" data-umami-event="store-ios">
+      <svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>
+      <span class="txt"><span class="small">Download on the</span><span class="big">App Store</span></span>
+    </a>
+    <span class="store soon" role="note" aria-label="Soon on Google Play" data-umami-event="store-android">
+      <svg class="glyph" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>
+      <span class="txt"><span class="small">Soon on</span><span class="big">Google Play</span></span>
+    </span>
+  </div>
+  <p class="try-online">Or without installing anything: <a href="/studio?lang=en" data-umami-event="cta-studio" data-umami-event-location="final">try it online, in your browser ↗</a></p>
+</section>
+
+<!-- ============ FOOTER ============ -->
 <footer class="site">
   <div class="foot-inner">
     <div class="foot-top">
       <div>
-        <a href="/" class="wm" aria-label="Mèche">m<span class="gw">e</span>che</a>
+        <a href="/en" class="wm" aria-label="Mèche">m<span class="gw">e</span>che</a>
         <p class="tag">See yourself first. Change after. Paris to everywhere.</p>
       </div>
       <div class="foot-col">
         <h5>Product</h5>
-        <a href="/#paths">Try-on</a>
-        <a href="/#how">How it works</a>
-        <a href="/#why">Why Mèche</a>
-        <a href="/#download">Download</a>
+        <a href="/en#paths">Try-on</a>
+        <a href="/en#how">How it works</a>
+        <a href="/en#why">Why Mèche</a>
+        <a href="/studio?lang=en" data-umami-event="cta-studio" data-umami-event-location="footer">Try online</a>
+        <a href="/en#download">Download</a>
       </div>
       <div class="foot-col">
         <h5>Stylists</h5>
@@ -63,6 +400,54 @@
     </div>
   </div>
 </footer>
+
+<script>
+  // Hero try-on — one face, auto-cycling through four real looks
+  (function(){
+    const shot = document.getElementById('hero-shot');
+    const which = document.getElementById('hero-which');
+    if (!shot || !which) return;
+
+    const looks = [
+      { img: '/looks/pixie.jpg',    name: 'Brunette <em>pixie</em>' },
+      { img: '/looks/balayage.jpg', name: 'Caramel <em>balayage</em>' },
+      { img: '/looks/boucles.jpg',  name: 'Copper <em>curls</em>' },
+      { img: '/looks/carre.jpg',    name: 'Sleek <em>bob</em>' },
+    ];
+
+    // preload so swaps don't flash
+    looks.forEach(l => { const im = new Image(); im.src = l.img; });
+
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % looks.length;
+      shot.src = looks[i].img;
+      which.innerHTML = looks[i].name;
+    }, 2600);
+  })();
+
+  // Platform-aware "Get the app" button(s): iOS -> App Store, Android -> Play,
+  // desktop/unknown -> the #download section (which shows both badges).
+  // PLAY_URL stays null until the app ships on Android: an Android visitor keeps the neutral
+  // button to #download, where the Play badge says "Soon". An honest announcement beats a dead link.
+  (function(){
+    const APPSTORE_URL = 'https://apps.apple.com/app/m%C3%A8che/id6777728552';
+    const PLAY_URL = null;    // TODO: fill in at Google Play release
+    const APPLE = '<svg class="glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>';
+    const PLAY = '<svg class="glyph" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>';
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/.test(ua);
+    let cfg = null;
+    if (isAndroid && PLAY_URL) cfg = { href: PLAY_URL, icon: PLAY, small: 'Get it on', big: 'Google Play' };
+    else if (isIOS && APPSTORE_URL) cfg = { href: APPSTORE_URL, icon: APPLE, small: 'Download on the', big: 'App Store' };
+    if (!cfg) return; // desktop/unknown: keep the neutral button -> #download
+    document.querySelectorAll('.js-store').forEach(btn => {
+      btn.setAttribute('href', cfg.href);
+      btn.innerHTML = cfg.icon + '<span class="txt"><span class="small">' + cfg.small + '</span><span class="big">' + cfg.big + '</span></span>';
+    });
+  })();
+</script>
 
 </body>
 </html>

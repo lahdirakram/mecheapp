@@ -195,11 +195,32 @@ studio depuis la même origine.
 
 ```
 visiteur ──► Cloudflare ──► service "meche-site"  (Root Directory: web)
-                                 ├── /               site/index.html
+                                 ├── /               site/index.html      (landing FR)
+                                 ├── /en             site/en/index.html   (landing EN)
+                                 ├── /fr             301 -> /
                                  ├── /privacy /terms  site/{fr,en}/*.html  (langue detectee)
                                  ├── /looks/*.jpg     site/looks/
                                  └── /studio/*        dist/  (build Vite)
 ```
+
+**La landing est bilingue et dupliquée à la main** : `site/index.html` (FR) et `site/en/index.html`
+(EN) sont deux copies du même HTML, à modifier ENSEMBLE. Le style est partagé dans
+`site/landing.css` pour que la mise en page, elle, ne puisse pas diverger. `/fr` redirige vers `/`
+(une seule URL canonique par langue) ; l'ancien hub légal qui vivait sur `/fr` et `/en` a disparu,
+ses liens sont dans le footer de chaque page.
+
+**La langue sur `/` est détectée sans sacrifier le SEO** (détail dans l'en-tête de `server.js`) :
+`?lang` → cookie `lang` → `Accept-Language` → fr. Un anglophone sur `/` part en **302** (jamais
+301) vers `/en` ; un crawler, sans cookie ni Accept-Language, voit toujours le français stable sur
+`/` et suit les `hreflang`. Le cookie n'est posé que sur un choix EXPLICITE (visiter `/en`, `/fr`,
+ou un `?lang=`), et il l'emporte sur `Accept-Language`, sinon le bouton FR de `/en` rebondirait.
+C'est pour ça que ce bouton pointe sur `/?lang=fr`, pas sur `/`.
+
+**Le studio est bilingue aussi** : tout le texte vit dans `src/lib/i18n.ts` (dictionnaire FR/EN,
+détection `?lang` → localStorage → cookie → `navigator.language`), les landings passent
+`/studio?lang=xx`, et le bouton FR/EN du header bascule à chaud. Le choix survit au redirect OAuth
+via localStorage. Ne JAMAIS remettre une chaîne en dur dans `src/` : elle sortirait en français
+pour tout le monde.
 
 ### Creer le service
 
