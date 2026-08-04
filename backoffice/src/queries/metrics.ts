@@ -66,6 +66,8 @@ x as (
   select (count(*))::int as excluded_count from profiles where id in (select id from excl)
 ),
 u as (
+  -- Un tombstone (compte supprimé, 0035) n'est plus un compte : hors des compteurs de comptes.
+  -- Son argent et ses essais restent comptés par c/g/s, qui lisent scope en entier.
   select
     (count(*))::int                                                              as users_total,
     (count(*) filter (where role::text = 'b2c'))::int                            as users_b2c,
@@ -73,6 +75,7 @@ u as (
     (count(*) filter (where ${inPeriod('created_at')}))::int                      as users_new,
     (count(*) filter (where id not in (select user_id from activated)))::int      as users_inactive
   from scope
+  where deleted_at is null
 ),
 g as (
   select

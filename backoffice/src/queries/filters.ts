@@ -61,8 +61,11 @@ export const SCOPE_CTE = `
   activated as (
     select distinct user_id from generations where status = 'done'
   ),
+  -- Les comptes supprimés (deleted_at non nul, 0035) RESTENT dans scope : leur revenu et leurs
+  -- essais doivent compter dans les métriques, c'est la raison d'être des tombstones. Seuls les
+  -- compteurs de COMPTES (bloc u de metrics.ts) les écartent, via cette colonne.
   scope as (
-    select p.id, p.role, p.created_at
+    select p.id, p.role, p.created_at, p.deleted_at
     from profiles p
     where p.id not in (select id from excl)
       and ($2 = 'all' or p.role::text = $2)

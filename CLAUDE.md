@@ -234,6 +234,16 @@ wrong belief survives across sessions.
   (cron `reap-stuck-generations`, toutes les 5 min, seuil 10 min — mesuré : p99 réel = 15,5 s ;
   ne pas descendre sous la minute, on rembourserait des générations vivantes). Ce cron ne voit PAS
   les orphelins d'avant 0030 : leur débit n'a pas de `gen:<id>` et leur ligne n'existe pas.
+- **La suppression de compte ANONYMISE, elle n'efface plus l'historique (0035).** Avant, la cascade
+  `auth.users → profiles → tout` emportait le ledger : un achat RevenueCat pouvait n'avoir AUCUNE
+  trace en DB (vécu le 2026-08-04 : achat 0,99 € crédité à 13h29:32, compte supprimé 18 s après,
+  backoffice aveugle). Depuis 0035, un trigger `on_auth_user_deleted_scrub` garde
+  `credit_transactions`/`generations`/`suggest_calls`/`subscriptions` sous un tombstone `profiles`
+  (`deleted_at`), et efface l'identité (auth, looks, devices, messages, chemins d'images). Les
+  invariants et le POURQUOI : `docs/security-model.md` § 0035. **Le check** si une transaction RC
+  semble sans trace : l'app_user_id complet est dans l'URL du Customer profile RC, l'Event Details
+  montre la réponse exacte du webhook (`granted:true`), et côté DB chercher le tombstone
+  (`profiles.deleted_at`) avant `private.signup_marks`.
 - **`credit_transactions.external_id` doit porter `gen:<generationId>` sur un débit de génération.**
   Il valait NULL, donc un débit ne pointait sur rien : c'est précisément pourquoi la perte ci-dessus
   est restée invisible six semaines (sans lien on ne peut que COMPTER les débits et comparer à des
@@ -337,9 +347,11 @@ npx supabase@latest functions deploy <fn> --project-ref <ref>
 Two Supabase refs, for copy/paste: staging `vefxfjcdvstjwieasrbq`, prod `hqhnvjjbohzktoapsytj`.
 
 ## Legal pages are a contract with the code
-`web/site/{fr,en}/privacy.html` is public and enforceable. Two commitments there are backed by
+`web/site/{fr,en}/privacy.html` is public and enforceable. Three commitments there are backed by
 code, and changing either side without the other makes the policy false:
-- account deletion erases everything **except** a 12-month email hash (anti-abuse, migration 0023)
+- account deletion erases identity (auth user, names, photos, devices, messages) but **keeps an
+  anonymised history** (ledger, generation log without images) under a tombstone profile (0035)
+- the 12-month email hash (anti-abuse, migration 0023)
 - the retention period is honoured by the `purge-signup-marks` cron (0024)
 
 Served by `web/server.js`, deployed separately from the app on Railway.

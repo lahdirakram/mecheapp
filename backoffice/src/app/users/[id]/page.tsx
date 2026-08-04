@@ -71,13 +71,15 @@ export default async function UserPage({
       <div className="head">
         <div>
           <h1>
-            {user.display_name || 'Sans nom'}
+            {user.display_name || (user.deleted_at ? 'Compte supprimé' : 'Sans nom')}
             {user.role === 'pro' && <> <span className="badge badge--pro">pro</span></>}
             {user.is_excluded && <> <span className="badge badge--excluded">interne</span></>}
+            {user.deleted_at && <> <span className="badge badge--deleted">supprimé</span></>}
           </h1>
           <p className="sub">
-            {user.email ?? 'email inconnu'}
+            {user.email ?? (user.deleted_at ? 'historique anonymisé' : 'email inconnu')}
             {user.handle ? ` · @${user.handle}` : ''} · inscrit le {fmtDateTime(user.created_at)}
+            {user.deleted_at && ` · supprimé le ${fmtDateTime(user.deleted_at)}`}
             {user.is_excluded && ' · compte exclu des chiffres du dashboard'}
           </p>
         </div>

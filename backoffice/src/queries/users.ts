@@ -20,6 +20,8 @@ export type UserRow = {
   suggs: number;
   /** Compte interne (EXCLUDED_EMAILS) : visible ici, mais hors de tous les chiffres. */
   is_excluded: boolean;
+  /** Compte supprimé (0035) : tombstone anonyme qui porte l'historique. Marqué, pas masqué. */
+  deleted_at: string | null;
   /** Inscription jamais terminée : le code email n'a pas été validé. Même règle que la fiche. */
   is_unconfirmed: boolean;
   total_count: number;
@@ -79,6 +81,7 @@ export async function listUsers(scope: Scope, p: ListParams): Promise<UserRow[]>
       pr.role::text                            as role,
       pr.lang,
       pr.created_at,
+      pr.deleted_at,
       u.email,
       u.last_sign_in_at,
       (coalesce(bal.balance, 0))::int          as balance,
@@ -167,6 +170,8 @@ export type UserDetail = {
   suggs: number;
   looks: number;
   is_excluded: boolean;
+  /** Compte supprimé (0035) : l'historique ci-dessus est tout ce qui reste. */
+  deleted_at: string | null;
 };
 
 export async function getUser(id: string): Promise<UserDetail | null> {
@@ -179,6 +184,7 @@ export async function getUser(id: string): Promise<UserDetail | null> {
       pr.lang,
       pr.member_since,
       pr.created_at,
+      pr.deleted_at,
       u.email,
       u.phone,
       u.email_confirmed_at,

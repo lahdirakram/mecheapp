@@ -569,6 +569,10 @@ input[type='search']:focus {
   background: rgba(74, 136, 224, 0.13);
   color: var(--community);
 }
+.badge--deleted {
+  background: rgba(200, 65, 43, 0.13);
+  color: var(--warn);
+}
 .badge--excluded {
   background: repeating-linear-gradient(
     -45deg,

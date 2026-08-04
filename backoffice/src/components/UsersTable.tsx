@@ -71,7 +71,11 @@ export function UsersTable({
                 {fmtDate(u.created_at)}
                 <div className="mono">{shortId(u.id)}</div>
               </td>
-              <td>{u.email ?? <span className="dim">— (compte auth absent)</span>}</td>
+              <td>
+                {u.email ?? (
+                  <span className="dim">{u.deleted_at ? '— (compte supprimé)' : '— (compte auth absent)'}</span>
+                )}
+              </td>
               <td>
                 <span className="strong">{u.display_name || <span className="dim">sans nom</span>}</span>
                 {u.handle && <div className="mono">@{u.handle}</div>}
@@ -94,6 +98,14 @@ export function UsersTable({
                     {' '}
                     <span className="badge badge--pending" title="Inscription non terminée : email jamais confirmé">
                       non confirmé
+                    </span>
+                  </>
+                )}
+                {u.deleted_at && (
+                  <>
+                    {' '}
+                    <span className="badge badge--deleted" title="Compte supprimé : historique anonymisé conservé (0035)">
+                      supprimé
                     </span>
                   </>
                 )}

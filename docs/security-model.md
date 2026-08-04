@@ -177,13 +177,28 @@ set local role authenticated;
 -- puis tenter lectures et écritures, dans une transaction annulée
 ```
 
-## Ce qui reste ouvert
+### Suppression de compte = anonymisation, pas effacement total (0035)
 
-- **`profiles` a encore le grant `DELETE`** pour `authenticated`. Inoffensif aujourd'hui : aucune
-  policy `DELETE` n'existe, donc la RLS refuse. Mais c'est le même motif — un droit inutilisé dont
-  l'innocuité dépend d'une policy absente ailleurs. Et `profiles` cascade sur `generations` **et**
-  `credit_transactions` : une future policy de suppression rouvrirait la chaîne de quota. À révoquer
-  au prochain changement de schéma.
+La cascade `auth.users → profiles → tout` est retirée. Un trigger `on_auth_user_deleted_scrub`
+(BEFORE DELETE sur `auth.users`, même patron et même raison que le marqueur d'email : couvrir
+dashboard et API admin, jamais bloquer une suppression) transforme le compte en **tombstone** :
+
+- **conservé, pseudonyme** : `credit_transactions` (le ledger), `generations` (dates et statuts
+  seulement : chemins d'images annulés, `brief` vidé car son champ `prompt` est du texte libre),
+  `suggest_calls`, `subscriptions`, et la ligne `profiles` scrubée (`display_name=''`,
+  `handle=null`, `deleted_at=now()`). C'est ce qui garde le revenu et les compteurs de coût
+  exacts dans le backoffice — et c'est annoncé dans `web/site/{fr,en}/privacy.html` (base légale :
+  obligation comptable + intérêt légitime). **Toute modification du périmètre conservé doit être
+  reportée dans ces pages.**
+- **effacé** : l'utilisateur auth (email), `looks`, `devices`, `feed_events`, `requests` +
+  `messages`, et les fichiers storage (par `delete-account` ; une suppression dashboard laisse les
+  fichiers à `purge-orphan-media`, comme avant).
+
+Un tombstone est invisible pour tout client (RLS `auth.uid()`), et le backoffice l'affiche
+« marqué, pas masqué » (badge supprimé) en l'écartant des compteurs de comptes seulement.
+
+## Ce qui reste ouvert
+- ~~`profiles` a encore le grant `DELETE` pour `authenticated`~~ — révoqué en 0035.
 - **`delete-account` ne vide pas le bucket `portfolio`**, qui est public. Sans effet tant que le côté
   Pro n'a pas d'utilisateur (0 en prod), à corriger avant son lancement — une ligne dans la boucle
   des buckets.

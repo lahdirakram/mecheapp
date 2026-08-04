@@ -1,8 +1,10 @@
 // POST /functions/v1/delete-account
 // Auth: user JWT. Permanently deletes the caller's account — required by the App Store for any app
 // with account creation. Removes the user's private images (storage isn't cascaded), then deletes
-// the auth user, which cascades EVERY DB row (profiles → credits, generations, looks, devices, ...)
-// via the ON DELETE CASCADE chain in 0001_init.sql.
+// the auth user. Since 0035 there is NO cascade into the app tables: the on_auth_user_deleted_scrub
+// trigger anonymises instead (keeps credit_transactions / generations / suggest_calls under a
+// tombstone profiles row, erases looks, devices, messages, image paths). The accounting history is
+// deliberately retained, pseudonymised — see 0035 and web/site/{fr,en}/privacy.html.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { cors } from '../_shared/cors.ts';
 
