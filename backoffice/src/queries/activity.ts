@@ -14,6 +14,16 @@ export type Brief = {
   mood?: string;
 };
 
+/** Contenu d'une suggestion conservé en base (0038). Null = avant 0038, échec, ou compte scrubé. */
+export type SuggestionContent = {
+  name?: string;
+  description?: string;
+  reasons?: string[];
+  prompt?: string;
+  lang?: string;
+  model?: string;
+} | null;
+
 export type Activity = {
   kind: 'generation' | 'suggestion';
   id: string;
@@ -27,16 +37,42 @@ export type Activity = {
   error: string | null;
   look_name: string | null;
   loved: boolean | null;
+  suggestion: SuggestionContent;
+  /** Coût mesuré (registre ai_calls, 0036), micro-USD, toutes tentatives. Null = pas couvert. */
+  cost_micro_usd: number | null;
   total_count: number;
 };
 
 /**
+ * Coût mesuré d'une génération : somme de SES lignes ai_calls (try_on + normalisation de refine,
+ * retries compris). Jointure exacte par generation_id.
+ */
+const GEN_COST_LATERAL = `
+      left join lateral (
+        select (sum(cost_micro_usd))::float8 as cost_micro_usd
+        from ai_calls where generation_id = g.id
+      ) ac on true`;
+
+/**
+ * Coût mesuré d'une suggestion : jointure exacte par ai_calls.suggest_call_id (0037 : le RPC de
+ * rate-limit renvoie l'id de la ligne qu'il insère, la fonction edge le journalise). Aucune ligne
+ * 'suggest' n'a été écrite en prod entre 0036 et 0037, donc pas de repli pour un entre-deux.
+ */
+const SUGG_COST_LATERAL = `
+      left join lateral (
+        select (a.cost_micro_usd)::float8 as cost_micro_usd
+        from ai_calls a
+        where a.suggest_call_id = s.id
+        limit 1
+      ) ac on true`;
+
+/**
  * Timeline d'activité : générations + suggestions, fusionnées et triées par date.
  *
- * Une suggestion n'a QUE sa date : `suggest_calls` (0009_store_hardening.sql:47-53) est un simple
- * compteur pour le rate-limit, et suggest/index.ts:73-74 renvoie le contenu au client sans jamais
- * le persister. D'où les colonnes nulles castées explicitement (les branches d'un UNION doivent
- * avoir des types alignés).
+ * `suggest_calls` est né simple compteur de rate-limit (0009) ; depuis 0038 il porte aussi le
+ * contenu proposé (`suggestion` jsonb), vidé par le scrub à la suppression du compte. Les
+ * colonnes propres aux générations restent nulles côté suggestion (les branches d'un UNION
+ * doivent avoir des types alignés), et inversement.
  *
  * Le nom lisible d'une génération vient de `looks` (joint par generation_id) : `brief` ne contient
  * que lookId / prompt / sliders, pas de libellé.
@@ -56,11 +92,14 @@ export async function listActivity(userId: string, page: number, size: number) {
         g.result_path,
         g.error,
         l.name              as look_name,
-        l.loved
+        l.loved,
+        null::jsonb         as suggestion,
+        ac.cost_micro_usd
       from generations g
       left join lateral (
         select name, loved from looks where generation_id = g.id order by created_at limit 1
       ) l on true
+${GEN_COST_LATERAL}
       where g.user_id = $1
 
       union all
@@ -77,8 +116,11 @@ export async function listActivity(userId: string, page: number, size: number) {
         null::text,
         null::text,
         null::text,
-        null::boolean
+        null::boolean,
+        s.suggestion,
+        ac.cost_micro_usd
       from suggest_calls s
+${SUGG_COST_LATERAL}
       where s.user_id = $1
     )
     select *, (count(*) over ())::int as total_count
@@ -129,12 +171,15 @@ export async function listGlobalActivity(
         g.error,
         l.name              as look_name,
         l.loved,
+        null::jsonb         as suggestion,
+        ac.cost_micro_usd,
         g.user_id
       from generations g
       join scope sc on sc.id = g.user_id
       left join lateral (
         select name, loved from looks where generation_id = g.id order by created_at limit 1
       ) l on true
+${GEN_COST_LATERAL}
       where ${ATTEMPT_OK} and ${inPeriod('g.created_at')}
 
       union all
@@ -152,9 +197,12 @@ export async function listGlobalActivity(
         null::text,
         null::text,
         null::boolean,
+        s.suggestion,
+        ac.cost_micro_usd,
         s.user_id
       from suggest_calls s
       join scope sc on sc.id = s.user_id
+${SUGG_COST_LATERAL}
       where ${inPeriod('s.created_at')}
     )
     select

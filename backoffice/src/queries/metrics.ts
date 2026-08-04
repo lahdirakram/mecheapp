@@ -27,6 +27,24 @@ export type Metrics = {
 
   sugg_total: number;
 
+  /** Essais ayant réellement atteint l'appel Gemini payant (tout sauf l'échec `no_credits`). */
+  gens_billed: number;
+
+  /**
+   * Coûts EXACTS depuis le registre ai_calls (0036) : micro-USD sommés depuis l'usageMetadata
+   * de chaque appel. Les compteurs *_exact disent combien d'événements sont couverts, pour
+   * estimer le reste (l'historique d'avant 0036) au prix unitaire.
+   */
+  gen_exact_micro_usd: number;
+  gens_exact: number;
+  gen_retries: number;
+  sugg_exact_micro_usd: number;
+  sugg_exact: number;
+  /** Feed : coût exact porté par gen_meta.cost_micro_usd (survit à copy-feed), estimation sinon. */
+  feed_exact_micro_usd: number;
+  feed_exact_items: number;
+  feed_est_cents: number;
+
   credits_bought: number;
   credits_used: number;
   credits_free: number;
@@ -83,9 +101,37 @@ g as (
     (count(*) filter (where status = 'done'))::int        as gens_done,
     (count(*) filter (where status = 'failed'))::int      as gens_failed,
     (count(*) filter (where status = 'pending'))::int     as gens_pending,
-    (count(distinct user_id) filter (where ${ATTEMPT_OK}))::int as users_tried
+    (count(distinct user_id) filter (where ${ATTEMPT_OK}))::int as users_tried,
+    -- Facturés : tout essai sauf l'échec 'no_credits', seul cas qui s'arrête AVANT l'appel Gemini
+    -- (generate/index.ts). Les 'pending' comptent (l'appel est parti), les refus/reaped aussi
+    -- (surestimation prudente : un refus est facturé en entrée seulement).
+    (count(*) filter (where not (status = 'failed' and error = 'no_credits')))::int as gens_billed
   from generations
   where user_id in (select id from scope) and ${inPeriod('created_at')}
+),
+-- Le registre exact (0036) : une ligne par appel Gemini sortant, retries et refus compris.
+-- Le feed n'y est pas lu (ses lignes restent sur la lane qui a généré, voir le CTE f).
+a as (
+  select
+    (coalesce(sum(cost_micro_usd) filter (where kind in ('try_on', 'refine_normalize')), 0))::float8 as gen_exact_micro_usd,
+    (count(distinct generation_id) filter (where kind = 'try_on'))::int                              as gens_exact,
+    (count(*) filter (where kind = 'try_on' and attempt > 1))::int                                   as gen_retries,
+    (coalesce(sum(cost_micro_usd) filter (where kind = 'suggest'), 0))::float8                       as sugg_exact_micro_usd,
+    (count(*) filter (where kind = 'suggest'))::int                                                  as sugg_exact
+  from ai_calls
+  where kind <> 'feed' and user_id in (select id from scope) and ${inPeriod('created_at')}
+),
+-- Le feed n'appartient à personne : hors périmètre de comptes, la période s'applique seule.
+-- Seuls les items générés (gen_meta non nul) ont coûté ; les items édito à la main sont gratuits.
+-- Le coût exact voyage DANS gen_meta (cost_micro_usd, somme des tentatives de l'item) parce que
+-- copy-feed.mjs copie les feed_items d'une lane à l'autre mais pas leurs lignes ai_calls.
+f as (
+  select
+    (coalesce(sum((gen_meta->>'cost_micro_usd')::numeric) filter (where gen_meta ? 'cost_micro_usd'), 0))::float8 as feed_exact_micro_usd,
+    (count(*) filter (where gen_meta ? 'cost_micro_usd'))::int                                                    as feed_exact_items,
+    (coalesce(sum(coalesce((gen_meta->>'cost_eur')::numeric, 0.04)) filter (where not gen_meta ? 'cost_micro_usd'), 0) * 100)::float8 as feed_est_cents
+  from feed_items
+  where gen_meta is not null and ${inPeriod('created_at')}
 ),
 s as (
   select
@@ -116,7 +162,7 @@ sub as (
   from subscriptions
   where owner_id in (select id from scope)
 )
-select * from x, u, g, s, c, cl, sub
+select * from x, u, g, a, f, s, c, cl, sub
 `;
 
 export async function getMetrics(scope: Scope): Promise<Metrics> {

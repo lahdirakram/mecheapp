@@ -1,5 +1,11 @@
 // Provider-agnostic AI try-on for the Edge runtime. GeminiProvider is the default; MockProvider
 // (echoes the selfie) keeps the whole pipeline working before a key is set.
+//
+// Every paid call takes an optional `onUsage` callback, invoked with the raw usageMetadata as soon
+// as the response JSON is parsed — BEFORE any "no image" / parse error is thrown, because a blocked
+// or image-less response is still billed for its input tokens. Callers use it to feed the ai_calls
+// ledger (0036) without the return types having to carry accounting data.
+import type { GeminiUsage } from './aicost.ts';
 
 export interface Brief {
   prompt?: string;
@@ -43,7 +49,7 @@ export function buildRefinePrompt(_prevBrief: Brief, change: string): string {
 // into ONE unambiguous English imperative for the image editor. Negations/reductions are the whole
 // point — a raw foreign phrase dropped into the English edit prompt made the model do the opposite
 // (it added color for "moins de couleur"). Best-effort: callers fall back to the raw text on failure.
-export async function normalizeRefinement(opts: { apiKey: string; model: string; instruction: string }): Promise<string> {
+export async function normalizeRefinement(opts: { apiKey: string; model: string; instruction: string; onUsage?: (u: GeminiUsage) => void }): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`;
   const instruction =
     `Rewrite this short hairstyle-change request as ONE clear, unambiguous English imperative for an ` +
@@ -55,6 +61,7 @@ export async function normalizeRefinement(opts: { apiKey: string; model: string;
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`gemini ${res.status}: ${await res.text()}`);
   const j = await res.json();
+  if (j?.usageMetadata) opts.onUsage?.(j.usageMetadata as GeminiUsage);
   const text: string = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
   return text.trim() || opts.instruction;
 }
@@ -68,6 +75,7 @@ export async function generateWithGemini(opts: {
   /** Optional second reference image (e.g. the previous result during a refine pass). */
   refImageB64?: string;
   refMimeType?: string;
+  onUsage?: (u: GeminiUsage) => void;
 }): Promise<TryOnResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`;
   // Image 1 = selfie (identity), then the optional reference image, then the instruction text.
@@ -81,6 +89,8 @@ export async function generateWithGemini(opts: {
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`gemini ${res.status}: ${await res.text()}`);
   const json = await res.json();
+  // Signalé AVANT le throw "no image" ci-dessous : un refus est facturé en tokens d'entrée.
+  if (json?.usageMetadata) opts.onUsage?.(json.usageMetadata as GeminiUsage);
   // deno-lint-ignore no-explicit-any
   const parts: any[] = json?.candidates?.[0]?.content?.parts ?? [];
   const img = parts.find((p) => p.inlineData || p.inline_data);
@@ -161,6 +171,7 @@ export async function suggestWithGemini(opts: {
   mimeType: string;
   lang: 'fr' | 'en';
   exclude?: string[];
+  onUsage?: (u: GeminiUsage) => void;
 }): Promise<Suggestion> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`;
   const langName = opts.lang === 'fr' ? 'French' : 'English';
@@ -197,6 +208,7 @@ export async function suggestWithGemini(opts: {
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`gemini ${res.status}: ${await res.text()}`);
   const j = await res.json();
+  if (j?.usageMetadata) opts.onUsage?.(j.usageMetadata as GeminiUsage);
   const text: string = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
   if (!text) throw new Error('gemini: empty suggestion');
   const parsed = JSON.parse(text) as Suggestion;

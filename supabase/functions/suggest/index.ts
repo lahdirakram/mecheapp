@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { cors } from '../_shared/cors.ts';
 import { mockSuggestion, suggestWithGemini } from '../_shared/tryon.ts';
+import { logAiCall, type GeminiUsage } from '../_shared/aicost.ts';
 import { parseImageInput } from '../_shared/validate.ts';
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, 'content-type': 'application/json' } });
@@ -66,11 +67,31 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE);
     const SUGGEST_HOURLY_CAP = Number(Deno.env.get('SUGGEST_HOURLY_CAP') ?? '20'); // per user
     const SUGGEST_DAILY_CAP = Number(Deno.env.get('SUGGEST_DAILY_CAP') ?? '20000'); // global backstop, all users
-    const { data: allowed, error: rlErr } = await admin.rpc('reserve_suggest_call', { p_user: user.id, p_max: SUGGEST_HOURLY_CAP, p_daily_max: SUGGEST_DAILY_CAP });
+    // _v2 (0037) renvoie l'ID de la ligne suggest_calls insérée (null = refusé) au lieu d'un
+    // booléen : c'est ce qui permet à la ligne ai_calls ci-dessous de pointer sa suggestion.
+    const { data: reservedId, error: rlErr } = await admin.rpc('reserve_suggest_call_v2', { p_user: user.id, p_max: SUGGEST_HOURLY_CAP, p_daily_max: SUGGEST_DAILY_CAP });
     if (rlErr) throw rlErr;
-    if (!allowed) return json({ error: 'rate_limited' }, 429);
+    if (!reservedId) return json({ error: 'rate_limited' }, 429);
+    const suggestCallId = reservedId as string;
 
-    const suggestion = await suggestWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, selfieB64: selfie, mimeType: mt, lang, exclude: safeExclude });
+    // Une ligne ai_calls (0036) par appel, succès comme échec — un refus est facturé en entrée,
+    // et l'usage arrive via onUsage avant tout throw.
+    let usage: GeminiUsage | undefined;
+    let suggestion;
+    try {
+      suggestion = await suggestWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, selfieB64: selfie, mimeType: mt, lang, exclude: safeExclude, onUsage: (u) => (usage = u) });
+    } catch (e) {
+      await logAiCall(admin, { kind: 'suggest', model: GEMINI_TEXT_MODEL, user_id: user.id, suggest_call_id: suggestCallId, ok: false, error: String(e instanceof Error ? e.message : e), usage });
+      throw e;
+    }
+    await logAiCall(admin, { kind: 'suggest', model: GEMINI_TEXT_MODEL, user_id: user.id, suggest_call_id: suggestCallId, ok: true, usage });
+    // Le contenu est conservé (0038) pour l'activité du backoffice, et vidé par le scrub 0035 à la
+    // suppression du compte. Best-effort : la réponse au client ne doit jamais en dépendre.
+    try {
+      await admin.from('suggest_calls').update({ suggestion: { ...suggestion, lang, model: GEMINI_TEXT_MODEL } }).eq('id', suggestCallId);
+    } catch {
+      /* best-effort */
+    }
     return json({ ...suggestion, provider: 'gemini' });
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e);

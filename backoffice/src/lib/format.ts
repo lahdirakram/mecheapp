@@ -1,5 +1,6 @@
 const INT = new Intl.NumberFormat('fr-FR');
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+const USD = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' });
 const DATE = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short' });
 const DATETIME = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -7,6 +8,21 @@ export const fmtInt = (n: number | null | undefined) => INT.format(n ?? 0);
 
 /** Les montants circulent en centimes jusqu'à l'affichage. */
 export const fmtEurCents = (cents: number | null | undefined) => EUR.format((cents ?? 0) / 100);
+
+/** Les coûts IA circulent en micro-USD (ai_calls.cost_micro_usd), la devise de la facture Google. */
+export const fmtUsdMicro = (microUsd: number | null | undefined) => USD.format((microUsd ?? 0) / 1e6);
+
+// Un appel isolé vaut quelques centièmes de cent : 2 décimales aplatiraient tout à « 0,04 $US ».
+const USD_FINE = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+});
+
+/** Coût d'UN appel / d'UNE ligne d'activité : 4 décimales pour rester lisible à cette échelle. */
+export const fmtUsdMicroFine = (microUsd: number | null | undefined) =>
+  USD_FINE.format((microUsd ?? 0) / 1e6);
 
 export const fmtPct = (num: number, den: number, digits = 1) =>
   den > 0 ? `${((num / den) * 100).toFixed(digits).replace('.', ',')} %` : '—';

@@ -7,7 +7,14 @@ import { Pager } from '@/components/Pager';
 import { SearchBox } from '@/components/SearchBox';
 import { UsersTable } from '@/components/UsersTable';
 import { toVM } from '@/lib/activity-vm';
-import { fmtEurCents, fmtInt, fmtPct } from '@/lib/format';
+import { fmtEurCents, fmtInt, fmtPct, fmtUsdMicro } from '@/lib/format';
+import {
+  AI_IMAGE_EST_MICRO_USD,
+  AI_SUGGEST_EST_MICRO_USD,
+  eurCentsToMicroUsd,
+  microUsdToCents,
+  USD_TO_EUR,
+} from '@/lib/pricing';
 import { flatten, readInt, withParams } from '@/lib/qs';
 import {
   listGlobalActivity,
@@ -68,6 +75,22 @@ export default async function Dashboard({
   const essaisReussisSeuls = scope.attempts === 'done';
   // Dénominateur du taux d'échec : la répartition réelle, indépendante du filtre de statut.
   const gensReels = m.gens_done + m.gens_failed + m.gens_pending;
+  // Coûts Gemini, en micro-USD de bout en bout (la devise de la facture Google) : exacts
+  // (registre ai_calls, 0036) pour tout ce qui est couvert, estimés au prix unitaire pour
+  // l'historique d'avant. `max(0)` défensif : un essai peut avoir des lignes ai_calls sans être
+  // compté dans gens_billed si les filtres divergent un jour. Seuls l'équivalent entre
+  // parenthèses et la marge (soustraite d'un CA en EUR) passent par le taux de conversion.
+  const gensEstimes = Math.max(0, m.gens_billed - m.gens_exact);
+  const suggEstimes = Math.max(0, m.sugg_total - m.sugg_exact);
+  const coutEssaisMicro = m.gen_exact_micro_usd + gensEstimes * AI_IMAGE_EST_MICRO_USD;
+  const coutSuggMicro = m.sugg_exact_micro_usd + suggEstimes * AI_SUGGEST_EST_MICRO_USD;
+  const coutFeedMicro = m.feed_exact_micro_usd + eurCentsToMicroUsd(m.feed_est_cents);
+  const coutTotalMicro = coutEssaisMicro + coutSuggMicro + coutFeedMicro;
+  const margeCents = m.revenue_cents - microUsdToCents(coutTotalMicro);
+  const toutExact = gensEstimes === 0 && suggEstimes === 0 && m.feed_est_cents === 0;
+  /** USD d'abord, l'équivalent EUR entre parenthèses en secondaire. */
+  const usdEur = (microUsd: number) =>
+    `${fmtUsdMicro(microUsd)} (${fmtEurCents(microUsdToCents(microUsd))})`;
 
   return (
     <>
@@ -153,7 +176,7 @@ export default async function Dashboard({
           <MetricCard
             label="Suggestions"
             value={fmtInt(m.sugg_total)}
-            hint="date seule, aucun contenu stocké"
+            hint="contenu conservé depuis 0038, visible dans l'activité"
           />
           <MetricCard
             label="Crédits consommés"
@@ -224,6 +247,46 @@ export default async function Dashboard({
             label="Abonnements Pro actifs"
             value={fmtInt(m.subs_active)}
             hint="hors CA : aucun prix en base"
+          />
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2>Coûts IA</h2>
+          <span className="section-note">
+            {toutExact
+              ? `mesuré sur les usage metadata Gemini, retries et refus inclus, au tarif du moment de l'appel · en USD, la devise de la facture Google (équivalent EUR à ${USD_TO_EUR.toFixed(2).replace('.', ',')} €/$)`
+              : `mesuré sur les usage metadata Gemini (retries et refus inclus) ; l'historique d'avant le registre reste estimé au prix unitaire · en USD, la devise de la facture Google (équivalent EUR à ${USD_TO_EUR.toFixed(2).replace('.', ',')} €/$)`}
+          </span>
+        </div>
+        <div className="metrics">
+          <MetricCard
+            label="Coût des essais"
+            value={usdEur(coutEssaisMicro)}
+            hint={`${fmtInt(m.gens_exact)} mesurés dont ${fmtInt(m.gen_retries)} retry${m.gen_retries > 1 ? 's' : ''}${gensEstimes > 0 ? ` · ${fmtInt(gensEstimes)} estimés × 0,039 $` : ''} · ${periode}`}
+          />
+          <MetricCard
+            label="Coût des suggestions"
+            value={usdEur(coutSuggMicro)}
+            hint={`${fmtInt(m.sugg_exact)} mesurées${suggEstimes > 0 ? ` · ${fmtInt(suggEstimes)} estimées` : ''}`}
+          />
+          <MetricCard
+            label="Coût du feed"
+            value={usdEur(coutFeedMicro)}
+            hint={`${fmtInt(m.feed_exact_items)} visuels mesurés${m.feed_est_cents > 0 ? ' · le reste estimé' : ''} · tous statuts, hors périmètre de comptes`}
+          />
+          <MetricCard
+            label="Coût IA total"
+            value={usdEur(coutTotalMicro)}
+            hint={`essais + suggestions + feed · ${periode}`}
+            accent
+          />
+          <MetricCard
+            label="Marge après coût IA"
+            value={fmtEurCents(margeCents)}
+            hint="CA estimé (EUR) moins coût IA total converti"
+            estimate
           />
         </div>
       </section>

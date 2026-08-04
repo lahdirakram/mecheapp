@@ -13,6 +13,8 @@ export type ActivityVM = {
   when: string;
   title: string;
   meta: string;
+  /** Coût Gemini de la ligne, déjà formaté (« 0,0388 $US », « ≈ 0,039 $US ») ; null = rien dépensé. */
+  cost: string | null;
   status: string | null;
   selfiePath: string | null;
   resultPath: string | null;
@@ -38,8 +40,9 @@ export function ActivityList({ items }: { items: ActivityVM[] }) {
   return (
     <div>
       {items.map((it) => {
-        // Une suggestion n'a rien à déplier : seule sa date est en base.
-        const expandable = it.kind === 'generation';
+        // Une génération se déplie sur l'avant/après ; une suggestion, sur son contenu (0038).
+        // Une vieille suggestion sans contenu n'a rien à montrer.
+        const expandable = it.kind === 'generation' || it.brief != null;
         const isOpen = open === it.id;
         return (
           <div className="act" key={`${it.kind}-${it.id}`}>
@@ -60,19 +63,26 @@ export function ActivityList({ items }: { items: ActivityVM[] }) {
               )}
               <span className="act__title">
                 <span className="act__name">{it.title}</span>
-                {it.meta && <span className="act__meta">{it.meta}</span>}
+                {(it.meta || it.cost) && (
+                  <span className="act__meta">
+                    {[it.cost, it.meta].filter(Boolean).join(' · ')}
+                  </span>
+                )}
               </span>
               <span className="act__date">{it.when}</span>
             </button>
-            {isOpen && (
-              <BeforeAfter
-                selfiePath={it.selfiePath}
-                resultPath={it.resultPath}
-                brief={it.brief}
-                error={it.error}
-                photosDeleted={it.photosDeleted}
-              />
-            )}
+            {isOpen &&
+              (it.kind === 'generation' ? (
+                <BeforeAfter
+                  selfiePath={it.selfiePath}
+                  resultPath={it.resultPath}
+                  brief={it.brief}
+                  error={it.error}
+                  photosDeleted={it.photosDeleted}
+                />
+              ) : (
+                it.brief && <pre className="ba__brief">{it.brief}</pre>
+              ))}
           </div>
         );
       })}

@@ -220,6 +220,24 @@ wrong belief survives across sessions.
   Le B2C n'était pas cassé, il marchait **par chance** : ses packs vivent dans l'offering qui porte
   le statut. C'était donc une bombe à retardement, désamorcée depuis (même helper). Si les deux
   copies divergent un jour, c'est le signe qu'il faut sortir ce helper dans `packages/`.
+- **Chaque appel Gemini sortant écrit une ligne `ai_calls` (0036) : c'est le registre de coût
+  EXACT.** Une ligne PAR TENTATIVE (un retry = 2 lignes, Google facture les deux ; un refus est
+  facturé en tokens d'entrée, l'usage est capté AVANT le throw « no image »). Le coût est figé en
+  micro-USD au tarif du moment de l'appel (`functions/_shared/aicost.ts`) ; la conversion EUR est
+  un choix d'affichage (`backoffice/src/lib/pricing.ts`, taux fixe). Invariants : (1) la
+  journalisation est best-effort PARTOUT, un échec d'insert ne doit jamais casser une génération
+  déjà payée ; (2) les tarifs vivent en DEUX copies, `aicost.ts` (Deno) et `scripts/gen-feed.mjs`
+  (Node ne peut pas importer un module Deno), à bouger ensemble ; (3) le coût d'un item du feed
+  voyage DANS `gen_meta.cost_micro_usd` (somme des tentatives), parce que `copy-feed.mjs` copie
+  les feed_items entre lanes mais pas leurs lignes `ai_calls`. Le backoffice affiche exact +
+  estimation (l'historique d'avant 0036 n'a pas de lignes), en soustrayant les comptages couverts.
+  Vérifié e2e sur staging le 2026-08-04 : 312 tokens d'entrée + 1290 de sortie image = 38 794 µ$,
+  le calcul théorique exact. Liens : `generation_id` pour les essais, `suggest_call_id` (0037)
+  pour les suggestions — le RPC de rate-limit est passé à `reserve_suggest_call_v2` qui renvoie
+  l'id inséré au lieu d'un booléen (nom distinct, PAS une surcharge : un argument par défaut de
+  plus rendrait l'appel 3-args ambigu et casserait la fonction déployée ; la v1 reste à supprimer
+  plus tard). Mesuré : une suggestion réelle coûte ~2 900 µ$ (le thinking de flash pèse ~1 100
+  tokens de sortie), pas les ~1 000 µ$ qu'on aurait devinés.
 - **Le crédit se réserve juste AVANT l'appel Gemini, jamais avant.** Un crédit paie un appel payant
   et rien d'autre : validation, encodage, upload, inserts sont gratuits. `generate` réservait en
   tête, puis encodait et uploadait le selfie avant d'écrire la ligne `generations`. Une EXCEPTION
@@ -234,6 +252,12 @@ wrong belief survives across sessions.
   (cron `reap-stuck-generations`, toutes les 5 min, seuil 10 min — mesuré : p99 réel = 15,5 s ;
   ne pas descendre sous la minute, on rembourserait des générations vivantes). Ce cron ne voit PAS
   les orphelins d'avant 0030 : leur débit n'a pas de `gen:<id>` et leur ligne n'existe pas.
+- **Le contenu des suggestions est conservé depuis 0038 (`suggest_calls.suggestion` jsonb : name,
+  description, reasons, prompt, lang, model), écrit best-effort par `suggest` après la réponse.**
+  C'est du DÉRIVÉ DU SELFIE (« pourquoi ça vous irait »), donc il suit le régime du brief des
+  générations : le scrub 0035 (redéfini en 0038) le vide à la suppression du compte en gardant la
+  ligne (valeur comptable). Toute nouvelle colonne « contenu » sur une table conservée doit passer
+  par la même case : se demander si le scrub doit la vider.
 - **La suppression de compte ANONYMISE, elle n'efface plus l'historique (0035).** Avant, la cascade
   `auth.users → profiles → tout` emportait le ledger : un achat RevenueCat pouvait n'avoir AUCUNE
   trace en DB (vécu le 2026-08-04 : achat 0,99 € crédité à 13h29:32, compte supprimé 18 s après,

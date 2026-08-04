@@ -15,6 +15,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { decodeBase64, encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import { cors } from '../_shared/cors.ts';
 import { buildPrompt, buildRefinePrompt, generateWithGemini, mockResult, normalizeRefinement, type Brief } from '../_shared/tryon.ts';
+import { logAiCall, type GeminiUsage } from '../_shared/aicost.ts';
 import { parseImageInput } from '../_shared/validate.ts';
 import { encodeJpeg, makeTeaser, FULL_QUALITY, SELFIE_EDGE, SELFIE_QUALITY, THUMB_EDGE, THUMB_QUALITY } from '../_shared/images.ts';
 
@@ -151,6 +152,10 @@ Deno.serve(async (req) => {
     let genBrief: Brief = brief;
     let prompt: string;
 
+    // Créé ici (et non à l'enqueue) pour que l'appel de normalisation d'un refine, journalisé dans
+    // ai_calls (0036), puisse déjà pointer sur l'essai qu'il sert.
+    const genId = crypto.randomUUID();
+
     if (refineFrom) {
       // Refine pass — the source images live in storage; reload them instead of trusting the client.
       const { data: prev } = await admin
@@ -189,10 +194,13 @@ Deno.serve(async (req) => {
       // back to the raw text. One cheap text call, bounded to this single refine.
       let change = refinement;
       if (GEMINI_API_KEY) {
+        let nUsage: GeminiUsage | undefined;
         try {
-          change = await normalizeRefinement({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, instruction: refinement });
-        } catch {
+          change = await normalizeRefinement({ apiKey: GEMINI_API_KEY, model: GEMINI_TEXT_MODEL, instruction: refinement, onUsage: (u) => (nUsage = u) });
+          await logAiCall(admin, { kind: 'refine_normalize', model: GEMINI_TEXT_MODEL, user_id: user.id, generation_id: genId, ok: true, usage: nUsage });
+        } catch (e) {
           /* keep the raw instruction */
+          await logAiCall(admin, { kind: 'refine_normalize', model: GEMINI_TEXT_MODEL, user_id: user.id, generation_id: genId, ok: false, error: String(e instanceof Error ? e.message : e), usage: nUsage });
         }
       }
       // Keep a readable record of what the USER asked (their own words), carrying the look name forward.
@@ -307,8 +315,6 @@ Deno.serve(async (req) => {
     // opens a window in which the credit can be lost for good (0030). The encode below is also the
     // step most likely to kill the worker, which makes it a useful free canary: when it dies now,
     // the user keeps their credit and can retry.
-    const genId = crypto.randomUUID();
-
     const selfiePath = `${user.id}/${genId}-in.jpg`;
     // Store the selfie now so the before/after is available even while the result is still pending.
     // Phone cameras hand us ~500 KB even at reduced quality, and this copy exists only to be shown
@@ -369,14 +375,27 @@ Deno.serve(async (req) => {
             // or briefly rate-limits. Retry AT MOST ONCE on those recoverable cases — every call is a
             // paid image generation, so the retry is strictly capped to bound cost. Anything else
             // surfaces immediately. (`prompt`/`modelB64` were resolved synchronously above.)
-            const call = () => generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: modelB64, mimeType: modelMime, prompt });
+            // Chaque tentative écrit sa ligne ai_calls (0036), succès comme échec : Google facture
+            // le retry comme un appel plein, et un refus est facturé en tokens d'entrée — l'usage
+            // arrive via onUsage AVANT le throw, donc la ligne d'échec porte quand même son coût.
+            const call = async (attempt: number) => {
+              let usage: GeminiUsage | undefined;
+              try {
+                const r = await generateWithGemini({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, selfieB64: modelB64, mimeType: modelMime, prompt, onUsage: (u) => (usage = u) });
+                await logAiCall(admin, { kind: 'try_on', model: GEMINI_MODEL, user_id: user.id, generation_id: genId, attempt, ok: true, usage });
+                return r;
+              } catch (e) {
+                await logAiCall(admin, { kind: 'try_on', model: GEMINI_MODEL, user_id: user.id, generation_id: genId, attempt, ok: false, error: String(e instanceof Error ? e.message : e), usage });
+                throw e;
+              }
+            };
             try {
-              result = await call();
+              result = await call(1);
             } catch (e) {
               const m = String(e instanceof Error ? e.message : e);
               if (!/no image|RESOURCE_EXHAUSTED|429|50\d/.test(m)) throw e;
               await new Promise((r) => setTimeout(r, 400));
-              result = await call();
+              result = await call(2);
             }
           } else {
             result = mockResult(modelB64, modelMime);

@@ -39,12 +39,15 @@ export function ActivityTable({ rows }: { rows: ActivityRowVM[] }) {
             <th>Type</th>
             <th>Utilisateur</th>
             <th>Essai</th>
+            <th>Coût</th>
             <th>Détail</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => {
-            const expandable = r.kind === 'generation';
+            // Une génération se déplie sur l'avant/après ; une suggestion, sur son contenu (0038).
+            // Une vieille suggestion sans contenu n'a rien à montrer.
+            const expandable = r.kind === 'generation' || r.brief != null;
             const key = `${r.kind}-${r.id}`;
             const isOpen = open === key;
             return (
@@ -86,18 +89,23 @@ export function ActivityTable({ rows }: { rows: ActivityRowVM[] }) {
                     </Link>
                   </td>
                   <td>{r.kind === 'generation' ? r.title : <span className="dim">{r.title}</span>}</td>
+                  <td className="dim nowrap">{r.cost ?? '—'}</td>
                   <td className="dim">{r.meta || '—'}</td>
                 </tr>
                 {isOpen && (
                   <tr className="act-detail">
-                    <td colSpan={6}>
-                      <BeforeAfter
-                        selfiePath={r.selfiePath}
-                        resultPath={r.resultPath}
-                        brief={r.brief}
-                        error={r.error}
-                        photosDeleted={r.photosDeleted}
-                      />
+                    <td colSpan={7}>
+                      {r.kind === 'generation' ? (
+                        <BeforeAfter
+                          selfiePath={r.selfiePath}
+                          resultPath={r.resultPath}
+                          brief={r.brief}
+                          error={r.error}
+                          photosDeleted={r.photosDeleted}
+                        />
+                      ) : (
+                        r.brief && <pre className="ba__brief">{r.brief}</pre>
+                      )}
                     </td>
                   </tr>
                 )}

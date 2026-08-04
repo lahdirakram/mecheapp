@@ -41,8 +41,21 @@ import { fileURLToPath } from 'node:url';
 import { Image } from 'imagescript';
 
 const MAX_BATCH = 100;             // hard ceiling on images per run
-const COST_PER_IMAGE_EUR = 0.04;   // matches GEN_COST_PER_LOOK_EUR
+const COST_PER_IMAGE_EUR = 0.04;   // pre-run ESTIMATE only (matches GEN_COST_PER_LOOK_EUR)
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-image';
+
+// ── exact cost from usageMetadata (0036) ─────────────────────────────────────
+// Copy of supabase/functions/_shared/aicost.ts (a Node script can't import a Deno module — keep
+// the two in sync when a tariff moves). micro-USD per token = USD per 1M tokens; paid tier,
+// ai.google.dev/gemini-api/docs/pricing, checked 2026-08-04. USD because Google bills USD; the
+// EUR figure is display-only (same fixed rate as backoffice/src/lib/pricing.ts).
+const RATE_INPUT = 0.3, RATE_OUT_TEXT = 2.5, RATE_OUT_IMAGE = 30;
+const USD_TO_EUR = 0.87;
+function costMicroUsd(u) {
+  const imageOut = (u?.candidatesTokensDetails ?? []).filter((d) => d.modality === 'IMAGE').reduce((s, d) => s + (d.tokenCount ?? 0), 0);
+  const textOut = Math.max(0, (u?.candidatesTokenCount ?? 0) - imageOut) + (u?.thoughtsTokenCount ?? 0);
+  return Math.round((u?.promptTokenCount ?? 0) * RATE_INPUT + textOut * RATE_OUT_TEXT + imageOut * RATE_OUT_IMAGE);
+}
 
 // ── variation axes (the diversity sampler; lives here as config for v1) ───────
 // High cardinality on purpose: the product of these is in the millions, so two
@@ -246,31 +259,42 @@ async function toJpeg(bytes) {
 }
 
 // ── Gemini text-to-image (same REST shape as functions/_shared/tryon.ts) ──────
-async function generateImage(prompt, aspectRatio) {
+// `onCall` fires once per outgoing attempt (retry = a second event) with the raw usageMetadata
+// when the response carried one — a "no image" reply is still billed for its input tokens. The
+// caller turns these events into ai_calls rows (0036) and into the item's exact cost.
+async function generateImage(prompt, aspectRatio, onCall) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio } },
   };
-  const call = async () => {
+  const call = async (attempt) => {
     const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    if (!res.ok) throw new Error(`gemini ${res.status}: ${await res.text()}`);
+    if (!res.ok) {
+      onCall?.({ attempt, ok: false, error: `gemini ${res.status}`, usage: null });
+      throw new Error(`gemini ${res.status}: ${await res.text()}`);
+    }
     const j = await res.json();
+    const usage = j?.usageMetadata ?? null;
     const parts = j?.candidates?.[0]?.content?.parts ?? [];
     const img = parts.find((p) => p.inlineData || p.inline_data);
     const data = img?.inlineData?.data ?? img?.inline_data?.data;
-    if (!data) throw new Error('no image in response');
+    if (!data) {
+      onCall?.({ attempt, ok: false, error: 'no image in response', usage });
+      throw new Error('no image in response');
+    }
+    onCall?.({ attempt, ok: true, error: null, usage });
     const mime = img?.inlineData?.mimeType ?? img?.inline_data?.mime_type ?? 'image/png';
     return { data, mime };
   };
   try {
-    return await call();
+    return await call(1);
   } catch (e) {
     // Retry AT MOST ONCE on recoverable errors — every call is paid, so the retry is strictly bounded.
     const m = String(e?.message ?? e);
     if (!/no image|RESOURCE_EXHAUSTED|429|50\d/.test(m)) throw e;
     await sleep(500);
-    return await call();
+    return await call(2);
   }
 }
 
@@ -365,8 +389,11 @@ async function main() {
   const fails = [];
   await pool(plan, CONCURRENCY, async (p, idx) => {
     const label = `#${String(idx + 1).padStart(2, '0')} [${p.style.slug}]`;
+    // Every attempt (retries and failures included) becomes an ai_calls row on THIS lane, and the
+    // item's gen_meta carries the exact total so the cost survives a copy-feed to the other lane.
+    const calls = [];
     try {
-      const img = await generateImage(p.prompt, RATIO);
+      const img = await generateImage(p.prompt, RATIO, (c) => calls.push(c));
       // Store as JPEG, never as the PNG the model returns. The feed is the most-read asset in the
       // app (every new user scrolls it, while a generated look is only ever read by its author), so
       // its format is the single biggest egress line: measured on these exact images, ~11x lighter
@@ -389,7 +416,13 @@ async function main() {
         by: { fr: 'Référence éditoriale', en: 'Editorial reference' },
         match: null,
         image_url: publicUrl(path),
-        gen_meta: { source: 'gen-feed', model: GEMINI_MODEL, aspectRatio: RATIO, combo: p.combo, prompt: p.prompt, axes: p.sample, cost_eur: COST_PER_IMAGE_EUR },
+        // cost_micro_usd = the EXACT production cost of this item (all its attempts summed, from
+        // usageMetadata); cost_eur is the same figure converted for humans. The backoffice reads
+        // items carrying cost_micro_usd as exact and only estimates the older ones.
+        gen_meta: (() => {
+          const micro = calls.reduce((s, c) => s + (c.usage ? costMicroUsd(c.usage) : 0), 0);
+          return { source: 'gen-feed', model: GEMINI_MODEL, aspectRatio: RATIO, combo: p.combo, prompt: p.prompt, axes: p.sample, cost_micro_usd: micro, cost_eur: Number(((micro / 1e6) * USD_TO_EUR).toFixed(4)) };
+        })(),
       });
       ok++;
       console.log(`  ✓ ${label}  ${p.sample.gender}, ${p.sample.age}, ${p.sample.heritage}`);
@@ -397,6 +430,21 @@ async function main() {
       const msg = String(e?.message ?? e);
       fails.push({ label, msg });
       console.log(`  ✗ ${label}  ${msg.slice(0, 120)}`);
+    } finally {
+      for (const c of calls) {
+        await sbInsert('ai_calls', {
+          kind: 'feed',
+          model: GEMINI_MODEL,
+          attempt: c.attempt,
+          ok: c.ok,
+          error: c.error ? String(c.error).slice(0, 500) : null,
+          prompt_tokens: c.usage?.promptTokenCount ?? null,
+          output_tokens: c.usage ? (c.usage.candidatesTokenCount ?? 0) + (c.usage.thoughtsTokenCount ?? 0) : null,
+          total_tokens: c.usage?.totalTokenCount ?? null,
+          cost_micro_usd: c.usage ? costMicroUsd(c.usage) : null,
+          usage: c.usage,
+        }).catch((e) => console.warn(`  ! ${label} ai_calls insert failed: ${String(e?.message ?? e).slice(0, 120)}`));
+      }
     }
   });
 

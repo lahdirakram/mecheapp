@@ -22,6 +22,29 @@ export const PACK_PRICES_CENTS: Record<string, number> = {
  * Fabrique le `case pack_id when … end` en centimes, pour sommer le CA côté SQL sans dupliquer
  * les prix. Les clés sont les nôtres, mais on les valide quand même avant interpolation.
  */
+/**
+ * Coûts IA : depuis 0036, chaque appel Gemini sortant écrit une ligne `ai_calls` avec son
+ * usageMetadata et son coût EXACT en micro-dollars (calculé au tarif du moment de l'appel,
+ * retries et refus inclus — Google facture les deux). Les coûts IA s'AFFICHENT donc en USD,
+ * la devise de la facture Google : aucune conversion dans le chiffre principal. L'équivalent
+ * EUR entre parenthèses (et la marge, qui se soustrait d'un CA en EUR) passe par un taux fixe
+ * assumé, à rafraîchir à la main de temps en temps.
+ *
+ * Les unités micro-USD servent aussi à estimer l'HISTORIQUE d'avant 0036, qui n'a pas de
+ * lignes `ai_calls` : image × 0,039 $ (le prix officiel par image ≤ 1024px), suggestion
+ * × ~0,003 $ (mesuré sur un appel réel : 2 886 µ$ — ~400 tokens d'entrée mais ~1 100 de sortie,
+ * le thinking de gemini-2.5-flash pèse plus que le JSON rendu).
+ */
+export const USD_TO_EUR = 0.87;
+export const AI_IMAGE_EST_MICRO_USD = 39_000;
+export const AI_SUGGEST_EST_MICRO_USD = 3_000;
+
+/** micro-USD → centimes d'euro, pour l'équivalent EUR et la marge. */
+export const microUsdToCents = (microUsd: number) => (microUsd * USD_TO_EUR) / 10_000;
+
+/** Centimes d'euro → micro-USD, pour les coûts historiques enregistrés en EUR (gen_meta.cost_eur). */
+export const eurCentsToMicroUsd = (cents: number) => (cents * 10_000) / USD_TO_EUR;
+
 export function priceCentsSql(col = 'pack_id'): string {
   const whens = Object.entries(PACK_PRICES_CENTS)
     .map(([id, cents]) => {
