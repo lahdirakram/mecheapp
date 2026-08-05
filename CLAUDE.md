@@ -62,6 +62,12 @@ wrong belief survives across sessions.
 - **No em dash in user-facing copy** (FR/EN strings). Use a period or comma.
 - **Cap paid AI calls** — retries/fan-out on the Gemini image model must stay tightly bounded (budget).
   A refusal (`gemini: blocked …`) is NOT retried: paying a second call for a policy block is waste.
+  **Nuance mesurée (registre 0036)** : une réponse « no image » (IMAGE_OTHER/NO_IMAGE, l'essentiel
+  des échecs prod : 27 en un mois, aucun lié à un incident) est facturée en tokens d'ENTRÉE
+  seulement (~400 µ$), pas au prix d'une image (39 000 µ$). `generate` fait donc jusqu'à 3 retries
+  à délais croissants (800/2000/5000 ms) sur ce cas précis — 400 ms d'écart retombait sur le même
+  état défaillant — et garde UN retry pour 429/5xx (ne pas insister pendant un incident). Pire cas
+  ≈ 0,2 centime. Le plafond « borné » reste la règle : ne pas étendre sans repasser par le coût réel.
 - After edits, `cd apps/meche && npx tsc --noEmit` to typecheck before shipping. In `backoffice/`, use
   `./node_modules/.bin/tsc` — `npx tsc` picks up the root workspace's TypeScript 6, not the local 5.9.
 - **Client write access to the DB is deliberately minimal.** Read `docs/security-model.md` before

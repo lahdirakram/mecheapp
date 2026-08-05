@@ -389,13 +389,29 @@ Deno.serve(async (req) => {
                 throw e;
               }
             };
-            try {
-              result = await call(1);
-            } catch (e) {
-              const m = String(e instanceof Error ? e.message : e);
-              if (!/no image|RESOURCE_EXHAUSTED|429|50\d/.test(m)) throw e;
-              await new Promise((r) => setTimeout(r, 400));
-              result = await call(2);
+            // Politique de retry, dimensionnée sur le coût RÉEL mesuré par le registre (0036) :
+            // une réponse « no image » (IMAGE_OTHER / NO_IMAGE, l'essentiel de nos échecs prod,
+            // 27 sur un mois) est facturée en tokens d'ENTRÉE seulement (~400 µ$), pas au prix
+            // d'une image (39 000 µ$). Réessayer est donc quasi gratuit tant que ça échoue, et ne
+            // coûte le prix plein que si ça réussit — exactement ce qu'on veut payer. D'où :
+            // jusqu'à 3 retries à délais croissants (400 ms d'écart tombait souvent sur le même
+            // état défaillant). Les erreurs de quota/serveur gardent UN seul retry : là on ne veut
+            // pas insister pendant un incident. Un refus (« blocked ») n'est jamais retenté.
+            // Pire cas borné : 4 appels sans image ≈ 1 600 µ$ (0,2 centime).
+            const NO_IMAGE_DELAYS = [800, 2000, 5000];
+            const TRANSIENT_DELAYS = [400];
+            let attempt = 0;
+            for (;;) {
+              try {
+                result = await call(++attempt);
+                break;
+              } catch (e) {
+                const m = String(e instanceof Error ? e.message : e);
+                const delays = /no image/.test(m) ? NO_IMAGE_DELAYS : /RESOURCE_EXHAUSTED|429|50\d/.test(m) ? TRANSIENT_DELAYS : [];
+                const delay = delays[attempt - 1];
+                if (delay == null) throw e;
+                await new Promise((r) => setTimeout(r, delay));
+              }
             }
           } else {
             result = mockResult(modelB64, modelMime);
