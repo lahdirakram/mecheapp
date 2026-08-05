@@ -86,8 +86,18 @@ export default async function Dashboard({
   const coutSuggMicro = m.sugg_exact_micro_usd + suggEstimes * AI_SUGGEST_EST_MICRO_USD;
   const coutFeedMicro = m.feed_exact_micro_usd + eurCentsToMicroUsd(m.feed_est_cents);
   const coutTotalMicro = coutEssaisMicro + coutSuggMicro + coutFeedMicro;
-  const margeCents = m.revenue_cents - microUsdToCents(coutTotalMicro);
   const toutExact = gensEstimes === 0 && suggEstimes === 0 && m.feed_est_cents === 0;
+
+  // CA : en micro-USD de bout en bout, comme les coûts (RC normalise tout en USD). La seule
+  // conversion restante est l'estimation catalogue (EUR) des achats d'avant le registre.
+  const caPacksMicro = m.rev_exact_usd * 1e6 + eurCentsToMicroUsd(m.revenue_est_cents);
+  const caProMicro = m.pro_rev_usd * 1e6;
+  const caMicro = caPacksMicro + caProMicro;
+  const commissionTvaMicro = (m.commission_usd + m.tax_usd) * 1e6;
+  const refundsMicro = m.refunds_usd * 1e6;
+  const caNetMicro = caMicro - commissionTvaMicro - refundsMicro;
+  const ordersEstimes = Math.max(0, m.orders - m.orders_exact);
+  const margeMicro = caMicro - coutTotalMicro;
   /** USD d'abord, l'équivalent EUR entre parenthèses en secondaire. */
   const usdEur = (microUsd: number) =>
     `${fmtUsdMicro(microUsd)} (${fmtEurCents(microUsdToCents(microUsd))})`;
@@ -99,8 +109,8 @@ export default async function Dashboard({
           <h1>Vue d&apos;ensemble</h1>
           <p className="sub">
             {fmtInt(m.users_total)} comptes · {fmtInt(m.gens_shown)}{' '}
-            {essaisReussisSeuls ? 'essais réussis' : 'essais'} · {fmtEurCents(m.revenue_cents)} de CA
-            estimé · {periode}
+            {essaisReussisSeuls ? 'essais réussis' : 'essais'} · {fmtUsdMicro(caMicro)} de CA ·{' '}
+            {periode}
             {scope.accounts === 'active' && ' · comptes activés seulement'}
             {m.excluded_count > 0 && (
               <>
@@ -199,29 +209,45 @@ export default async function Dashboard({
         <div className="section-head">
           <h2>Monétisation</h2>
           <span className="section-note">
-            aucun montant n&apos;est stocké par le webhook RevenueCat : CA au prix catalogue EUR,
-            brut avant commission store et TVA
+            montants exacts du webhook RevenueCat (registre 0039, PRODUCTION seulement, un achat
+            sandbox crédite mais ne rapporte rien) · en USD normalisé RC, équivalent EUR à{' '}
+            {USD_TO_EUR.toFixed(2).replace('.', ',')} €/$ ; les achats d&apos;avant le registre
+            restent estimés au prix catalogue
           </span>
         </div>
         <div className="metrics">
           <MetricCard
-            label="CA"
-            value={fmtEurCents(m.revenue_cents)}
-            hint={`${fmtInt(m.orders)} achat${m.orders > 1 ? 's' : ''} · ${periode}`}
+            label="CA brut"
+            value={usdEur(caMicro)}
+            hint={`${fmtInt(m.orders_exact)} achat${m.orders_exact > 1 ? 's' : ''} mesuré${m.orders_exact > 1 ? 's' : ''}${ordersEstimes > 0 ? ` · ${fmtInt(ordersEstimes)} estimé${ordersEstimes > 1 ? 's' : ''}` : ''}${caProMicro > 0 ? ` · dont Pro ${fmtUsdMicro(caProMicro)}` : ''} · ${periode}`}
             accent
+          />
+          <MetricCard
+            label="Commission + TVA"
+            value={usdEur(commissionTvaMicro)}
+            hint={`estimation RevenueCat · sur la part mesurée seulement`}
+            estimate
+          />
+          <MetricCard
+            label="Remboursements"
+            value={m.refunds > 0 ? `-${fmtUsdMicro(refundsMicro)}` : '0'}
+            hint={`${fmtInt(m.refunds)} remboursement${m.refunds > 1 ? 's' : ''} · crédits repris par le webhook`}
+          />
+          <MetricCard
+            label="CA net estimé"
+            value={usdEur(caNetMicro)}
+            hint="brut moins commission, TVA et remboursements"
             estimate
           />
           <MetricCard
             label="CA moyen / compte"
-            value={m.users_total > 0 ? fmtEurCents(m.revenue_cents / m.users_total) : '—'}
+            value={m.users_total > 0 ? fmtUsdMicro(caMicro / m.users_total) : '—'}
             hint="ARPU, tous comptes du périmètre"
-            estimate
           />
           <MetricCard
             label="CA moyen / payeur"
-            value={m.payers > 0 ? fmtEurCents(m.revenue_cents / m.payers) : '—'}
+            value={m.payers > 0 ? fmtUsdMicro(caMicro / m.payers) : '—'}
             hint="ARPPU"
-            estimate
           />
           <MetricCard
             label="Payeurs"
@@ -230,8 +256,7 @@ export default async function Dashboard({
           />
           <MetricCard
             label="Panier moyen"
-            value={m.orders > 0 ? fmtEurCents(m.revenue_cents / m.orders) : '—'}
-            estimate
+            value={m.orders > 0 ? fmtUsdMicro(caPacksMicro / m.orders) : '—'}
           />
           <MetricCard
             label="Crédits achetés"
@@ -246,7 +271,7 @@ export default async function Dashboard({
           <MetricCard
             label="Abonnements Pro actifs"
             value={fmtInt(m.subs_active)}
-            hint="hors CA : aucun prix en base"
+            hint={`${fmtInt(m.pro_payments)} paiement${m.pro_payments > 1 ? 's' : ''} Pro mesuré${m.pro_payments > 1 ? 's' : ''} · ${periode}`}
           />
         </div>
       </section>
@@ -284,8 +309,8 @@ export default async function Dashboard({
           />
           <MetricCard
             label="Marge après coût IA"
-            value={fmtEurCents(margeCents)}
-            hint="CA estimé (EUR) moins coût IA total converti"
+            value={usdEur(margeMicro)}
+            hint="CA brut moins coût IA total"
             estimate
           />
         </div>

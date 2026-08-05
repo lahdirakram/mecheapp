@@ -24,6 +24,16 @@ const USD_FINE = new Intl.NumberFormat('fr-FR', {
 export const fmtUsdMicroFine = (microUsd: number | null | undefined) =>
   USD_FINE.format((microUsd ?? 0) / 1e6);
 
+/** Montant exact du webhook (iap_events) : dans la devise réellement payée, quelle qu'elle soit. */
+export const fmtMoney = (amount: number, currency: string) => {
+  try {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(amount);
+  } catch {
+    // Devise inconnue d'Intl : on affiche brut plutôt que de planter la page.
+    return `${amount} ${currency}`;
+  }
+};
+
 export const fmtPct = (num: number, den: number, digits = 1) =>
   den > 0 ? `${((num / den) * 100).toFixed(digits).replace('.', ',')} %` : '—';
 

@@ -236,13 +236,15 @@ Deno.serve(async (req) => {
     // so purchased credits stay in reserve as long as possible. Replaying in order (rather than
     // summing) means a later ad-reward can't retroactively reclassify an older paid look.
     // `admin_grant` (0029) counts as PAID: a credit granted from the backoffice is meant to be a real
-    // one, so it must lift the lock below exactly like a purchase. Keep this in lockstep with the
-    // same replay in packages/api-client/src/queries.ts (useCreditSummary), which drives what the
+    // one, so it must lift the lock below exactly like a purchase. `refund` (0039) is paid-side too:
+    // it's the webhook clawing back a refunded pack (negative delta), or re-granting on
+    // REFUND_REVERSED (positive) — either way it moves purchased credits. Keep this in lockstep with
+    // the same replay in packages/api-client/src/queries.ts (useCreditSummary), which drives what the
     // client shows — the two disagreeing means promising credits the server won't honour.
     let free = 0; // free_trial + ad rewards + promos
-    let paid = 0; // purchased packs + admin grants
+    let paid = 0; // purchased packs + admin grants + refund clawbacks
     for (const tx of txList) {
-      if (tx.reason === 'purchase' || tx.reason === 'admin_grant') paid += tx.delta;
+      if (tx.reason === 'purchase' || tx.reason === 'admin_grant' || tx.reason === 'refund') paid += tx.delta;
       else if (tx.reason === 'generation') {
         if (free > 0) free -= 1;
         else paid -= 1;

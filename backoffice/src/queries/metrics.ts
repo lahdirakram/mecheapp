@@ -54,7 +54,22 @@ export type Metrics = {
   credits_left: number;
   orders: number;
   payers: number;
-  revenue_cents: number;
+  /** Estimation catalogue, RÉDUITE aux achats sans ligne iap_events (l'historique d'avant 0039). */
+  revenue_est_cents: number;
+
+  /**
+   * L'argent EXACT (registre iap_events, 0039) : ce que le webhook RevenueCat rapporte, en
+   * PRODUCTION seulement (le sandbox crédite mais ne rapporte rien). Tout en USD, la devise
+   * normalisée de RevenueCat : le dashboard affiche l'USD tel quel, comme les coûts IA.
+   */
+  rev_exact_usd: number;
+  orders_exact: number;
+  commission_usd: number;
+  tax_usd: number;
+  refunds: number;
+  refunds_usd: number;
+  pro_rev_usd: number;
+  pro_payments: number;
 
   subs_active: number;
 };
@@ -144,13 +159,48 @@ c as (
   select
     (coalesce(sum(delta) filter (where reason = 'purchase'), 0))::int                     as credits_bought,
     (coalesce(-sum(delta) filter (where delta < 0), 0))::int                              as credits_used,
-    (coalesce(sum(delta) filter (where delta > 0 and reason not in ('purchase', 'admin_grant')), 0))::int as credits_free,
+    (coalesce(sum(delta) filter (where delta > 0 and reason not in ('purchase', 'admin_grant', 'refund')), 0))::int as credits_free,
     (coalesce(sum(delta) filter (where reason = 'admin_grant'), 0))::int                  as credits_granted,
     (count(*) filter (where reason = 'purchase'))::int                                    as orders,
     (count(distinct user_id) filter (where reason = 'purchase'))::int                     as payers,
-    (coalesce(sum(${priceCentsSql()}) filter (where reason = 'purchase'), 0))::int         as revenue_cents
+    -- Estimation catalogue restreinte aux achats SANS ligne iap_events : dès qu'un achat est
+    -- couvert par le registre, c'est le montant exact (CTE ie) qui compte, y compris zéro pour
+    -- un achat sandbox (qui crédite mais ne rapporte rien).
+    (coalesce(sum(${priceCentsSql()}) filter (where reason = 'purchase'
+        and not exists (select 1 from iap_events ie2 where ie2.event_id = credit_transactions.external_id)), 0))::int as revenue_est_cents
   from credit_transactions
   where user_id in (select id from scope) and ${inPeriod('created_at')}
+),
+-- L'argent exact (0039). Un « sale » = achat de pack ou paiement d'abonnement Pro, en PRODUCTION.
+-- Tout en USD normalisé RC (event.price / revenue_in_usd.gross) : c'est la devise d'affichage.
+ie as (
+  select
+    (coalesce(sum(price_usd) filter (where sale and kind = 'pack'), 0))::float8                    as rev_exact_usd,
+    (count(*) filter (where sale and kind = 'pack'))::int                                          as orders_exact,
+    (coalesce(sum(price_usd * coalesce(commission_percentage, 0)) filter (where sale), 0))::float8 as commission_usd,
+    (coalesce(sum(price_usd * coalesce(tax_percentage, 0)) filter (where sale), 0))::float8        as tax_usd,
+    (count(*) filter (where refund))::int                                                          as refunds,
+    (coalesce(sum(abs(coalesce(price_usd, 0))) filter (where refund), 0))::float8                  as refunds_usd,
+    (coalesce(sum(price_usd) filter (where sale and kind = 'pro'), 0))::float8                     as pro_rev_usd,
+    (count(*) filter (where sale and kind = 'pro'))::int                                           as pro_payments
+  from (
+    select *,
+      case when pack_id is not null then 'pack' when product_id like 'meche_pro%' then 'pro' end as kind,
+      environment = 'PRODUCTION'
+        and ((type = 'NON_RENEWING_PURCHASE' and pack_id is not null)
+          or (type in ('INITIAL_PURCHASE', 'RENEWAL') and product_id like 'meche_pro%')) as sale,
+      environment = 'PRODUCTION' and type = 'CANCELLATION' and cancel_reason = 'CUSTOMER_SUPPORT' as refund
+    from iap_events
+    -- Périmètre : on suit le filtre de comptes quand l'acheteur EXISTE dans profiles ; on garde
+    -- toujours l'argent des ids inconnus (comptes emportés par la cascade d'avant 0035, ou id RC
+    -- anonyme) : il est réel et n'a aucun profil pour le représenter.
+    where (app_user_id is null
+           or app_user_id in (select id from scope)
+           or app_user_id not in (select id from profiles))
+      -- La période se juge à la date d'ACHAT : un backfill (resend RC) arrive aujourd'hui avec
+      -- un purchased_at ancien, et doit compter dans son mois réel.
+      and ${inPeriod('coalesce(purchased_at, received_at)')}
+  ) e
 ),
 cl as (
   select (coalesce(sum(delta), 0))::int as credits_left
@@ -162,7 +212,7 @@ sub as (
   from subscriptions
   where owner_id in (select id from scope)
 )
-select * from x, u, g, a, f, s, c, cl, sub
+select * from x, u, g, a, f, s, c, ie, cl, sub
 `;
 
 export async function getMetrics(scope: Scope): Promise<Metrics> {

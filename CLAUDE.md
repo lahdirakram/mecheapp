@@ -264,6 +264,20 @@ wrong belief survives across sessions.
   générations : le scrub 0035 (redéfini en 0038) le vide à la suppression du compte en gardant la
   ligne (valeur comptable). Toute nouvelle colonne « contenu » sur une table conservée doit passer
   par la même case : se demander si le scrub doit la vider.
+- **L'argent exact vit dans `iap_events` (0039), écrit par le webhook RevenueCat.** Une ligne par
+  événement RC (prix USD normalisé, prix payé + devise, commission/TVA estimées par RC,
+  environnement) ; le pont vers les crédits est `external_id = event_id`. Le CA du backoffice ne
+  compte que PRODUCTION (un achat sandbox crédite mais ne rapporte rien) ; l'estimation catalogue
+  ne couvre plus que les achats d'avant le registre. Invariants : (1) le journal est best-effort
+  et APRÈS le grant, créditer est le produit, journaliser du reporting ; (2) un remboursement de
+  pack (CANCELLATION + cancel_reason=CUSTOMER_SUPPORT) reprend les crédits par une ligne
+  `reason='refund'` à delta négatif (REFUND_REVERSED les rend), et **`'refund'` étend l'invariant
+  trois-fichiers d'admin_grant** : côté PAYANT du replay dans `functions/generate` ET
+  `packages/api-client/src/queries.ts` (OTA nécessaire, sinon l'app affiche des crédits que le
+  serveur refuse) ; (3) `iap-webhook` se déploie avec `--no-verify-jwt`, sinon RC ne passe plus ;
+  (4) le payload brut `event` est vidé par le scrub à la suppression du compte, les montants
+  restent. NB : le `RC_WEBHOOK_SECRET` de STAGING a été remplacé par une valeur de test le
+  2026-08-05 (aucun RC réel ne pointe sur staging, ça sert aux e2e curl du webhook).
 - **La suppression de compte ANONYMISE, elle n'efface plus l'historique (0035).** Avant, la cascade
   `auth.users → profiles → tout` emportait le ledger : un achat RevenueCat pouvait n'avoir AUCUNE
   trace en DB (vécu le 2026-08-04 : achat 0,99 € crédité à 13h29:32, compte supprimé 18 s après,

@@ -6,7 +6,7 @@ import { ActivityList } from '@/components/ActivityList';
 import { Fatal } from '@/components/Fatal';
 import { Pager } from '@/components/Pager';
 import { toVM } from '@/lib/activity-vm';
-import { fmtDateTime, fmtEurCents, fmtInt } from '@/lib/format';
+import { fmtDateTime, fmtEurCents, fmtInt, fmtMoney } from '@/lib/format';
 import { flatten, readInt } from '@/lib/qs';
 import { listActivity, listLedger, type Activity, type LedgerRow } from '@/queries/activity';
 import {
@@ -294,7 +294,14 @@ export default async function UserPage({
                           {l.delta > 0 ? `+${l.delta}` : l.delta}
                         </td>
                         <td className="num">
-                          {l.amount_cents > 0 ? fmtEurCents(l.amount_cents) : <span className="dim">—</span>}
+                          {l.exact_amount != null ? (
+                            // Montant exact du webhook, dans la devise payée ; négatif = remboursement.
+                            `${l.delta < 0 ? '-' : ''}${fmtMoney(Math.abs(l.exact_amount), l.exact_currency ?? 'EUR')}`
+                          ) : l.amount_cents > 0 ? (
+                            fmtEurCents(l.amount_cents)
+                          ) : (
+                            <span className="dim">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

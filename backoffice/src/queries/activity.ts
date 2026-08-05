@@ -235,21 +235,30 @@ export type LedgerRow = {
   /** Motif d'un crédit accordé à la main (0029) ; null partout ailleurs. */
   note: string | null;
   amount_cents: number;
+  /** Montant exact du webhook (iap_events, 0039) dans la devise réellement payée ; null = pas couvert. */
+  exact_amount: number | null;
+  exact_currency: string | null;
   created_at: string;
 };
 
 /**
- * Ledger de crédits, affiché à part de la timeline. `amount_cents` n'a de sens que pour
- * reason = 'purchase' (voir la note d'estimation dans lib/pricing.ts).
+ * Ledger de crédits, affiché à part de la timeline. `amount_cents` reste l'estimation catalogue
+ * (achats d'avant 0039) ; dès qu'une ligne iap_events existe, `exact_amount`/`exact_currency`
+ * portent ce que la personne a réellement payé. Le pont est external_id = event_id, en retirant
+ * le préfixe des lignes refund (`refund:<event_id>` / `refund-reversed:<event_id>`).
  */
 export function listLedger(userId: string, limit = 100) {
   return query<LedgerRow>(
-    `select id, delta, reason, pack_id, external_id, note,
-            (case when reason = 'purchase' then ${priceCentsSql()} else 0 end)::int as amount_cents,
-            created_at
-     from credit_transactions
-     where user_id = $1
-     order by created_at desc
+    `select ct.id, ct.delta, ct.reason, ct.pack_id, ct.external_id, ct.note,
+            (case when ct.reason = 'purchase' then ${priceCentsSql('ct.pack_id')} else 0 end)::int as amount_cents,
+            (ie.price_local)::float8 as exact_amount,
+            ie.currency as exact_currency,
+            ct.created_at
+     from credit_transactions ct
+     left join iap_events ie
+       on ie.event_id = regexp_replace(ct.external_id, '^refund(-reversed)?:', '')
+     where ct.user_id = $1
+     order by ct.created_at desc
      limit $2`,
     [userId, limit],
   );

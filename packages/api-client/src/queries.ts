@@ -82,6 +82,8 @@ export function useMinVersion(): string | undefined {
 // first-try model nothing is presented as offered, so the welcome credit never appears as a credit.
 // A backoffice grant (reason 'admin_grant', 0029) lands on the PAID side on both sides of the wire:
 // it is a real credit, so it must also flip this account out of the pre-purchase experience.
+// A refund clawback (reason 'refund', 0039, negative delta — or positive on REFUND_REVERSED) is
+// paid-side too: it moves purchased credits, in lockstep with the replay in functions/generate.
 export function useCreditSummary(userId: string | undefined) {
   const sb = useSupabase();
   return useQuery({
@@ -96,7 +98,7 @@ export function useCreditSummary(userId: string | undefined) {
       let free = 0;
       let paid = 0;
       for (const tx of (data ?? []) as { delta: number; reason: string }[]) {
-        if (tx.reason === 'purchase' || tx.reason === 'admin_grant') paid += tx.delta;
+        if (tx.reason === 'purchase' || tx.reason === 'admin_grant' || tx.reason === 'refund') paid += tx.delta;
         else if (tx.reason === 'generation') {
           if (free > 0) free -= 1;
           else paid -= 1;
