@@ -34,10 +34,9 @@ export const PADDLE_ENV: 'sandbox' | 'production' =
   import.meta.env.VITE_PADDLE_ENV === 'production' ? 'production' : 'sandbox';
 export const PADDLE_READY = PADDLE_TOKEN.length > 0;
 
-/** Same value as legal/public/index.html. Android is still "bientôt" there, so there is no Play URL
- *  to point at yet; keep this null until the Play listing is live rather than inventing a link. */
+/** Same values as the landing pages (site/index.html + site/en/index.html keep their own copies). */
 export const APPSTORE_URL = 'https://apps.apple.com/fr/app/m%C3%A8che/id6777728552';
-export const PLAY_URL: string | null = null;
+export const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.meche.app';
 
 export type Platform = 'ios' | 'android' | 'other';
 

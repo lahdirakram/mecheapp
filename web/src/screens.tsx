@@ -507,8 +507,6 @@ export function PaywallScreen({
 function ContinueInApp({ credits }: { credits: number }) {
   const os = platform();
   const t = tr();
-  // Nothing to point an Android visitor at until the Play listing exists.
-  if (os === 'android' && !PLAY_URL) return null;
   const href = os === 'android' ? PLAY_URL : APPSTORE_URL;
 
   return (
@@ -525,7 +523,7 @@ function ContinueInApp({ credits }: { credits: number }) {
           <>{t.result.appBody}</>
         )}
       </p>
-      <a className="m-btn m-btn--ghost" href={href ?? APPSTORE_URL} target="_blank" rel="noopener noreferrer">
+      <a className="m-btn m-btn--ghost" href={href} target="_blank" rel="noopener noreferrer">
         {t.result.appDownload}
       </a>
       {/* Un acheteur web n'a JAMAIS de mot de passe : il s'inscrit par code, sans en choisir un.

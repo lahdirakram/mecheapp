@@ -150,8 +150,8 @@ passé par le code email n'en a jamais défini. Google et Apple, eux, passent sa
 première connexion ». **Le vrai correctif est d'ajouter un chemin sans mot de passe à l'app**, pas de
 mieux tourner la phrase.
 
-Android : `PLAY_URL` est `null` tant que la fiche Play n'existe pas (la landing affiche « bientôt »).
-Le bloc ne s'affiche donc pas du tout sur Android, plutôt que de pointer vers un lien inventé.
+Android : l'app est publiée sur Google Play depuis 2026-08-07, `PLAY_URL` pointe sur la fiche
+(`com.meche.app`) et le bloc s'affiche aussi pour un visiteur Android.
 
 ## Les trois façons dont un essai peut échouer (0030 / 0031)
 
