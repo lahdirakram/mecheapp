@@ -350,6 +350,19 @@ wrong belief survives across sessions.
   pas seulement les fullScreenModal : mesurer la hauteur du clavier à la main et soulever le
   contenu (`apps/meche/components/AuthScreen.tsx`, même motif que `try/result.tsx`). Les deux
   vérifiés sur device.
+- **Le consentement (CGU, privacy, pub) est journalisé en DB depuis 0040 (`consent_events`), et
+  c'est la DB qui décide si l'écran s'affiche.** Append-only (un retrait = une NOUVELLE ligne
+  `denied`, jamais d'update : l'historique est la preuve RGPD art. 7.1), les lignes survivent à la
+  suppression du compte sous le tombstone 0035 (annoncé dans privacy.html, mis à jour ensemble).
+  L'AsyncStorage n'est plus qu'un cache : hors-ligne ou table absente, `shouldPromptConsent`
+  retombe sur le comportement local (fail-closed, jamais de SDK pub sans choix stocké), donc l'OTA
+  peut précéder la migration sans casse. L'écriture est best-effort SANS file de retry locale : un
+  insert raté = pas de ligne = le prochain lancement rejoue le même chemin et la preuve se
+  reconstitue d'elle-même. Les comptes d'avant 0040 ne revoient PAS l'écran : un choix local sans
+  ligne DB est migré tel quel (`source='backfill'`, `lang` null car inconnue au moment du choix ;
+  un local présent prouve le passage de l'écran, cases CGU/privacy comprises). `LEGAL_DOC_VERSION`
+  (`apps/meche/lib/legal.ts`) date le texte accepté : à bumper quand terms/privacy changent sur le
+  fond.
 - **Un toast est invisible depuis un écran `presentation: 'modal'` sur iOS** (overlay rendu à la
   racine, le modal natif est un autre contrôleur de vue et passe devant). Depuis un modal, utiliser
   `Alert.alert`. Vaut aussi pour `useSheet`, déjà noté dans `packages/ui/src/feedback.tsx`.

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@meche/api-client';
 import { MIcon, MPAL, MText, useLangStore } from '@meche/ui';
 import { openLegal } from '../lib/legal';
-import { setAdConsent, shouldPromptConsent } from '../lib/consent';
+import { recordConsent, setAdConsent, shouldPromptConsent } from '../lib/consent';
 import { replayAfterGrant, startMarketing } from '../lib/marketing';
 
 // Ad-measurement consent as a CMP-style purposes screen: an "always active" row for what the app
@@ -36,10 +36,13 @@ export function ConsentGate() {
     startMarketing();
   }, []);
 
+  // DB-backed since 0040: the screen shows only when NEITHER the consent_events ledger NOR the
+  // device has an answer. A pre-0040 device that already answered is backfilled into the ledger
+  // silently (see shouldPromptConsent) — existing users never see this screen again.
   const uid = session?.user?.id ?? null;
   useEffect(() => {
     if (Platform.OS === 'web' || !uid) return;
-    void shouldPromptConsent().then((s) => {
+    void shouldPromptConsent(uid).then((s) => {
       if (s) setShow(true);
     });
   }, [uid]);
@@ -52,6 +55,15 @@ export function ConsentGate() {
 
   const finish = (granted: boolean) => {
     setShow(false); // hide first: SDK inits behind setAdConsent must never block the tap
+    // The DB proof (0040): CGU + privacy are necessarily accepted to get here ("Tout accepter"
+    // covers them), ads carries the actual choice. Best-effort: a failed insert means the gate
+    // shows again next launch and the proof is re-collected.
+    if (uid)
+      recordConsent(uid, 'gate', lang, [
+        { purpose: 'terms', status: 'granted' },
+        { purpose: 'privacy', status: 'granted' },
+        { purpose: 'ads', status: granted ? 'granted' : 'denied' },
+      ]);
     void setAdConsent(granted ? 'granted' : 'denied').then(() => {
       if (granted)
         // Sign-up fired seconds ago while the SDKs were still off: replay identify + Registration

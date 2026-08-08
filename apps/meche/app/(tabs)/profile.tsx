@@ -8,7 +8,7 @@ import { useAuth, useBookings, useCreditPacks, useCreditSummary, useLockedFirstT
 import type { HairShape, PortraitMood } from '@meche/core';
 import { MIcon, MPAL, MText, MPortrait, type MIconName, useLangStore, useSheet, useT, useToast } from '@meche/ui';
 import { getPushEnabled } from '../../lib/notifPref';
-import { getAdConsent, setAdConsent, type AdConsent } from '../../lib/consent';
+import { getAdConsent, recordConsent, setAdConsent, type AdConsent } from '../../lib/consent';
 import { setPushPreference } from '../../lib/push';
 import { openLegal } from '../../lib/legal';
 import { openStoreListing } from '../../lib/review';
@@ -138,7 +138,13 @@ export default function Profile() {
     });
 
   // The withdraw path the consent card promises ("modifiable à tout moment"). Granting here also
-  // starts the ad SDKs live (marketing.ts listens on the consent store), no restart needed.
+  // starts the ad SDKs live (marketing.ts listens on the consent store), no restart needed. Every
+  // change appends a row to the consent_events ledger (0040): a withdrawal is proof too.
+  const changeAdConsent = (c: AdConsent) => {
+    setAdConsentState(c);
+    void setAdConsent(c);
+    if (session) recordConsent(session.user.id, 'profile', lang, [{ purpose: 'ads', status: c }]);
+  };
   const openAdConsent = () =>
     sheet({
       title: lang === 'fr' ? 'Mesure et publicité' : 'Measurement and ads',
@@ -149,17 +155,11 @@ export default function Profile() {
       options: [
         {
           label: `${lang === 'fr' ? 'Accepter' : 'Accept'}${adConsent === 'granted' ? ' ·' : ''}`,
-          onPress: () => {
-            setAdConsentState('granted');
-            void setAdConsent('granted');
-          },
+          onPress: () => changeAdConsent('granted'),
         },
         {
           label: `${lang === 'fr' ? 'Refuser' : 'Refuse'}${adConsent === 'denied' ? ' ·' : ''}`,
-          onPress: () => {
-            setAdConsentState('denied');
-            void setAdConsent('denied');
-          },
+          onPress: () => changeAdConsent('denied'),
         },
         { label: lang === 'fr' ? 'Fermer' : 'Close', cancel: true },
       ],

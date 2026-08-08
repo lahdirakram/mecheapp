@@ -47,6 +47,7 @@ qui possède la **ligne**, jamais que le **chemin** appartient à cette personne
 | `profiles` | UPDATE sur `display_name`, `handle`, `lang` seulement (0020 + 0022) | oui (`role`, `lang`) |
 | `credit_transactions`, `subscriptions`, `suggest_calls` | **aucune policy** → refus RLS | oui |
 | `looks`, `feed_events` | CRUD complet | écrites seulement, jamais relues |
+| `consent_events` (0040) | INSERT + SELECT sur ses lignes, **jamais** update/delete (journal de preuve append-only) | non |
 | `requests`, `messages`, `bookings`, `salons`, `stylists`, `services`, `portfolio_items` | CRUD selon propriété | **aucune fonction edge n'y touche** |
 
 Les tables qui portent l'argent et les quotas ont le grant mais **aucune policy d'écriture** : en
@@ -185,11 +186,12 @@ dashboard et API admin, jamais bloquer une suppression) transforme le compte en 
 
 - **conservé, pseudonyme** : `credit_transactions` (le ledger), `generations` (dates et statuts
   seulement : chemins d'images annulés, `brief` vidé car son champ `prompt` est du texte libre),
-  `suggest_calls`, `subscriptions`, et la ligne `profiles` scrubée (`display_name=''`,
-  `handle=null`, `deleted_at=now()`). C'est ce qui garde le revenu et les compteurs de coût
-  exacts dans le backoffice — et c'est annoncé dans `web/site/{fr,en}/privacy.html` (base légale :
-  obligation comptable + intérêt légitime). **Toute modification du périmètre conservé doit être
-  reportée dans ces pages.**
+  `suggest_calls`, `subscriptions`, `consent_events` (0040 : la preuve du consentement doit rester
+  opposable après la suppression, RGPD art. 7.1, aucune colonne libre ni identifiante), et la ligne
+  `profiles` scrubée (`display_name=''`, `handle=null`, `deleted_at=now()`). C'est ce qui garde le
+  revenu et les compteurs de coût exacts dans le backoffice — et c'est annoncé dans
+  `web/site/{fr,en}/privacy.html` (base légale : obligation comptable + intérêt légitime). **Toute
+  modification du périmètre conservé doit être reportée dans ces pages.**
 - **effacé** : l'utilisateur auth (email), `looks`, `devices`, `feed_events`, `requests` +
   `messages`, et les fichiers storage (par `delete-account` ; une suppression dashboard laisse les
   fichiers à `purge-orphan-media`, comme avant).
