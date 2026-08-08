@@ -10,9 +10,11 @@ import { fmtDateTime, fmtEurCents, fmtInt, fmtMoney } from '@/lib/format';
 import { flatten, readInt } from '@/lib/qs';
 import { listActivity, listLedger, type Activity, type LedgerRow } from '@/queries/activity';
 import {
+  getConsents,
   getDevices,
   getSubscription,
   getUser,
+  type ConsentRow,
   type Device,
   type Subscription,
   type UserDetail,
@@ -22,6 +24,18 @@ export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACT_PAGE_SIZE = 25;
+
+const CONSENT_PURPOSE: Record<string, string> = {
+  terms: 'CGU',
+  privacy: 'Confidentialité',
+  ads: 'Mesure pub',
+};
+// 'backfill' = choix d'avant 0040 trouvé en AsyncStorage et migré tel quel (voir la migration).
+const CONSENT_SOURCE: Record<string, string> = {
+  gate: 'écran de consentement',
+  profile: 'profil',
+  backfill: 'migré de l’appareil',
+};
 
 export default async function UserPage({
   params,
@@ -47,13 +61,15 @@ export default async function UserPage({
   let ledger: LedgerRow[];
   let devices: Device[];
   let sub: Subscription | null;
+  let consents: ConsentRow[];
   try {
-    [user, activity, ledger, devices, sub] = await Promise.all([
+    [user, activity, ledger, devices, sub, consents] = await Promise.all([
       getUser(id),
       listActivity(id, actPage, ACT_PAGE_SIZE),
       listLedger(id),
       getDevices(id),
       getSubscription(id),
+      getConsents(id),
     ]);
   } catch (error) {
     return <Fatal error={error} />;
@@ -201,6 +217,53 @@ export default async function UserPage({
               </div>
             </div>
           )}
+
+          <div className="panel" style={{ marginTop: 16 }}>
+            <div className="panel__head">
+              <div className="panel__title">Consentements</div>
+              <span className="section-note">registre de preuve (0040), l&apos;historique complet</span>
+            </div>
+            {consents.length === 0 ? (
+              <div className="empty">
+                Aucun consentement enregistré. Compte d&apos;avant le registre qui n&apos;a pas
+                rouvert l&apos;app depuis, ou écriture encore en attente (best-effort).
+              </div>
+            ) : (
+              <div className="scroll-x">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Finalité</th>
+                      <th>Choix</th>
+                      <th>Origine</th>
+                      <th>Version</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {consents.map((c, i) => (
+                      <tr key={i}>
+                        <td className="dim">{fmtDateTime(c.created_at)}</td>
+                        <td>{CONSENT_PURPOSE[c.purpose] ?? c.purpose}</td>
+                        <td>
+                          {c.status === 'granted' ? (
+                            'accepté'
+                          ) : (
+                            <span className="badge badge--failed">refusé</span>
+                          )}
+                        </td>
+                        <td>
+                          {CONSENT_SOURCE[c.source] ?? c.source}
+                          {c.platform && <span className="dim"> · {c.platform}</span>}
+                        </td>
+                        <td className="mono">{c.doc_version ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
 
           <div className="panel" style={{ marginTop: 16 }}>
             <div className="panel__head">

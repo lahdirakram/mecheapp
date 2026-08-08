@@ -221,6 +221,27 @@ export function getDevices(id: string) {
   );
 }
 
+export type ConsentRow = {
+  purpose: 'terms' | 'privacy' | 'ads';
+  status: 'granted' | 'denied';
+  source: 'gate' | 'profile' | 'backfill';
+  platform: string | null;
+  lang: string | null;
+  doc_version: string | null;
+  created_at: string;
+};
+
+/** Registre de consentement (0040). Tout l'historique, pas seulement l'état courant : la suite
+ *  des lignes EST la preuve RGPD (un retrait = une nouvelle ligne, jamais d'update). */
+export function getConsents(id: string) {
+  return query<ConsentRow>(
+    `select purpose, status, source, platform, lang, doc_version, created_at
+     from consent_events where user_id = $1
+     order by created_at desc, purpose`,
+    [id],
+  );
+}
+
 export type Subscription = {
   plan: string;
   status: string;
