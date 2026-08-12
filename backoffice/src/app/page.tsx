@@ -4,6 +4,7 @@ import { Fatal } from '@/components/Fatal';
 import { FilterBar } from '@/components/FilterBar';
 import { MetricCard } from '@/components/MetricCard';
 import { Pager } from '@/components/Pager';
+import { PurchasesTable } from '@/components/PurchasesTable';
 import { SearchBox } from '@/components/SearchBox';
 import { UsersTable } from '@/components/UsersTable';
 import { toVM } from '@/lib/activity-vm';
@@ -22,6 +23,7 @@ import {
   type GlobalActivity,
 } from '@/queries/activity';
 import { feedCounts, type StatusCounts } from '@/queries/feed';
+import { listPurchases, type PurchaseRow } from '@/queries/purchases';
 import { parseScope, PERIOD_LABEL } from '@/queries/filters';
 import { getMetrics, type Metrics } from '@/queries/metrics';
 import { isSortKey, listUsers, type SortKey, type UserRow } from '@/queries/users';
@@ -42,7 +44,8 @@ export default async function Dashboard({
 }) {
   const params = flatten(await searchParams);
   const scope = parseScope(params);
-  const tab = params.tab === 'activity' ? 'activity' : 'users';
+  const tab =
+    params.tab === 'activity' ? 'activity' : params.tab === 'purchases' ? 'purchases' : 'users';
   const kind: ActivityKind = KIND_FROM_URL[params.kind ?? ''] ?? 'all';
   const q = (params.q ?? '').trim();
   const sort: SortKey = isSortKey(params.sort ?? '') ? (params.sort as SortKey) : 'created_at';
@@ -55,14 +58,16 @@ export default async function Dashboard({
   let m: Metrics;
   let rows: UserRow[];
   let acts: GlobalActivity[];
+  let buys: PurchaseRow[];
   let counts: StatusCounts;
   try {
-    // Seul le tableau de l'onglet actif est chargé : l'autre requête ne sert à rien.
-    [m, counts, rows, acts] = await Promise.all([
+    // Seul le tableau de l'onglet actif est chargé : les autres requêtes ne servent à rien.
+    [m, counts, rows, acts, buys] = await Promise.all([
       getMetrics(scope),
       feedCounts(),
       tab === 'users' ? listUsers(scope, { q, sort, dir, page, size }) : Promise.resolve([]),
       tab === 'activity' ? listGlobalActivity(scope, { kind, page, size }) : Promise.resolve([]),
+      tab === 'purchases' ? listPurchases(scope, { page, size }) : Promise.resolve([]),
     ]);
   } catch (error) {
     return <Fatal error={error} />;
@@ -70,7 +75,12 @@ export default async function Dashboard({
   // Le nombre de visuels en attente doit se voir depuis l'accueil, sinon la file grossit sans bruit.
   const drafts = counts.draft;
 
-  const total = (tab === 'users' ? rows[0]?.total_count : acts[0]?.total_count) ?? 0;
+  const total =
+    (tab === 'users'
+      ? rows[0]?.total_count
+      : tab === 'activity'
+        ? acts[0]?.total_count
+        : buys[0]?.total_count) ?? 0;
   const periode = PERIOD_LABEL[scope.period];
   const essaisReussisSeuls = scope.attempts === 'done';
   // Dénominateur du taux d'échec : la répartition réelle, indépendante du filtre de statut.
@@ -97,7 +107,9 @@ export default async function Dashboard({
   const refundsMicro = m.refunds_usd * 1e6;
   const caNetMicro = caMicro - commissionTvaMicro - refundsMicro;
   const ordersEstimes = Math.max(0, m.orders - m.orders_exact);
-  const margeMicro = caMicro - coutTotalMicro;
+  // La marge se calcule sur le NET : la commission store et la TVA ne nous appartiennent pas,
+  // les soustraire d'abord est la seule façon honnête de la lire.
+  const margeMicro = caNetMicro - coutTotalMicro;
   /** USD d'abord, l'équivalent EUR entre parenthèses en secondaire. */
   const usdEur = (microUsd: number) =>
     `${fmtUsdMicro(microUsd)} (${fmtEurCents(microUsdToCents(microUsd))})`;
@@ -310,7 +322,7 @@ export default async function Dashboard({
           <MetricCard
             label="Marge après coût IA"
             value={usdEur(margeMicro)}
-            hint="CA brut moins coût IA total"
+            hint="CA net (après commission, TVA, remboursements) moins coût IA total"
             estimate
           />
         </div>
@@ -343,12 +355,30 @@ export default async function Dashboard({
                 >
                   Activité
                 </Link>
+                <Link
+                  href={withParams(params, {
+                    tab: 'purchases',
+                    q: undefined,
+                    sort: undefined,
+                    dir: undefined,
+                    kind: undefined,
+                    page: undefined,
+                  })}
+                  aria-current={tab === 'purchases'}
+                  scroll={false}
+                >
+                  Achats
+                </Link>
               </div>
               <span className="section-note">même périmètre que les cartes</span>
             </div>
-            {tab === 'users' ? (
-              <SearchBox params={params} initial={q} />
-            ) : (
+            {tab === 'users' && <SearchBox params={params} initial={q} />}
+            {tab === 'purchases' && (
+              <span className="section-note">
+                montants exacts dès le registre 0039, estimation catalogue avant
+              </span>
+            )}
+            {tab === 'activity' && (
               <div className="seg">
                 <Link
                   href={withParams(params, { kind: undefined, page: undefined })}
@@ -374,12 +404,13 @@ export default async function Dashboard({
               </div>
             )}
           </div>
-          {tab === 'users' ? (
+          {tab === 'users' && (
             <>
               <UsersTable rows={rows} sort={sort} dir={dir} params={params} />
               <Pager params={params} page={page} size={size} total={total} label="utilisateurs" />
             </>
-          ) : (
+          )}
+          {tab === 'activity' && (
             <>
               <ActivityTable
                 rows={acts.map((a) => ({
@@ -388,6 +419,12 @@ export default async function Dashboard({
                 }))}
               />
               <Pager params={params} page={page} size={size} total={total} label="activités" />
+            </>
+          )}
+          {tab === 'purchases' && (
+            <>
+              <PurchasesTable rows={buys} />
+              <Pager params={params} page={page} size={size} total={total} label="achats" />
             </>
           )}
         </div>
