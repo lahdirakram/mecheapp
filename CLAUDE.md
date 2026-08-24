@@ -258,6 +258,18 @@ wrong belief survives across sessions.
   (cron `reap-stuck-generations`, toutes les 5 min, seuil 10 min — mesuré : p99 réel = 15,5 s ;
   ne pas descendre sous la minute, on rembourserait des générations vivantes). Ce cron ne voit PAS
   les orphelins d'avant 0030 : leur débit n'a pas de `gen:<id>` et leur ligne n'existe pas.
+- **Incident « spend cap » AI Studio (18-20 août 2026) : le plafond de dépense Google atteint fait
+  répondre 429 à TOUS les appels Gemini, pendant des heures.** L'app a bien tenu : chaque essai
+  finit en carte `failed` et le catch de `generate` rembourse la réservation (vérifié après coup :
+  110 générations échouées, 0 débit restant), mais l'expérience utilisateur est morte pendant
+  deux jours. **Le check** pour dimensionner un incident : `ai_calls` (0036) filtré sur
+  `ok=false and error like 'gemini 429%'` donne la fenêtre exacte, les users touchés et les
+  volumes ; pas besoin des logs edge. La relance email post-incident est
+  `scripts/relance-incident-gemini.ts` (même convention que `relance-verif-email.ts` : liste
+  recalculée, dry-run par défaut, `--only` pour un envoi de contrôle) — réutilisable comme
+  gabarit pour le prochain incident en changeant la fenêtre et le texte. Le texte évite le mot
+  « crédit » (des destinataires pré-achat, règle UX du premier essai verrouillé) : « rien ne t'a
+  été décompté » est vrai pour tout le monde.
 - **Le contenu des suggestions est conservé depuis 0038 (`suggest_calls.suggestion` jsonb : name,
   description, reasons, prompt, lang, model), écrit best-effort par `suggest` après la réponse.**
   C'est du DÉRIVÉ DU SELFIE (« pourquoi ça vous irait »), donc il suit le régime du brief des
