@@ -226,6 +226,13 @@ wrong belief survives across sessions.
   `app_config.locked_first_try` row (0027): it drives `generate` AND the whole client experience,
   so one SQL update flips everything (`0` off, `1` respect client flag, `force` always). The
   `LOCKED_FIRST_TRY` env var, when set, overrides the row (emergency only; keep it unset).
+  **Cette ligne fait des aller-retours : ne JAMAIS déduire son état du 0027 (qui insère `'1'`) ni
+  d'un doc, la lire.** Prod `'0'` depuis le 2026-08-31 (premier essai gratuit, image nette), après
+  `'1'` du 2026-07-29 ; staging `'1'`. Éteindre ne débloque PAS rétroactivement : les comptes qui
+  ont un `locked=true` en attente (395 à la bascule) ont déjà consommé leur crédit de bienvenue et
+  se retrouvent à 0 crédit, leur image nette restant dans le `vault`. Les débloquer ne coûte aucun
+  appel Gemini (l'image existe) mais demande un `admin_grant_credits` par compte, choisi de ne pas
+  le faire. Détail et raison de la bascule : `docs/web-studio.md` § `locked_first_try`.
 - **UX rule behind the locked first try: the credit vocabulary does not exist before the first
   purchase.** No counter, no "1 crédit", no "recharge" for someone who never bought. Pre-purchase
   the app says what happens ("ton essai apparaît d'abord en aperçu"), the paywall renders IN PLACE

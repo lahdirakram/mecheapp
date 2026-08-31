@@ -109,27 +109,39 @@ C'est la vraie économie de la décision, au-delà du prix :
   (`web/src/lib/packs.ts`), il n'a pas sa propre copie des tarifs. Changer un prix reste un seul
   `update`, appliqué partout.
 
-## `locked_first_try` : `'0'` en prod, et c'est assumé
+## `locked_first_try` : rallumé le 29/07, ÉTEINT à nouveau le 2026-08-31
 
-**Vérifié : la prod est à `'0'`, staging à `'1'`.** La prod livre donc aujourd'hui l'image nette à
-tout compte qui a son crédit de bienvenue. Le 0027 insère `'1'`, mais c'est la valeur d'insertion,
-pas l'état courant.
+**État courant, vérifié en base : prod `'0'` (premier essai GRATUIT, image nette), staging `'1'`.**
+Le 0027 insère `'1'`, mais c'est la valeur d'insertion, pas l'état courant : cette ligne a fait
+l'aller-retour (`'0'` au moment de la rédaction de ce document, `'1'` le 2026-07-29, `'0'` le
+2026-08-31). **Ne jamais déduire l'état du fichier de migration ni de ce document, le lire :**
+`select value, updated_at from app_config where key = 'locked_first_try';`
 
-**Décision : on le laisse à `'0'` pour l'instant.** Ce qui comptait était de savoir que le mécanisme
-marche quand on l'allume, et c'est vérifié de bout en bout sur staging (compte neuf → teaser flouté
-serveur → paywall → `unlock` → image nette, invariants du grand livre respectés).
+**Pourquoi on l'a ré-éteint** : le studio web n'encaisse pas (Paddle a refusé le compte), donc le
+verrou ne servait plus qu'à retenir des images sans jamais offrir de moyen de payer côté web. Le
+mécanisme lui-même reste vérifié de bout en bout sur staging (compte neuf → teaser flouté serveur
+→ paywall → `unlock` → image nette, invariants du grand livre respectés) : c'est un interrupteur
+en état de marche, pas du code mort.
 
 Ce qu'il faut garder en tête :
 
-- **Le studio web ne peut pas ouvrir au public tant que la prod est à `'0'`.** `generate` renverrait
-  une image nette, il n'y aurait rien à révéler, et le paywall vendrait du vide. C'est le dernier
-  interrupteur à basculer, pas un préalable au développement.
-- **Le réglage est global, il ne distingue pas l'app du web.** Le passer à `'1'` allume aussi le
-  premier essai verrouillé dans l'app en prod. Le test device de l'app est donc sur le chemin
-  critique du lancement web, même si le web n'en dépend pas pour être construit et testé.
-- La bascule, le moment venu :
+- **Éteindre ne débloque PAS rétroactivement.** Au moment de la bascule, 395 comptes avaient un
+  résultat `locked=true` en attente : leur crédit de bienvenue est déjà consommé, leur image nette
+  dort dans le `vault`, et avec le flag à `'0'` ils voient simplement 0 crédit. Les débloquer est
+  possible et ne coûte AUCUN appel Gemini (l'image existe déjà) : un `admin_grant_credits` par
+  compte, qu'ils dépensent en `unlock`. Décision du 2026-08-31 : on ne le fait pas.
+- **Le studio web ne peut pas ouvrir au public tant que la prod est à `'0'`.** `generate` renvoie
+  une image nette, il n'y a rien à révéler, et le paywall vendrait du vide (`web/src/App.tsx`
+  n'affiche l'étape `paywall` que si `row.locked`). Sans encaissement Paddle la question est
+  théorique, mais si le web revient un jour, cet interrupteur est un préalable.
+- **Le réglage est global, il ne distingue pas l'app du web.** Le repasser à `'1'` rallume aussi le
+  premier essai verrouillé dans l'app en prod.
+- La bascule, dans les deux sens, sans redéploiement ni OTA (`generate` et les clients lisent la
+  même ligne ; cache client 5 min) :
   `update app_config set value = '1', updated_at = now() where key = 'locked_first_try';`
-  Pas de redéploiement, pas d'OTA : `generate` et le client lisent la même ligne.
+  Vérifier aussi qu'aucun secret `LOCKED_FIRST_TRY` n'est posé sur la fonction `generate`, il
+  écraserait la table (`supabase secrets list`) ; en temps normal il est absent, vérifié le
+  2026-08-31.
 
 ## Points de vigilance
 - **La photo est TOUJOURS convertie en JPEG et redimensionnée à 1600px dans le navigateur** avant

@@ -185,6 +185,10 @@ function resolve(req) {
   }
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
 
+  // Passerelle mail -> app : une page unique, hors du système bilingue à deux copies (elle prend sa
+  // langue en ?lang). Elle tente `meche://` puis retombe sur la fiche store. Détail : site/open.html.
+  if (p === '/ouvrir' || p === '/open') return { file: safeJoin(SITE, '/open.html') };
+
   // The studio owns everything under /studio, before the rules below.
   // Fermé, on ne résout AUCUN fichier : ni le shell, ni les assets fingerprintés. Rien du studio ne
   // quitte le serveur, donc il n'y a rien à réactiver côté navigateur.

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Mèche</title>
+<!--
+  Passerelle mail -> app. Servie sur /ouvrir (et /open) par server.js.
+
+  POURQUOI CETTE PAGE EXISTE : un bouton dans un email ne peut pas ouvrir l'app directement. Un lien
+  `meche://` est ignoré ou masqué par une partie des clients mail (Gmail en tête), et l'app n'a pas
+  d'universal links (aucun `associatedDomains` dans apps/meche/app.json, ce qui demanderait un build
+  store). Un lien https, lui, est cliquable partout. Cette page fait donc le saut a la place du mail :
+  elle tente le schéma custom immédiatement, et retombe sur la fiche store si l'app n'est pas là.
+
+  Le repli est déclenché par un timer ANNULÉ quand la page passe en arrière-plan : si l'app s'ouvre,
+  le navigateur perd le focus et le store ne s'affiche jamais. C'est le seul signal fiable, aucun
+  navigateur ne dit "le schéma a marché".
+
+  Bilingue par ?lang, comme le reste de web/ : aucune chaîne en dur dans une seule langue.
+-->
+<style>
+  :root { color-scheme: light; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: #FCF8F4; color: #15110E; padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  .card { max-width: 420px; text-align: center; }
+  .logo { font-family: Georgia, 'Times New Roman', serif; font-size: 30px; letter-spacing: -0.3px; margin: 0 0 20px; }
+  p { color: #3D342B; font-size: 16px; line-height: 1.6; margin: 0 0 24px; }
+  .btn {
+    display: inline-block; background: #15110E; color: #FCF8F4; text-decoration: none;
+    padding: 14px 28px; border-radius: 999px; font-size: 16px; font-weight: 600;
+  }
+  .alt { display: block; margin-top: 16px; font-size: 14px; color: #8E8580; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <p class="logo">Mèche</p>
+    <p id="msg"></p>
+    <a class="btn" id="cta" href="#"></a>
+    <a class="alt" id="store" href="#"></a>
+  </div>
+<script>
+(function () {
+  var T = {
+    fr: { msg: 'Ouverture de l’app...', cta: 'Ouvrir Mèche', store: 'Installer l’app' },
+    en: { msg: 'Opening the app...', cta: 'Open Mèche', store: 'Get the app' }
+  };
+  var q = new URLSearchParams(location.search);
+  var lang = q.get('lang') === 'en' ? 'en' : 'fr';
+  document.documentElement.lang = lang;
+  var t = T[lang];
+  document.getElementById('msg').textContent = t.msg;
+
+  var SCHEME = 'meche://';
+  var APPSTORE = 'https://apps.apple.com/app/id6777728552';
+  var PLAY = 'https://play.google.com/store/apps/details?id=com.meche.app';
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  var storeUrl = isAndroid ? PLAY : isIOS ? APPSTORE : 'https://mecheapp.com/' + (lang === 'en' ? 'en' : '');
+
+  var cta = document.getElementById('cta');
+  cta.textContent = t.cta;
+  cta.href = SCHEME;
+  var store = document.getElementById('store');
+  store.textContent = t.store;
+  store.href = storeUrl;
+
+  // Sur ordinateur il n'y a pas d'app à ouvrir : on ne tente rien, on montre la page.
+  if (!isIOS && !isAndroid) return;
+
+  var timer = setTimeout(function () { location.replace(storeUrl); }, 1500);
+  // L'app a pris la main (onglet caché ou page mise en cache) : surtout ne pas envoyer au store.
+  var cancel = function () { clearTimeout(timer); };
+  document.addEventListener('visibilitychange', function () { if (document.hidden) cancel(); });
+  window.addEventListener('pagehide', cancel);
+  window.addEventListener('blur', cancel);
+  location.href = SCHEME;
+})();
+</script>
+</body>
+</html>
