@@ -82,6 +82,13 @@ export type Metrics = {
  * les taux de conversion gardent un dénominateur stable et honnête, et `credits_left` qui est un
  * solde courant.
  *
+ * La liste EXHAUSTIVE de ce qui ignore la période, parce que c'est ce qui fait lire « donnée
+ * fausse » quand on filtre sur un seul jour : `users_total/b2c/pro` (dénominateur), `users_inactive`
+ * (le CTE `activated` est de toute l'histoire), `credits_left` (un solde) et `subs_active` (un
+ * statut courant). CHACUNE doit porter « hors période » sur sa carte : un chiffre hors période à
+ * côté d'un chiffre filtré, sans étiquette, se lit comme un bug. Toute nouvelle métrique sans
+ * `inPeriod` doit passer par la même case.
+ *
  * Notes de comptage :
  * - « crédits consommés » est déjà NET : un essai qui échoue voit sa ligne de réservation SUPPRIMÉE
  *   (generate/index.ts:329,343), pas compensée par un +1.

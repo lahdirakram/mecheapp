@@ -10,16 +10,9 @@ export type Scope = {
   role: 'all' | 'b2c' | 'pro';
   /** `active` = a au moins un essai RÉUSSI. Un compte sans résultat n'a jamais rien vécu du produit. */
   accounts: 'all' | 'active';
-  period: 'all' | '7d' | '30d' | '90d';
+  period: 'all' | '7d' | '30d' | '90d' | 'today' | 'yesterday' | 'month';
   /** Statut des essais retenus. `done` par défaut : un échec n'est pas un essai livré. */
   attempts: 'done' | 'all';
-};
-
-export const PERIOD_DAYS: Record<Scope['period'], number> = {
-  all: 0,
-  '7d': 7,
-  '30d': 30,
-  '90d': 90,
 };
 
 export const PERIOD_LABEL: Record<Scope['period'], string> = {
@@ -27,6 +20,9 @@ export const PERIOD_LABEL: Record<Scope['period'], string> = {
   '7d': 'sur 7 jours',
   '30d': 'sur 30 jours',
   '90d': 'sur 90 jours',
+  today: "aujourd'hui",
+  yesterday: 'hier',
+  month: 'ce mois-ci',
 };
 
 export const DEFAULT_SCOPE: Scope = {
@@ -45,7 +41,11 @@ export function parseScope(p: Record<string, string>): Scope {
   return {
     role: isIn(['all', 'b2c', 'pro'] as const, p.role, DEFAULT_SCOPE.role),
     accounts: isIn(['all', 'active'] as const, p.accounts, DEFAULT_SCOPE.accounts),
-    period: isIn(['all', '7d', '30d', '90d'] as const, p.period, DEFAULT_SCOPE.period),
+    period: isIn(
+      ['all', '7d', '30d', '90d', 'today', 'yesterday', 'month'] as const,
+      p.period,
+      DEFAULT_SCOPE.period
+    ),
     attempts: isIn(['done', 'all'] as const, p.attempts, DEFAULT_SCOPE.attempts),
   };
 }
@@ -73,16 +73,34 @@ export const SCOPE_CTE = `
   )`;
 
 /**
- * Prédicat de période. La période est passée en nombre de jours entier, 0 = tout, plutôt qu'en
- * `interval` nullable : un paramètre ne peut avoir qu'un seul type inféré, et mélanger
- * `$4::text is null` avec `$4::interval` rend l'inférence fragile.
+ * Minuit et 1er du mois en Europe/Paris, exprimés en timestamptz. Les bornes calendaires
+ * (aujourd'hui, hier, ce mois-ci) suivent l'horloge de l'admin, pas l'UTC du serveur : à 1h du
+ * matin heure française, « aujourd'hui » ne doit pas être vide.
  */
-export const inPeriod = (col: string) => `($4 = 0 or ${col} > now() - make_interval(days => $4))`;
+const DAY0 = `(date_trunc('day', now() at time zone 'Europe/Paris') at time zone 'Europe/Paris')`;
+const MONTH0 = `(date_trunc('month', now() at time zone 'Europe/Paris') at time zone 'Europe/Paris')`;
+
+/**
+ * Prédicat de période. `$4` est la clé de période telle quelle (texte), chaque cas est énuméré :
+ * pas de `$4::int` conditionnel, le pliage de constantes de Postgres peut évaluer un cast d'une
+ * branche non prise et faire échouer la requête. Les fenêtres glissantes restent ancrées sur
+ * `now()` ; les trois périodes calendaires sont bornées sur l'heure de Paris.
+ */
+export const inPeriod = (col: string) => `(case $4
+  when 'all' then true
+  when 'today' then ${col} >= ${DAY0}
+  when 'yesterday' then (${col} >= ${DAY0} - interval '1 day' and ${col} < ${DAY0})
+  when 'month' then ${col} >= ${MONTH0}
+  when '7d' then ${col} > now() - interval '7 days'
+  when '30d' then ${col} > now() - interval '30 days'
+  when '90d' then ${col} > now() - interval '90 days'
+  else true
+end)`;
 
 /** Prédicat de statut d'essai, à appliquer sur `generations`. */
 export const ATTEMPT_OK = `($5 = 'all' or status = 'done')`;
 
 /** Les 5 premiers paramètres de TOUTE requête, dans cet ordre imposé. */
 export function baseParams(s: Scope): unknown[] {
-  return [getEnv().excludedEmails, s.role, s.accounts, PERIOD_DAYS[s.period], s.attempts];
+  return [getEnv().excludedEmails, s.role, s.accounts, s.period, s.attempts];
 }

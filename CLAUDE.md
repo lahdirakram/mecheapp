@@ -70,6 +70,38 @@ wrong belief survives across sessions.
   ≈ 0,2 centime. Le plafond « borné » reste la règle : ne pas étendre sans repasser par le coût réel.
 - After edits, `cd apps/meche && npx tsc --noEmit` to typecheck before shipping. In `backoffice/`, use
   `./node_modules/.bin/tsc` — `npx tsc` picks up the root workspace's TypeScript 6, not the local 5.9.
+- **Le filtre de période du backoffice mêle deux natures, et la moitié des cartes l'ignore
+  VOLONTAIREMENT.** `inPeriod` (`backoffice/src/queries/filters.ts`) est un `case` sur la clé de
+  période passée en TEXTE : `7d/30d/90d` sont des fenêtres glissantes ancrées sur `now()`,
+  `today/yesterday/month` sont des bornes CALENDAIRES calculées en `Europe/Paris` (le serveur est
+  en UTC : sans ça « aujourd'hui » est vide jusqu'à 2 h du matin, et déborde sur la veille le
+  soir). Ne pas repasser à un nombre de jours entier, ça ne peut pas exprimer « hier » borné des
+  deux côtés. Ce qui ignore la période, exhaustivement : `users_total/b2c/pro` (dénominateur
+  stable des taux), `users_inactive` (le CTE `activated` couvre toute l'histoire), `credits_left`
+  et `subs_active` (des états, pas des événements). **Chacune DOIT porter « hors période » sur sa
+  carte** : un chiffre non filtré posé à côté de chiffres filtrés, sans étiquette, se lit comme
+  une donnée fausse, et c'est exactement le rapport de bug qu'on reçoit. Toute métrique ajoutée
+  sans `inPeriod` passe par la même case. **Le check** avant de conclure qu'un filtre est cassé :
+  recompter en SQL direct sur la même borne (`created_at >= date_trunc('day', now() at time zone
+  'Europe/Paris') at time zone 'Europe/Paris'`) et comparer à la page au même instant.
+- **Un agrégat d'argent affiché avec 2 décimales devient FAUX dès qu'on raccourcit la période.**
+  Sur « aujourd'hui », une suggestion coûte ~0,0023 $ et l'ARPU ~0,0018 $ : `Intl` les rend
+  « 0,00 $US » en face d'un compteur qui dit « 3 mesurées », et ça se lit comme un bug (rapporté
+  comme tel le 2026-08-30). Les cartes de coût et les moyennes par compte passent donc par
+  `fmtUsdMicroAuto` / `fmtEurCentsAuto` (`backoffice/src/lib/format.ts`), qui basculent à 4
+  décimales sous le cent et gardent « 0,00 » pour un VRAI zéro. Toute nouvelle carte qui divise un
+  montant par un nombre de comptes, ou qui somme des coûts sur une fenêtre courte, doit les
+  utiliser. Corollaire de rédaction, même carte : ne jamais relier par « dont » deux compteurs
+  d'unités différentes (`gens_exact` compte des ESSAIS, `gen_retries` des APPELS ; un jour
+  d'incident 429 il y a plus d'appels en retry que d'essais mesurés, et le « dont » devient absurde).
+- **Un chiffre du backoffice qui semble faux vient d'abord du hot-reload de `next dev`, pas de la
+  requête.** Après une édition d'un module serveur (`queries/*`), le premier rendu peut mélanger
+  des chunks compilés à des états différents : vu le 2026-08-30, des cartes cohérentes entre elles
+  mais correspondant à une fenêtre glissante alors que l'écran affichait « aujourd'hui », et un
+  nombre de comptes inférieur de 67 à la réalité. Ça ne se reproduit pas et ça ne laisse aucune
+  erreur en console. **Le check** avant d'ouvrir une chasse au bug : recharger dur, et si l'écart
+  persiste seulement alors comparer page et SQL au même instant. Un onglet resté ouvert depuis
+  avant l'édition montre la même chose.
 - **Client write access to the DB is deliberately minimal.** Read `docs/security-model.md` before
   touching any policy, grant, or `functions/generate`. The rule: never let the client write a value
   the server later reads back with `service_role`.

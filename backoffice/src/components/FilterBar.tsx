@@ -28,6 +28,9 @@ const GROUPS: FilterGroup[] = [
       { value: '90d', label: '90 j' },
       { value: '30d', label: '30 j' },
       { value: '7d', label: '7 j' },
+      { value: 'month', label: 'Ce mois-ci', title: 'Depuis le 1er du mois (heure de Paris)' },
+      { value: 'yesterday', label: 'Hier', title: "La journée d'hier complète (heure de Paris)" },
+      { value: 'today', label: "Aujourd'hui", title: 'Depuis minuit (heure de Paris)' },
     ],
   },
   {

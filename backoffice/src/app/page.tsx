@@ -8,7 +8,7 @@ import { PurchasesTable } from '@/components/PurchasesTable';
 import { SearchBox } from '@/components/SearchBox';
 import { UsersTable } from '@/components/UsersTable';
 import { toVM } from '@/lib/activity-vm';
-import { fmtEurCents, fmtInt, fmtPct, fmtUsdMicro } from '@/lib/format';
+import { fmtEurCentsAuto, fmtInt, fmtPct, fmtUsdMicro, fmtUsdMicroAuto } from '@/lib/format';
 import {
   AI_IMAGE_EST_MICRO_USD,
   AI_SUGGEST_EST_MICRO_USD,
@@ -110,9 +110,13 @@ export default async function Dashboard({
   // La marge se calcule sur le NET : la commission store et la TVA ne nous appartiennent pas,
   // les soustraire d'abord est la seule façon honnête de la lire.
   const margeMicro = caNetMicro - coutTotalMicro;
-  /** USD d'abord, l'équivalent EUR entre parenthèses en secondaire. */
+  /**
+   * USD d'abord, l'équivalent EUR entre parenthèses en secondaire. Formatage adaptatif : sur une
+   * période courte ces agrégats descendent sous le cent, et deux décimales les afficheraient
+   * « 0,00 $US » alors qu'ils ne sont pas nuls.
+   */
   const usdEur = (microUsd: number) =>
-    `${fmtUsdMicro(microUsd)} (${fmtEurCents(microUsdToCents(microUsd))})`;
+    `${fmtUsdMicroAuto(microUsd)} (${fmtEurCentsAuto(microUsdToCents(microUsd))})`;
 
   return (
     <>
@@ -154,23 +158,23 @@ export default async function Dashboard({
           <MetricCard
             label="Comptes"
             value={fmtInt(m.users_total)}
-            hint={`${fmtInt(m.users_b2c)} B2C · ${fmtInt(m.users_pro)} pro`}
+            hint={`${fmtInt(m.users_b2c)} B2C · ${fmtInt(m.users_pro)} pro · hors période`}
           />
           <MetricCard label="Inscrits" value={fmtInt(m.users_new)} hint={periode} />
           <MetricCard
             label="Ont fait un essai"
             value={fmtInt(m.users_tried)}
-            hint={`${fmtPct(m.users_tried, m.users_total)} des comptes · ${periode}`}
+            hint={`${periode} · ${fmtPct(m.users_tried, m.users_total)} de tous les comptes`}
           />
           <MetricCard
             label="Comptes non activés"
             value={fmtInt(m.users_inactive)}
-            hint={`${fmtPct(m.users_inactive, m.users_total)} sans aucun essai réussi`}
+            hint={`${fmtPct(m.users_inactive, m.users_total)} sans aucun essai réussi · hors période`}
           />
           <MetricCard
             label="Ont demandé une suggestion"
             value={fmtInt(m.users_sugg)}
-            hint={`${fmtPct(m.users_sugg, m.users_total)} des comptes`}
+            hint={`${periode} · ${fmtPct(m.users_sugg, m.users_total)} de tous les comptes`}
           />
         </div>
       </section>
@@ -188,7 +192,7 @@ export default async function Dashboard({
           <MetricCard
             label={essaisReussisSeuls ? 'Essais réussis' : 'Essais (tous statuts)'}
             value={fmtInt(m.gens_shown)}
-            hint={`${fmtInt(m.gens_done)} ok · ${fmtInt(m.gens_failed)} échecs · ${fmtInt(m.gens_pending)} en cours`}
+            hint={`${fmtInt(m.gens_done)} ok · ${fmtInt(m.gens_failed)} échecs · ${fmtInt(m.gens_pending)} en cours · ${periode}`}
           />
           <MetricCard
             label="Taux d'échec"
@@ -198,12 +202,12 @@ export default async function Dashboard({
           <MetricCard
             label="Suggestions"
             value={fmtInt(m.sugg_total)}
-            hint="contenu conservé depuis 0038, visible dans l'activité"
+            hint={`${periode} · contenu conservé depuis 0038, visible dans l'activité`}
           />
           <MetricCard
             label="Crédits consommés"
             value={fmtInt(m.credits_used)}
-            hint="net des remboursements"
+            hint={`${periode} · net des remboursements`}
           />
           <MetricCard
             label="Essais par compte actif"
@@ -243,7 +247,7 @@ export default async function Dashboard({
           <MetricCard
             label="Remboursements"
             value={m.refunds > 0 ? `-${fmtUsdMicro(refundsMicro)}` : '0'}
-            hint={`${fmtInt(m.refunds)} remboursement${m.refunds > 1 ? 's' : ''} · crédits repris par le webhook`}
+            hint={`${fmtInt(m.refunds)} remboursement${m.refunds > 1 ? 's' : ''} ${periode} · crédits repris par le webhook`}
           />
           <MetricCard
             label="CA net estimé"
@@ -253,37 +257,40 @@ export default async function Dashboard({
           />
           <MetricCard
             label="CA moyen / compte"
-            value={m.users_total > 0 ? fmtUsdMicro(caMicro / m.users_total) : '—'}
-            hint="ARPU, tous comptes du périmètre"
+            value={m.users_total > 0 ? fmtUsdMicroAuto(caMicro / m.users_total) : '—'}
+            hint={`ARPU · CA ${periode} rapporté à tous les comptes`}
           />
           <MetricCard
             label="CA moyen / payeur"
-            value={m.payers > 0 ? fmtUsdMicro(caMicro / m.payers) : '—'}
+            value={m.payers > 0 ? fmtUsdMicroAuto(caMicro / m.payers) : '—'}
             hint="ARPPU"
           />
           <MetricCard
             label="Payeurs"
             value={fmtInt(m.payers)}
-            hint={`${fmtPct(m.payers, m.users_total)} de conversion`}
+            hint={`${periode} · ${fmtPct(m.payers, m.users_total)} de tous les comptes`}
           />
           <MetricCard
             label="Panier moyen"
-            value={m.orders > 0 ? fmtUsdMicro(caPacksMicro / m.orders) : '—'}
+            value={m.orders > 0 ? fmtUsdMicroAuto(caPacksMicro / m.orders) : '—'}
           />
           <MetricCard
             label="Crédits achetés"
             value={fmtInt(m.credits_bought)}
-            hint={`${fmtInt(m.credits_free)} offerts · ${fmtInt(m.credits_granted)} accordés à la main`}
+            hint={`${periode} · ${fmtInt(m.credits_free)} offerts · ${fmtInt(m.credits_granted)} accordés à la main`}
           />
           <MetricCard
             label="Crédits en circulation"
             value={fmtInt(m.credits_left)}
             hint="solde courant, hors période"
           />
+          {/* La VALEUR est un état courant (statut 'active'), elle ne suit pas la période ; seul le
+              compte de paiements la suit. Le hint doit dire les deux, sinon le « aujourd'hui »
+              se lit comme s'appliquant au nombre d'abonnements. */}
           <MetricCard
             label="Abonnements Pro actifs"
             value={fmtInt(m.subs_active)}
-            hint={`${fmtInt(m.pro_payments)} paiement${m.pro_payments > 1 ? 's' : ''} Pro mesuré${m.pro_payments > 1 ? 's' : ''} · ${periode}`}
+            hint={`hors période · ${fmtInt(m.pro_payments)} paiement${m.pro_payments > 1 ? 's' : ''} Pro mesuré${m.pro_payments > 1 ? 's' : ''} ${periode}`}
           />
         </div>
       </section>
@@ -301,17 +308,20 @@ export default async function Dashboard({
           <MetricCard
             label="Coût des essais"
             value={usdEur(coutEssaisMicro)}
-            hint={`${fmtInt(m.gens_exact)} mesurés dont ${fmtInt(m.gen_retries)} retry${m.gen_retries > 1 ? 's' : ''}${gensEstimes > 0 ? ` · ${fmtInt(gensEstimes)} estimés × 0,039 $` : ''} · ${periode}`}
+            // « mesurés » compte des ESSAIS, « retrys » des APPELS : un « dont » entre les deux
+            // était faux, et le devenait criant un jour d'incident (63 essais en 429 = 63 appels
+            // de plus, donc plus de retrys que d'essais mesurés).
+            hint={`${fmtInt(m.gens_exact)} essai${m.gens_exact > 1 ? 's' : ''} mesuré${m.gens_exact > 1 ? 's' : ''} · ${fmtInt(m.gen_retries)} appel${m.gen_retries > 1 ? 's' : ''} en retry${gensEstimes > 0 ? ` · ${fmtInt(gensEstimes)} essai${gensEstimes > 1 ? 's' : ''} estimé${gensEstimes > 1 ? 's' : ''} × 0,039 $` : ''} · ${periode}`}
           />
           <MetricCard
             label="Coût des suggestions"
             value={usdEur(coutSuggMicro)}
-            hint={`${fmtInt(m.sugg_exact)} mesurées${suggEstimes > 0 ? ` · ${fmtInt(suggEstimes)} estimées` : ''}`}
+            hint={`${fmtInt(m.sugg_exact)} mesurées${suggEstimes > 0 ? ` · ${fmtInt(suggEstimes)} estimées` : ''} · ${periode}`}
           />
           <MetricCard
             label="Coût du feed"
             value={usdEur(coutFeedMicro)}
-            hint={`${fmtInt(m.feed_exact_items)} visuels mesurés${m.feed_est_cents > 0 ? ' · le reste estimé' : ''} · tous statuts, hors périmètre de comptes`}
+            hint={`${fmtInt(m.feed_exact_items)} visuels mesurés${m.feed_est_cents > 0 ? ' · le reste estimé' : ''} · ${periode} · tous statuts, hors périmètre de comptes`}
           />
           <MetricCard
             label="Coût IA total"

@@ -24,6 +24,33 @@ const USD_FINE = new Intl.NumberFormat('fr-FR', {
 export const fmtUsdMicroFine = (microUsd: number | null | undefined) =>
   USD_FINE.format((microUsd ?? 0) / 1e6);
 
+const EUR_FINE = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+});
+
+/**
+ * Montant AGRÉGÉ dont l'ordre de grandeur dépend de la période choisie : 2 décimales en temps
+ * normal, jusqu'à 4 dès qu'on passe sous le cent SANS être à zéro.
+ *
+ * POURQUOI : sur « aujourd'hui » une suggestion coûte ~0,0023 $ et l'ARPU vaut ~0,0018 $. Arrondis
+ * à « 0,00 $US » en face d'un compteur qui dit « 3 mesurées », ils se lisent comme une donnée
+ * fausse, et c'est exactement le bug qu'on nous remonte. Un vrai zéro reste « 0,00 $US » : la
+ * distinction gratuit / trop petit pour deux décimales est précisément ce qu'il faut montrer.
+ */
+export const fmtUsdMicroAuto = (microUsd: number | null | undefined) => {
+  const usd = (microUsd ?? 0) / 1e6;
+  return usd !== 0 && Math.abs(usd) < 0.01 ? USD_FINE.format(usd) : USD.format(usd);
+};
+
+/** Même règle pour l'équivalent EUR affiché entre parenthèses. */
+export const fmtEurCentsAuto = (cents: number | null | undefined) => {
+  const eur = (cents ?? 0) / 100;
+  return eur !== 0 && Math.abs(eur) < 0.01 ? EUR_FINE.format(eur) : EUR.format(eur);
+};
+
 /** Montant exact du webhook (iap_events) : dans la devise réellement payée, quelle qu'elle soit. */
 export const fmtMoney = (amount: number, currency: string) => {
   try {
