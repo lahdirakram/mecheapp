@@ -199,9 +199,16 @@ visiteur ──► Cloudflare ──► service "meche-site"  (Root Directory: w
                                  ├── /en             site/en/index.html   (landing EN)
                                  ├── /fr             301 -> /
                                  ├── /privacy /terms  site/{fr,en}/*.html  (langue detectee)
+                                 ├── /ouvrir /open   site/open.html  (passerelle mail -> app)
                                  ├── /looks/*.jpg     site/looks/
                                  └── /studio/*        dist/  (build Vite)
 ```
+
+**`/ouvrir` est la passerelle mail vers l'app** (`site/open.html`, aussi servie sur `/open`) : un
+bouton d'email ne peut pas ouvrir l'app directement, un lien `meche://` étant ignoré par une
+partie des clients mail et l'app n'ayant pas d'universal links. La page tente le schéma puis ne
+retombe sur la fiche store que si l'app ne prend pas la main. Elle prend sa langue dans `?lang`,
+elle n'est donc PAS dupliquée comme la landing.
 
 **La landing est bilingue et dupliquée à la main** : `site/index.html` (FR) et `site/en/index.html`
 (EN) sont deux copies du même HTML, à modifier ENSEMBLE. Le style est partagé dans
