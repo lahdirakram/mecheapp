@@ -18,7 +18,9 @@
   le navigateur perd le focus et le store ne s'affiche jamais. C'est le seul signal fiable, aucun
   navigateur ne dit "le schéma a marché".
 
-  Bilingue par ?lang, comme le reste de web/ : aucune chaîne en dur dans une seule langue.
+  Bilingue comme le reste de web/ : aucune chaîne en dur dans une seule langue. La langue suit
+  ?lang, puis le cookie `lang`, puis celle du NAVIGATEUR, et seulement ensuite le français.
+  Sans le repli navigateur, un anglophone qui ouvre un lien sans ?lang lisait du français.
 -->
 <style>
   :root { color-scheme: light; }
@@ -55,8 +57,29 @@
     fr: { msg: 'Ouverture de l’app...', cta: 'Ouvrir Mèche', store: 'Installer l’app' },
     en: { msg: 'Opening the app...', cta: 'Open Mèche', store: 'Get the app' }
   };
-  var q = new URLSearchParams(location.search);
-  var lang = q.get('lang') === 'en' ? 'en' : 'fr';
+  // Même ordre de priorité que le reste du site (voir pickLang dans server.js), rejoué ici en JS
+  // parce que cette page est un fichier UNIQUE et non deux copies : ?lang -> cookie `lang` (un
+  // choix explicite déjà fait sur le site) -> langue du navigateur -> fr.
+  // Le ?lang garde la priorité : quand le mail le pose, il sait dans quelle langue il a été écrit,
+  // ce qui est une meilleure information que les réglages du téléphone.
+  function pickLang() {
+    var q = new URLSearchParams(location.search).get('lang');
+    if (q === 'en' || q === 'fr') return q;
+    var c = /(?:^|;\s*)lang=(fr|en)(?:;|$)/.exec(document.cookie || '');
+    if (c) return c[1];
+    // navigator.languages est la liste ORDONNÉE des préférences : on prend la première qu'on
+    // parle, pas la première de la liste. Un navigateur en 'de-DE,en-GB' doit donner l'anglais.
+    var list = (navigator.languages && navigator.languages.length)
+      ? navigator.languages
+      : [navigator.language || ''];
+    for (var i = 0; i < list.length; i++) {
+      var l = String(list[i]).toLowerCase();
+      if (l.indexOf('fr') === 0) return 'fr';
+      if (l.indexOf('en') === 0) return 'en';
+    }
+    return 'fr';
+  }
+  var lang = pickLang();
   document.documentElement.lang = lang;
   var t = T[lang];
   document.getElementById('msg').textContent = t.msg;
@@ -67,7 +90,9 @@
   var ua = navigator.userAgent || '';
   var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var isAndroid = /Android/.test(ua);
-  var storeUrl = isAndroid ? PLAY : isIOS ? APPSTORE : 'https://mecheapp.com/' + (lang === 'en' ? 'en' : '');
+  // Sur ordinateur il n'y a rien à installer ici : on renvoie vers la page de téléchargement, qui
+  // montre les deux stores, plutôt que vers la landing.
+  var storeUrl = isAndroid ? PLAY : isIOS ? APPSTORE : (lang === 'en' ? '/en/download' : '/fr/download');
 
   var cta = document.getElementById('cta');
   cta.textContent = t.cta;

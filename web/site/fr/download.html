@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Télécharger Mèche · iPhone et Android</title>
+  <meta name="description" content="Télécharge Mèche sur iPhone ou Android. Premier essai offert, aucune carte demandée. Ou essaie directement dans ton navigateur." />
+  <link rel="canonical" href="https://mecheapp.com/fr/download" />
+  <link rel="alternate" hreflang="fr" href="https://mecheapp.com/fr/download" />
+  <link rel="alternate" hreflang="en" href="https://mecheapp.com/en/download" />
+  <link rel="alternate" hreflang="x-default" href="https://mecheapp.com/fr/download" />
+  <link rel="stylesheet" href="/style.css" />
+<!-- Umami analytics -->
+<script defer src="https://cloud.umami.is/script.js" data-website-id="e4d51509-6c02-47d8-8369-725f141cef0b"></script>
+<!--
+  Page de téléchargement dédiée, servie sur /telecharger et /download (langue détectée) et sur
+  /fr/download · /en/download (explicite). Deux copies HTML comme la landing, parce qu'elle est
+  PUBLIQUE et INDEXABLE : un ?lang côté client ne donnerait pas d'URL propre par langue.
+
+  Elle affiche TOUJOURS les deux stores, et met seulement en avant celui du device (classe
+  `is-target` + bouton principal ajouté par JS). Sans JS, on voit les deux cartes, ce qui reste
+  une page de téléchargement correcte. Le raccourci "un seul lien" est /get, qui redirige
+  côté SERVEUR d'après le User-Agent (voir server.js) : pas de JS, pas d'écran intermédiaire,
+  cliquable depuis un mail, un QR ou une bio Instagram.
+
+  Le cas iPad en "mode ordinateur" se joue ICI et pas dans /get : son UA est celui d'un Mac, le
+  serveur ne peut pas le distinguer, alors que le JS de cette page le voit à maxTouchPoints.
+-->
+<style>
+  /* Styles propres à cette page : le shell (nav, footer, typo) vient de style.css. */
+  main.legal.dl { text-align: center; max-width: 720px; }
+  /* style.css souligne et colore tous les liens de `main.legal` (bon pour du texte de
+     politique, faux pour des boutons). Ces deux sélecteurs reprennent la main dessus. */
+  main.legal.dl a.dl-card, main.legal.dl a.dl-primary { text-decoration: none; color: inherit; }
+  main.legal.dl a.dl-primary, main.legal.dl a.dl-primary:hover { color: var(--paper); }
+  .dl-lead { margin-bottom: 8px; }
+  .dl-note {
+    font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 36px;
+  }
+  .dl-primary {
+    display: none; align-items: center; justify-content: center; gap: 12px;
+    margin: 0 auto 12px; padding: 18px 30px; border-radius: 999px;
+    background: var(--ink); color: var(--paper);
+    font-family: 'Geist', sans-serif; font-size: 17px; font-weight: 600;
+    text-decoration: none; transition: transform .15s ease, background .15s ease;
+  }
+  .dl-primary.on { display: inline-flex; }
+  .dl-primary:hover { transform: translateY(-1px); background: var(--coral); color: var(--paper); }
+  .dl-primary svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0 0; }
+  @media (max-width: 640px) { .dl-grid { grid-template-columns: 1fr; } }
+  .dl-card {
+    display: block; border: 1px solid var(--line); border-radius: 18px;
+    padding: 28px 20px; background: #fff; text-decoration: none;
+    transition: transform .15s ease, border-color .15s ease;
+  }
+  .dl-card:hover { transform: translateY(-2px); border-color: var(--coral); }
+  /* Le store qui correspond au téléphone de la personne. Un liseré, pas un masquage de l'autre :
+     quelqu'un peut très bien télécharger pour un autre appareil que celui qu'il a en main. */
+  .dl-card.is-target { border-color: var(--coral); box-shadow: 0 0 0 1px var(--coral); }
+  .dl-card svg { width: 34px; height: 34px; color: var(--ink); }
+  .dl-card .dl-name {
+    font-family: 'Fraunces', serif; font-size: 21px; letter-spacing: -0.01em;
+    color: var(--ink); margin: 12px 0 4px;
+  }
+  .dl-card .dl-dev {
+    font-family: 'Geist Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .dl-card .dl-go {
+    display: inline-block; margin-top: 16px; font-size: 13px; font-weight: 500;
+    color: var(--paper); background: var(--ink); padding: 9px 18px; border-radius: 999px;
+  }
+  .dl-card:hover .dl-go { background: var(--coral); }
+  .dl-alt { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--line); }
+  main.legal.dl .dl-alt p { font-size: 15px; margin: 0 0 10px; }
+  .dl-qr { display: none; }
+  .dl-qr.on { display: block; }
+  .dl-qr code {
+    font-family: 'Geist Mono', monospace; font-size: 13px;
+    background: var(--paper-2); padding: 3px 8px; border-radius: 6px; color: var(--ink);
+  }
+</style>
+</head>
+<body>
+  <nav class="nav">
+  <a href="/" class="wm" aria-label="Mèche">m<span class="gw">e</span>che</a>
+  <div class="nav-right">
+    <span class="lang"><a href="/fr/download" class="active">FR</a><span>·</span><a href="/en/download">EN</a></span>
+    <a href="/studio?lang=fr" class="nav-cta" data-umami-event="cta-studio" data-umami-event-location="download-nav">Essayer en ligne</a>
+  </div>
+</nav>
+
+  <main class="legal dl">
+
+  <p class="updated">Télécharger</p>
+  <h1>Mèche, sur ton <em>téléphone.</em></h1>
+  <p class="lead dl-lead">Essaie coupe, couleur et mèches sur ta propre photo, avant de t'asseoir dans le fauteuil.</p>
+  <p class="dl-note">Gratuit · Premier essai offert · Aucune carte demandée</p>
+
+  <a class="dl-primary" id="dl-primary" href="#" data-umami-event="download-primary"></a>
+
+  <div class="dl-grid">
+    <a class="dl-card" id="dl-ios" href="https://apps.apple.com/app/id6777728552" data-umami-event="store-ios" data-umami-event-location="download-page">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>
+      <p class="dl-name">App Store</p>
+      <p class="dl-dev">iPhone et iPad</p>
+      <span class="dl-go">Télécharger</span>
+    </a>
+    <a class="dl-card" id="dl-android" href="https://play.google.com/store/apps/details?id=com.meche.app" data-umami-event="store-android" data-umami-event-location="download-page">
+      <svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>
+      <p class="dl-name">Google Play</p>
+      <p class="dl-dev">Android</p>
+      <span class="dl-go">Télécharger</span>
+    </a>
+  </div>
+
+  <div class="dl-alt">
+    <p class="dl-qr" id="dl-qr">Tu es sur un ordinateur. Ouvre <code>mecheapp.com/get</code> sur ton téléphone, tu tombes directement sur le bon store.</p>
+    <p>Déjà installée ? <a href="/ouvrir?lang=fr" data-umami-event="open-app" data-umami-event-location="download-page">Ouvrir l'app</a></p>
+    <p>Sans rien installer : <a href="/studio?lang=fr" data-umami-event="cta-studio" data-umami-event-location="download-page">essaie en ligne, dans ton navigateur ↗</a></p>
+  </div>
+
+  <div class="legal-nav">
+    <a href="/fr">Accueil</a>
+    <a href="/fr/support">Assistance</a>
+    <a href="/fr/privacy">Politique de confidentialité</a>
+    <a href="/fr/terms">Conditions d'utilisation</a>
+  </div>
+  </main>
+
+<footer class="site">
+  <div class="foot-inner">
+    <div class="foot-top">
+      <div>
+        <a href="/" class="wm" aria-label="Mèche">m<span class="gw">e</span>che</a>
+        <p class="tag">Vois-toi avant. Change après. Paris vers partout.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Produit</h5>
+        <a href="/#paths">Try-on</a>
+        <a href="/#how">Comment ça marche</a>
+        <a href="/#why">Pourquoi Mèche</a>
+        <a href="/studio?lang=fr" data-umami-event="cta-studio" data-umami-event-location="footer">Essayer en ligne</a>
+        <a href="/telecharger">Télécharger</a>
+      </div>
+      <div class="foot-col">
+        <h5>Coiffeurs</h5>
+        <span class="soon">Mèche Pro <span class="badge">Bientôt</span></span>
+        <span class="soon">Rejoindre <span class="badge">Bientôt</span></span>
+        <span class="soon">Tarification <span class="badge">Bientôt</span></span>
+      </div>
+      <div class="foot-col">
+        <h5>Mèche</h5>
+        <a href="/support">Assistance</a>
+        <a href="/delete-account">Suppression de compte</a>
+        <a href="/privacy">Confidentialité</a>
+        <a href="/terms">CGU</a>
+        <a href="/mentions-legales">Mentions légales</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 Mèche · Paris</span>
+      <span><a href="/mentions-legales">Mentions légales</a> · <a href="/terms">CGU</a> · <a href="/privacy">Confidentialité</a> · <a href="/privacy">Cookies</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var ua = navigator.userAgent || '';
+  // maxTouchPoints attrape l'iPad en "mode ordinateur", dont l'UA se fait passer pour un Mac.
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  var APPLE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/></svg>';
+  var PLAY = '<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>';
+
+  var card = isAndroid ? document.getElementById('dl-android') : isIOS ? document.getElementById('dl-ios') : null;
+  if (!card) { document.getElementById('dl-qr').classList.add('on'); return; }
+
+  card.classList.add('is-target');
+  var btn = document.getElementById('dl-primary');
+  btn.href = card.href;
+  btn.innerHTML = (isAndroid ? PLAY : APPLE) + '<span>Télécharger sur ' + (isAndroid ? 'Google Play' : 'l’App Store') + '</span>';
+  btn.setAttribute('data-umami-event-location', isAndroid ? 'download-page-android' : 'download-page-ios');
+  btn.classList.add('on');
+})();
+</script>
+
+</body>
+</html>

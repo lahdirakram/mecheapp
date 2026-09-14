@@ -199,6 +199,8 @@ visiteur ──► Cloudflare ──► service "meche-site"  (Root Directory: w
                                  ├── /en             site/en/index.html   (landing EN)
                                  ├── /fr             301 -> /
                                  ├── /privacy /terms  site/{fr,en}/*.html  (langue detectee)
+                                 ├── /telecharger /download  site/{fr,en}/download.html
+                                 ├── /get /app       302 -> App Store / Play selon le device
                                  ├── /ouvrir /open   site/open.html  (passerelle mail -> app)
                                  ├── /looks/*.jpg     site/looks/
                                  └── /studio/*        dist/  (build Vite)
@@ -207,8 +209,31 @@ visiteur ──► Cloudflare ──► service "meche-site"  (Root Directory: w
 **`/ouvrir` est la passerelle mail vers l'app** (`site/open.html`, aussi servie sur `/open`) : un
 bouton d'email ne peut pas ouvrir l'app directement, un lien `meche://` étant ignoré par une
 partie des clients mail et l'app n'ayant pas d'universal links. La page tente le schéma puis ne
-retombe sur la fiche store que si l'app ne prend pas la main. Elle prend sa langue dans `?lang`,
-elle n'est donc PAS dupliquée comme la landing.
+retombe sur la fiche store que si l'app ne prend pas la main. Elle n'est PAS dupliquée comme la
+landing : un seul fichier, qui rejoue en JS l'ordre de priorité de `pickLang` (`?lang` → cookie
+`lang` → **langue du navigateur** → fr). Le repli navigateur n'est pas optionnel : sans lui, tout
+lien sans `?lang` servait du français à un anglophone. Et `?lang` reste prioritaire, parce qu'un
+mail sait dans quelle langue il a été écrit, ce que les réglages du téléphone ne disent pas.
+
+**`/get` et `/ouvrir` ne servent PAS le même utilisateur, ne pas les fusionner.** `/get` (alias
+`/app`) est le lien à partager pour FAIRE INSTALLER : le serveur lit le `User-Agent` et renvoie un
+302 direct vers l'App Store ou Google Play, sans page ni attente, donc il marche dans un mail, un
+QR ou une bio Instagram, et sans JS. `/ouvrir` vise quelqu'un qui a DÉJÀ l'app : il tente
+`meche://` d'abord et n'atterrit au store qu'après un délai. Envoyer un nouveau venu sur `/ouvrir`
+lui fait regarder un écran d'attente pour rien.
+
+Deux contraintes sur `/get`, à ne pas retirer : `vary: user-agent` (sans ça un cache partagé
+envoie tout le monde sur le store du premier visiteur) et `x-robots-tag: noindex` (la page
+indexable, c'est `/download`). Un ordinateur, et un **iPad en mode ordinateur** dont l'UA se fait
+passer pour un Mac, tombent sur `/download` : la détection y est refaite en JS avec
+`maxTouchPoints`, ce que le serveur ne peut pas voir.
+
+**`/telecharger` (= `/download`) est la page de téléchargement dédiée**, `site/{fr,en}/download.html`,
+deux copies comme la landing parce qu'elle est publique et indexable. Elle montre TOUJOURS les deux
+stores et se contente de mettre en avant celui du device (liseré + bouton principal ajouté par JS) :
+quelqu'un peut télécharger pour un autre appareil que celui qu'il tient. Sans JS, les deux cartes
+restent, la page fonctionne. `telecharger` est un alias d'URL (`PAGE_ALIASES` dans `server.js`),
+pas un troisième fichier.
 
 **La landing est bilingue et dupliquée à la main** : `site/index.html` (FR) et `site/en/index.html`
 (EN) sont deux copies du même HTML, à modifier ENSEMBLE. Le style est partagé dans

@@ -2,6 +2,9 @@
 //
 //   /                     marketing landing        -> site/index.html
 //   /privacy /terms ...   legal pages, bilingual   -> site/{fr,en}/*.html
+//   /telecharger /download  download page, biling. -> site/{fr,en}/download.html
+//   /get /app             store redirect by device -> App Store / Play, desktop -> /download
+//   /ouvrir /open         mail -> app gateway       -> site/open.html
 //   /studio/*             the paid try-on SPA      -> dist/ (Vite build)
 //
 // ONE service on purpose. The studio wears the site's shell (same footer, same links), and a single
@@ -110,7 +113,33 @@ function sendStudioClosed(res) {
   res.end(body);
 }
 
-const PAGES = new Set(['index', 'privacy', 'terms', 'mentions-legales', 'support', 'delete-account']);
+const PAGES = new Set([
+  'index', 'privacy', 'terms', 'mentions-legales', 'support', 'delete-account', 'download',
+]);
+/** Alias d'URL -> page réelle. `/telecharger` est le nom français de `/download` : une seule paire
+ *  de fichiers (site/{fr,en}/download.html), deux chemins d'entrée. Le canonical des pages pointe
+ *  sur /xx/download, donc l'alias n'ajoute pas de contenu dupliqué pour un moteur. */
+const PAGE_ALIASES = { telecharger: 'download' };
+
+// ── Lien court /get : la redirection store décidée par le SERVEUR ────────────────────────────────
+//
+// UN lien à partager (mail, QR, bio Instagram, SMS) qui envoie chacun sur le bon store. Décidé
+// côté serveur et pas en JS : pas de page intermédiaire, pas d'attente, et ça marche là où le JS
+// ne tourne pas. C'est la différence avec /ouvrir, qui lui tente d'abord `meche://` pour ouvrir
+// l'app DÉJÀ installée et n'atterrit au store qu'après un délai : /ouvrir sert un utilisateur
+// existant, /get sert un nouveau.
+//
+// Ordinateur (et iPad en mode ordinateur, dont l'UA est celui d'un Mac : indistinguable ici) ->
+// la page /download, qui montre les deux stores et refait la détection en JS avec maxTouchPoints.
+const APPSTORE_URL = 'https://apps.apple.com/app/id6777728552';
+const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.meche.app';
+
+function storeForUA(ua) {
+  const u = ua || '';
+  if (/Android/i.test(u)) return PLAY_URL;
+  if (/iPhone|iPad|iPod/i.test(u)) return APPSTORE_URL;
+  return null; // ordinateur ou inconnu
+}
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -189,6 +218,16 @@ function resolve(req) {
   // langue en ?lang). Elle tente `meche://` puis retombe sur la fiche store. Détail : site/open.html.
   if (p === '/ouvrir' || p === '/open') return { file: safeJoin(SITE, '/open.html') };
 
+  // Lien court device-aware. `vary: user-agent` parce que la même URL répond différemment selon le
+  // téléphone : sans ça, un cache partagé enverrait tout le monde sur le store du premier visiteur.
+  // `noindex` : c'est un raccourci, la page indexable est /download.
+  if (p === '/get' || p === '/app') {
+    const store = storeForUA(req.headers['user-agent']);
+    if (store) return { redirect: store, varyUA: true, noindex: true };
+    const q = url.searchParams.get('lang');
+    return { redirect: q === 'en' || q === 'fr' ? `/${q}/download` : '/download', varyUA: true, noindex: true };
+  }
+
   // The studio owns everything under /studio, before the rules below.
   // Fermé, on ne résout AUCUN fichier : ni le shell, ni les assets fingerprintés. Rien du studio ne
   // quitte le serveur, donc il n'y a rien à réactiver côté navigateur.
@@ -207,7 +246,7 @@ function resolve(req) {
   // landing is an explicit choice and pins the `lang` cookie; the legal pages do not, reading
   // one document in English is not a decision about the whole site.
   if (parts[0] === 'fr' || parts[0] === 'en') {
-    const page = parts[1] || 'index';
+    const page = PAGE_ALIASES[parts[1]] || parts[1] || 'index';
     if (page === 'index') {
       if (parts[0] === 'fr') return { redirect: '/', setLang: 'fr' };
       return { file: safeJoin(SITE, '/en/index.html'), setLang: 'en' };
@@ -217,7 +256,7 @@ function resolve(req) {
   }
 
   // canonical: /privacy, /terms -> language-detected
-  const page = parts[0] || 'index';
+  const page = PAGE_ALIASES[parts[0]] || parts[0] || 'index';
   if (PAGES.has(page)) {
     return { file: safeJoin(SITE, `/${pickLang(req, url)}/${page}.html`), vary: true };
   }
@@ -260,6 +299,8 @@ function handle(req, res) {
       location: r.redirect,
       'cache-control': 'no-store',
       ...(r.vary ? { vary: 'accept-language, cookie' } : {}),
+      ...(r.varyUA ? { vary: 'user-agent' } : {}),
+      ...(r.noindex ? { 'x-robots-tag': 'noindex' } : {}),
       ...langCookie(r.setLang),
     });
     return res.end();
